@@ -24,5 +24,12 @@ namespace BBTech.Core.Tests
             Assert.Equal(all.Count, all.Distinct().Count());
         }
 
+        [Fact]
+        public void Required_tests_come_first_in_display_order()
+        {
+            Assert.Equal(TestCatalog.RequiredTests, TestCatalog.All.Take(4));
+            Assert.True(TestCatalog.Order(HardwareTest.Display) < TestCatalog.Order(HardwareTest.Storage));
+        }
+
     }
 }
