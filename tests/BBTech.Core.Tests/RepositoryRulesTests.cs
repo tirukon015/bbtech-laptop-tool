@@ -156,5 +156,16 @@ namespace BBTech.Core.Tests
             Assert.Null(running.CompletedAt);
         }
 
+        [Fact]
+        public void The_test_selection_of_a_completed_inspection_cannot_change()
+        {
+            var repo = Open();
+            var dev = repo.RegisterDevice(QcStoreTests.LaptopA, Specs);
+            var insp = repo.StartInspection(dev.DeviceId, Op, "1.0.0", Specs, "Required", new[] { "Display" });
+            repo.CompleteInspection(insp.InspectionId, "PASS");
+            Assert.Throws<InvalidOperationException>(() => repo.UpdateTestSelection(insp.InspectionId, "AllTests", new[] { "Display", "Camera" }));
+            Assert.Equal(new[] { "Display" }, Open().GetInspection(insp.InspectionId).SelectedTests);
+        }
+
     }
 }
