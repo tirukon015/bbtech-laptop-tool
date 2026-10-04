@@ -284,5 +284,20 @@ namespace BBTech.Core.Tests
             Assert.DoesNotContain(Pass, msg);
         }
 
+        [Fact]
+        public void Fingerprint_changes_with_password_security_and_hidden_flag_only()
+        {
+            string fp = WifiProvisioner.Fingerprint(Net());
+            var a = Net(); a.Password = "other-pass-1";
+            var b = Net(); b.Security = WifiSecurity.Wpa3Personal;
+            var c = Net(); c.Hidden = true;
+            var d = Net(); d.Version = 9; d.NetworkId = "other";
+            Assert.NotEqual(fp, WifiProvisioner.Fingerprint(a));
+            Assert.NotEqual(fp, WifiProvisioner.Fingerprint(b));
+            Assert.NotEqual(fp, WifiProvisioner.Fingerprint(c));
+            Assert.Equal(fp, WifiProvisioner.Fingerprint(d));
+            Assert.DoesNotContain(Pass, fp);
+        }
+
     }
 }
