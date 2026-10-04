@@ -83,5 +83,15 @@ namespace BBTech.Core.Tests
             Assert.DoesNotContain("PASS", raw);
         }
 
+        [Fact]
+        public void HasData_is_false_for_missing_or_header_only_files()
+        {
+            Assert.False(EncryptedJournal.HasData(FilePath));
+            File.WriteAllBytes(FilePath, Encoding.ASCII.GetBytes("BBQCJ001"));
+            Assert.False(EncryptedJournal.HasData(FilePath));
+            Journal().Append(B("x"));
+            Assert.True(EncryptedJournal.HasData(FilePath));
+        }
+
     }
 }
