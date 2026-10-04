@@ -118,5 +118,18 @@ namespace BBTech.Core.Tests
             Assert.Equal(new byte[] { 9 }, c.TryDecrypt(enc));
         }
 
+        [Fact]
+        public void Key_derivation_is_deterministic_and_depends_on_secret_salt_and_iterations()
+        {
+            byte[] salt = Enumerable.Range(0, 16).Select(i => (byte)i).ToArray();
+            byte[] a = EnvelopeCrypto.DeriveKey("secret", salt, 1000);
+            Assert.Equal(EnvelopeCrypto.KeySize, a.Length);
+            Assert.Equal(a, EnvelopeCrypto.DeriveKey("secret", salt, 1000));
+            Assert.NotEqual(a, EnvelopeCrypto.DeriveKey("secret2", salt, 1000));
+            Assert.NotEqual(a, EnvelopeCrypto.DeriveKey("secret", salt.Reverse().ToArray(), 1000));
+            Assert.NotEqual(a, EnvelopeCrypto.DeriveKey("secret", salt, 1001));
+            Assert.Equal(32, EnvelopeCrypto.DeriveKey("secret", salt, 1000, 32).Length);
+        }
+
     }
 }
