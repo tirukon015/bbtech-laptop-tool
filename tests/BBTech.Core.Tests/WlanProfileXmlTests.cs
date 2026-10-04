@@ -137,5 +137,12 @@ namespace BBTech.Core.Tests
             Assert.Null(WlanProfileXml.Parse(xml));
         }
 
+        [Fact]
+        public void Security_types_map_to_windows_authentication_names()
+        {
+            Assert.Equal("WPA2PSK", WlanProfileXml.AuthName(WifiSecurity.Wpa2Personal));
+            Assert.Equal("WPA3SAE", WlanProfileXml.AuthName(WifiSecurity.Wpa3Personal));
+            Assert.Equal("open", WlanProfileXml.AuthName(WifiSecurity.Open));
+        }
     }
 }
