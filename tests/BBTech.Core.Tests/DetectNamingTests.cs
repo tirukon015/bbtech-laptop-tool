@@ -93,5 +93,16 @@ namespace BBTech.Core.Tests
             Assert.Equal("Unknown", r.Generation);
         }
 
+        [Theory]
+        [InlineData(1, "1st")]
+        [InlineData(2, "2nd")]
+        [InlineData(3, "3rd")]
+        [InlineData(4, "4th")]
+        [InlineData(11, "11th")]
+        [InlineData(12, "12th")]
+        [InlineData(13, "13th")]
+        [InlineData(21, "21st")]
+        public void Ordinals(int n, string expected) => Assert.Equal(expected, CpuParser.Ordinal(n));
+
     }
 }
