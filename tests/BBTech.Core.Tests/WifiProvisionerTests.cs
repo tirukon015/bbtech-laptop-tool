@@ -199,5 +199,17 @@ namespace BBTech.Core.Tests
             Assert.All(results, r => Assert.Contains("no Wi-Fi adapter", r.Message));
         }
 
+        [Fact]
+        public void Radio_off_still_installs_but_does_not_scan()
+        {
+            var api = new ScriptedWlan();
+            api.Iface.RadioOn = false;
+            var r = P(api).ProvisionAll(new[] { Net() }).Single();
+            Assert.Equal(ProvisionOutcome.Installed, r.Outcome);
+            Assert.False(r.InRange);
+            Assert.Equal(0, api.ScanCalls);
+            Assert.Contains("when in range", r.Message);
+        }
+
     }
 }
