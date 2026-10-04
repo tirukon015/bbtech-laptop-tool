@@ -137,5 +137,14 @@ namespace BBTech.Core.Tests
             Assert.Equal(4, empty.Selected.Count);
         }
 
+        [Fact]
+        public void A_stored_all_tests_plan_missing_a_test_is_restored_as_required()
+        {
+            var names = TestCatalog.All.Where(t => t != HardwareTest.Bluetooth).Select(t => t.ToString());
+            var plan = TestPlan.FromStored("AllTests", names);
+            Assert.Equal(TestMode.Required, plan.Mode);
+            Assert.False(plan.IsSelected(HardwareTest.Bluetooth));
+        }
+
     }
 }
