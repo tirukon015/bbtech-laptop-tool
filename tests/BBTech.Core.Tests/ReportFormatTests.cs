@@ -98,5 +98,12 @@ namespace BBTech.Core.Tests
             Assert.Equal(expected, ReportNaming.Part(value, "FALLBACK", 30));
         }
 
+        [Fact]
+        public void Compatibility_characters_are_normalised()
+        {
+            Assert.Equal("Book-XII", ReportNaming.Part("Book Ⅻ", "X", 30));
+            Assert.Equal("AB12", ReportNaming.Part("ＡＢ１２", "X", 30));
+        }
+
     }
 }
