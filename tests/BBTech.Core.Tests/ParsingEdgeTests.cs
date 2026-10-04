@@ -188,5 +188,17 @@ namespace BBTech.Core.Tests
             Assert.Null(b.HealthPercent);
         }
 
+        [Fact]
+        public void Disk_number_falls_back_to_the_element_name()
+        {
+            string xml = "<Hard_Disk_Sentinel><Physical_Disk_Information_Disk_3><Hard_Disk_Summary>" +
+                         "<Hard_Disk_Model_ID>Example SSD</Hard_Disk_Model_ID><Health>77 %</Health></Hard_Disk_Summary>" +
+                         "</Physical_Disk_Information_Disk_3></Hard_Disk_Sentinel>";
+            var d = HdSentinelReportParser.Parse(xml).Single();
+            Assert.Equal(3, d.DiskNumber);
+            Assert.Equal(77, d.HealthPercent);
+            Assert.Null(d.PerformancePercent);
+        }
+
     }
 }
