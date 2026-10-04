@@ -4,9 +4,48 @@ All notable changes to BBTech Laptop Tool. Dates are in YYYY-MM-DD format.
 
 ## [1.0.0] — Unreleased (in development)
 
-Version 1.0.0 is planned for 2026-10-09 and is **not yet released or tagged**. All work below was done on 2026-10-04; see [docs/development/DAY-01.md](docs/development/DAY-01.md).
+Version 1.0.0 is planned for 2026-10-09 and is **not yet released or tagged**. Daily details: [DAY-01](docs/development/DAY-01.md) (2026-10-04), [DAY-02](docs/development/DAY-02.md) (2026-10-05).
 
-### Added
+### 2026-10-05
+
+#### Fixed
+
+- **Operators:** renaming or reactivating an operator can no longer create two active operators with the same name.
+- **Admin PIN:** only ASCII digits are accepted (`char.IsDigit` also allowed Bengali, Arabic-Indic and full-width digits). A damaged salt or hash now fails verification instead of throwing.
+- **Locale independence:** the DETECT CSV timestamp, DETECT export file names, log timestamps and on-screen dates no longer depend on the Windows region (for example the Thai Buddhist calendar produced year 2569).
+- **Wi-Fi:**
+  - WPA3-Personal networks reject 64-digit hex keys, which SAE does not support.
+  - A malformed SSID hex no longer hides the rest of an installed profile.
+  - Saving an unchanged network keeps its version, so laptops are not re-provisioned.
+  - Native WLAN API exceptions and a stopped WLAN service are reported as friendly failures instead of crashing.
+- **QC store:**
+  - Validates test status labels, overall results, Wi-Fi records and null ids before writing.
+  - Refuses to create a duplicate device record for a known laptop.
+  - Reports unknown devices clearly.
+  - Reads the journal even when its incomplete tail cannot be cut off.
+- **Detection:** first-generation Intel names with a letter before the number ("Core i7 CPU Q 720", "X 920") now get "1st Gen".
+- **Reports:**
+  - History rows tolerate missing results and duplicate selections.
+  - `DateTimeOffset` values are written as ISO 8601.
+- **Other:**
+  - A failed atomic write no longer leaves a `.tmp` file.
+  - `EnvelopeCrypto.Encrypt(null)` throws `ArgumentNullException`.
+  - `TestItem.CompletedAt` notifies only on change.
+
+#### Security
+
+- CSV exports neutralise cells that Excel would run as formulas (`=`, `+`, `-`, `@`, tab, CR).
+
+#### Performance
+
+- The test catalog is built once instead of by reflection on every lookup.
+
+#### Tests and tooling
+
+- The unit tests grew from 224 to 587 cases (358 methods). New suites: journal, key vault, crypto, settings store, operator rules, Wi-Fi XML and provisioning, report formats, CSV, history reports, identity rules, parser edge cases, CPU and model naming, test models.
+- Added `.gitattributes` (LF normalisation), `.editorconfig` and a GitHub Actions workflow that runs the tests and builds the app.
+
+### Added (2026-10-04)
 
 - **Portable WPF application** (.NET Framework 4.7.2) delivered as one EXE, with the third-party tools embedded and extracted to `%TEMP%` on demand.
 - **DETECT:** Brand, Model, Model Number (manufacturer-aware parsing), CPU family, CPU generation, RAM, Storage (multiple drives), Battery Health (BatteryInfoView with WMI and `powercfg` fallbacks), serial number, system UUID, motherboard serial.
