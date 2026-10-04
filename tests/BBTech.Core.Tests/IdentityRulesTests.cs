@@ -50,5 +50,16 @@ namespace BBTech.Core.Tests
             Assert.Equal(Uuid, DeviceIdentity.CleanUuid(raw));
         }
 
+        [Theory]
+        [InlineData("00020003-0004-0005-0006-000700080009")]
+        [InlineData("12345678-1234-5678-90AB-CDDEEFAABBCC")]
+        [InlineData("11111111-1111-1111-1111-111111111111")]
+        [InlineData("")]
+        [InlineData("   ")]
+        public void Placeholder_uuids_are_discarded(string raw)
+        {
+            Assert.Null(DeviceIdentity.CleanUuid(raw));
+        }
+
     }
 }
