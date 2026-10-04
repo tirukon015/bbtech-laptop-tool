@@ -191,5 +191,12 @@ namespace BBTech.Core.Tests
             Assert.Contains("\"capacity_bytes\": 256060514304", json);
             Assert.Contains("\"health_percent\": null", json);
         }
+
+        [Fact]
+        public void Date_time_offsets_are_written_in_iso_format_with_the_offset()
+        {
+            var t = new DateTimeOffset(2026, 10, 5, 14, 30, 0, TimeSpan.FromHours(6));
+            Assert.Equal("\"2026-10-05T14:30:00+06:00\"", JsonWriter.Serialize(t));
+        }
     }
 }

@@ -36,6 +36,7 @@ namespace BBTech.Core.Export
                 case string s: WriteString(sb, s); return;
                 case bool b: sb.Append(b ? "true" : "false"); return;
                 case DateTime dt: WriteString(sb, dt.ToString("yyyy-MM-ddTHH:mm:ss", CultureInfo.InvariantCulture)); return;
+                case DateTimeOffset dto: WriteString(sb, dto.ToString("yyyy-MM-ddTHH:mm:sszzz", CultureInfo.InvariantCulture)); return;
                 case double d: sb.Append(double.IsNaN(d) || double.IsInfinity(d) ? "null" : d.ToString("0.###", CultureInfo.InvariantCulture)); return;
                 case float f: Write(sb, (double)f, indent, level); return;
                 case decimal m: sb.Append(m.ToString(CultureInfo.InvariantCulture)); return;
