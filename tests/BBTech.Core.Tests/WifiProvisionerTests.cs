@@ -52,5 +52,16 @@ namespace BBTech.Core.Tests
             Assert.DoesNotContain(Pass, r.Message);
             Assert.False(r.AutoConnectVerified);
         }
+
+        [Fact]
+        public void Connect_now_survives_a_crashing_connect_call_and_keeps_the_profile()
+        {
+            var api = new ScriptedWlan { OnConnect = name => throw new InvalidOperationException("service stopped") };
+            api.Visible.Add("BBTECH_EXAMPLE");
+            string msg = P(api).ConnectNow(Net());
+            Assert.Contains("Could not connect", msg);
+            Assert.Contains("stays installed", msg);
+            Assert.True(api.Profiles.ContainsKey("BBTECH_EXAMPLE"));
+        }
     }
 }

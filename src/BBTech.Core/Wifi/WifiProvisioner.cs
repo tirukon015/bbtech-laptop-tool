@@ -217,7 +217,12 @@ namespace BBTech.Core.Wifi
             if (visible != null && !n.Hidden && !visible.Contains(n.Ssid))
                 return n.Ssid + " is not in range right now. The profile is installed and Windows will connect automatically when it is available.";
 
-            int rc = _api.Connect(iface.Id, n.Ssid);
+            int rc;
+            try { rc = _api.Connect(iface.Id, n.Ssid); }
+            catch (Exception ex) when (!(ex is OutOfMemoryException))
+            {
+                return "Could not connect to " + n.Ssid + " (" + ex.GetType().Name + "). The profile stays installed for automatic connection.";
+            }
             return rc == 0 ? null : "Could not connect to " + n.Ssid + " (error " + rc + "). The profile stays installed for automatic connection.";
         }
 
