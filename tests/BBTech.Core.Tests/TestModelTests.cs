@@ -108,5 +108,14 @@ namespace BBTech.Core.Tests
             Assert.Equal(TestCatalog.All.Count, plan.Selected.Count + plan.Available.Count);
         }
 
+        [Fact]
+        public void Adding_a_selected_test_again_changes_nothing()
+        {
+            var plan = TestPlan.Required();
+            plan.Add(HardwareTest.Display);
+            Assert.Equal(4, plan.Selected.Count);
+            Assert.Equal(TestMode.Required, plan.Mode);
+        }
+
     }
 }
