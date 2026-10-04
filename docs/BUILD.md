@@ -42,6 +42,17 @@ What `build.ps1` does:
 
 **"File in use" error:** the build cannot replace `dist\release\BBTech Laptop Tool.exe` while that EXE is running. Close the app first.
 
+## Continuous integration
+
+GitHub Actions (`.github/workflows/ci.yml`, `windows-latest`, .NET SDK 8):
+
+1. `dotnet test tests/BBTech.Core.Tests -c Release`, with results uploaded as the `test-results` artifact.
+2. `dotnet build src/BBTech.LaptopTool -c Release`.
+
+The CI build has **no embedded tools**: `third_party/` and `artifacts/` are not in the repository, and the project only embeds the bundle when `artifacts\bundle` exists. CI therefore checks that the code compiles and the tests pass. Release EXEs are still produced locally with `build.ps1`.
+
+**Cost:** for a private repository, Actions minutes on Windows runners count against the account's monthly allowance.
+
 ## Branding assets
 
 `build\make-branding.ps1` derives `Assets\bbtech.ico`, `Assets\Branding\logo-tile-*.png` and `splash.png` from `logo-master.png`. The master file is never modified. Run it only when the logo changes.
