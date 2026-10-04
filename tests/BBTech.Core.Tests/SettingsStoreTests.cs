@@ -70,5 +70,17 @@ namespace BBTech.Core.Tests
             Assert.Equal(raw, File.ReadAllBytes(FilePath));
         }
 
+        [Fact]
+        public void The_backup_copy_is_used_when_the_main_file_is_damaged()
+        {
+            var s = SettingsStore.Load(FilePath);
+            s.AddOperator("Operator One", "QC");
+            s.AddOperator("Operator Two", "QC");   // the previous version is now in settings.dat.bak
+            File.WriteAllBytes(FilePath, Encoding.ASCII.GetBytes("BBTS0001 garbage"));
+            var again = SettingsStore.Load(FilePath);
+            Assert.False(again.LoadFailed);
+            Assert.Equal(new[] { "Operator One" }, again.ActiveOperators.Select(o => o.Name));
+        }
+
     }
 }
