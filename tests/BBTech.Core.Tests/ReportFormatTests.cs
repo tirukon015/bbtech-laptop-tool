@@ -112,5 +112,15 @@ namespace BBTech.Core.Tests
             Assert.Equal(new string('A', 9), ReportNaming.Part(new string('A', 9) + " BBBB", "X", 10));
         }
 
+        [Fact]
+        public void Extension_and_duplicate_suffix_are_applied()
+        {
+            string b = ReportNaming.BuildFileName("Dell", "Latitude", "5420", "SERIAL-EXAMPLE", OverallResult.Fail, When, ".csv");
+            Assert.Equal("Dell_Latitude_5420_SERIAL-EXAMPLE_20261005_FAIL.csv", b);
+            Assert.EndsWith("_PASS", ReportNaming.BuildFileName("Dell", "Latitude", "5420", "S1", OverallResult.Pass, When, null));
+            Assert.Contains("_20261005_", ReportNaming.BuildFileName("Dell", "Latitude", "5420", "S1", OverallResult.Pass, When, "json", 1));
+            Assert.Contains("_20261005-3_", ReportNaming.BuildFileName("Dell", "Latitude", "5420", "S1", OverallResult.Pass, When, "json", 3));
+        }
+
     }
 }
