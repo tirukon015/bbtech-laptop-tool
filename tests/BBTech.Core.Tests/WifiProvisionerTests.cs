@@ -253,5 +253,15 @@ namespace BBTech.Core.Tests
             Assert.Empty(api.ConnectCalls);
         }
 
+        [Fact]
+        public void Connect_now_out_of_range_installs_and_explains()
+        {
+            var api = new ScriptedWlan();
+            string msg = P(api).ConnectNow(Net());
+            Assert.Contains("not in range", msg);
+            Assert.True(api.Profiles.ContainsKey("BBTECH_EXAMPLE"));
+            Assert.Empty(api.ConnectCalls);
+        }
+
     }
 }
