@@ -55,5 +55,12 @@ namespace BBTech.Core.Tests
             Assert.Equal("\"Sound – left/right ✓\"", JsonWriter.Serialize("Sound – left/right ✓"));
         }
 
+        [Fact]
+        public void Compact_json_keeps_insertion_order()
+        {
+            var o = new JsonObject { { "z", 1 }, { "a", new[] { 1, 2 } }, { "m", new JsonObject() }, { "e", new int[0] } };
+            Assert.Equal("{\"z\":1,\"a\":[1,2],\"m\":{},\"e\":[]}", JsonWriter.Serialize(o, false));
+        }
+
     }
 }
