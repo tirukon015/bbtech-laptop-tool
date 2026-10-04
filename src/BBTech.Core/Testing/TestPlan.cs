@@ -21,22 +21,24 @@ namespace BBTech.Core.Testing
             HardwareTest.Usb, HardwareTest.WiFi, HardwareTest.Bluetooth, HardwareTest.Storage,
         };
 
+        private static readonly IReadOnlyList<HardwareTest> AllTests = BuildAll();
+
         /// <summary>Every available test (built from the HardwareTest enum, so new tests are included automatically).</summary>
-        public static IReadOnlyList<HardwareTest> All
+        public static IReadOnlyList<HardwareTest> All => AllTests;
+
+        private static IReadOnlyList<HardwareTest> BuildAll()
         {
-            get
-            {
-                var all = Enum.GetValues(typeof(HardwareTest)).Cast<HardwareTest>().ToList();
-                return PreferredOrder.Where(all.Contains).Concat(all.Except(PreferredOrder)).ToList();
-            }
+            var all = Enum.GetValues(typeof(HardwareTest)).Cast<HardwareTest>().ToList();
+            return PreferredOrder.Where(all.Contains).Concat(all.Except(PreferredOrder)).ToList().AsReadOnly();
         }
 
-        public static bool IsRequired(HardwareTest t) => RequiredTests.Contains(t);
+        public static bool IsRequired(HardwareTest t) => Array.IndexOf(RequiredTests, t) >= 0;
 
+        /// <summary>Display position of a test (used to sort report and history rows).</summary>
         public static int Order(HardwareTest t)
         {
-            int i = All.ToList().IndexOf(t);
-            return i < 0 ? int.MaxValue : i;
+            for (int i = 0; i < AllTests.Count; i++) if (AllTests[i] == t) return i;
+            return int.MaxValue;
         }
     }
 
