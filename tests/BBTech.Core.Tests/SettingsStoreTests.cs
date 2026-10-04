@@ -178,5 +178,15 @@ namespace BBTech.Core.Tests
             Assert.True(SettingsStore.Load(FilePath).WifiNetworks.Single().Hidden);
         }
 
+        [Fact]
+        public void Duplicate_ssids_are_rejected_case_sensitively()
+        {
+            var s = SettingsStore.Load(FilePath);
+            s.AddOrUpdateWifi(null, "BBTECH_EXAMPLE", WifiSecurity.Wpa2Personal, "example-pass", false);
+            Assert.Throws<ArgumentException>(() => s.AddOrUpdateWifi(null, "BBTECH_EXAMPLE", WifiSecurity.Wpa2Personal, "example-pass", false));
+            s.AddOrUpdateWifi(null, "bbtech_example", WifiSecurity.Wpa2Personal, "example-pass", false);
+            Assert.Equal(2, SettingsStore.Load(FilePath).WifiNetworks.Count());
+        }
+
     }
 }
