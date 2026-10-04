@@ -41,5 +41,17 @@ namespace BBTech.Core.Tests
             Assert.DoesNotContain("example-pass", text);
         }
 
+        [Fact]
+        public void Each_save_uses_a_new_salt()
+        {
+            var s = SettingsStore.Load(FilePath);
+            s.AddOperator("Operator One", "QC");
+            byte[] first = File.ReadAllBytes(FilePath);
+            s.Save();
+            byte[] second = File.ReadAllBytes(FilePath);
+            Assert.NotEqual(first.Skip(8).Take(16), second.Skip(8).Take(16));
+            Assert.Equal("Operator One", SettingsStore.Load(FilePath).ActiveOperators.Single().Name);
+        }
+
     }
 }
