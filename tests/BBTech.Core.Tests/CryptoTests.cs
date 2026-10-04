@@ -98,5 +98,15 @@ namespace BBTech.Core.Tests
             Assert.Null(c.TryDecrypt(null));
         }
 
+        [Theory]
+        [InlineData(0)]
+        [InlineData(32)]
+        [InlineData(63)]
+        [InlineData(65)]
+        public void Keys_must_be_exactly_64_bytes(int size)
+        {
+            Assert.Throws<ArgumentException>(() => new EnvelopeCrypto(new byte[size]));
+        }
+
     }
 }
