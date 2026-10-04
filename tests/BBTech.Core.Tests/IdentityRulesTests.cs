@@ -79,5 +79,16 @@ namespace BBTech.Core.Tests
             Assert.Equal(a.Fingerprint, b.Fingerprint);
         }
 
+        [Theory]
+        [InlineData("ABC12345", null, null)]
+        [InlineData(null, Uuid, null)]
+        [InlineData(null, null, "BRD-0001")]
+        public void Any_one_stable_identifier_is_enough_for_a_fingerprint(string serial, string uuid, string board)
+        {
+            var id = new DeviceIdentity("HP", "EliteBook", "840 G8", serial, uuid, board);
+            Assert.True(id.HasStrongIdentifier);
+            Assert.Matches("^[0-9a-f]{64}$", id.Fingerprint);
+        }
+
     }
 }
