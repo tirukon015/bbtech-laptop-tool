@@ -26,5 +26,20 @@ namespace BBTech.Core.Tests
             Assert.Equal("\"2026-10-05T14:30:00\"", JsonWriter.Serialize(When));
         }
 
+        [Fact]
+        public void Json_numbers_use_a_dot_in_every_windows_region()
+        {
+            var old = Thread.CurrentThread.CurrentCulture;
+            Thread.CurrentThread.CurrentCulture = new CultureInfo("de-DE");
+            try
+            {
+                Assert.Equal("2.5", JsonWriter.Serialize(2.5));
+                Assert.Equal("1.235", JsonWriter.Serialize(1.23456));
+                Assert.Equal("1.5", JsonWriter.Serialize(1.5f));
+                Assert.Equal("1.10", JsonWriter.Serialize(1.10m));
+            }
+            finally { Thread.CurrentThread.CurrentCulture = old; }
+        }
+
     }
 }
