@@ -152,5 +152,15 @@ namespace BBTech.Core.Tests
             Assert.Null(BatteryHealth.Compute(null, 40000));
         }
 
+        [Theory]
+        [InlineData(86.99, "86%")]
+        [InlineData(100.0, "100%")]
+        [InlineData(0.5, "0%")]
+        [InlineData(null, "Unknown")]
+        public void Battery_health_is_floored_for_itms(double? percent, string expected)
+        {
+            Assert.Equal(expected, BatteryHealth.Format(percent));
+        }
+
     }
 }
