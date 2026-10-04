@@ -104,5 +104,17 @@ namespace BBTech.Core.Tests
             Assert.DoesNotContain("2468", again.Settings.AdminPinHash);
         }
 
+        [Theory]
+        [InlineData("12")]
+        [InlineData("12ab")]
+        [InlineData("1234567890123")]
+        [InlineData(null)]
+        public void Invalid_pins_are_rejected(string pin)
+        {
+            var s = SettingsStore.Load(FilePath);
+            Assert.Throws<ArgumentException>(() => s.SetPin(pin));
+            Assert.False(s.HasPin);
+        }
+
     }
 }
