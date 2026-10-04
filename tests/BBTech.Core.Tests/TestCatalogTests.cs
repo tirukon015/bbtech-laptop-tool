@@ -15,5 +15,14 @@ namespace BBTech.Core.Tests
             var list = Assert.IsAssignableFrom<IList<HardwareTest>>(TestCatalog.All);
             Assert.True(list.IsReadOnly);
         }
+
+        [Fact]
+        public void Every_hardware_test_appears_exactly_once()
+        {
+            var all = TestCatalog.All;
+            Assert.Equal(Enum.GetValues(typeof(HardwareTest)).Length, all.Count);
+            Assert.Equal(all.Count, all.Distinct().Count());
+        }
+
     }
 }
