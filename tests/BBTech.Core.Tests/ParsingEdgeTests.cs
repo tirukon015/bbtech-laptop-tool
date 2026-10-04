@@ -162,5 +162,18 @@ namespace BBTech.Core.Tests
             Assert.Equal(expected, BatteryHealth.Format(percent));
         }
 
+        [Fact]
+        public void A_single_battery_without_full_charge_capacity_keeps_the_reported_health()
+        {
+            string xml = @"<battery_information>
+<item><description>Designed Capacity</description><value>51,000 mWh</value></item>
+<item><description>Battery Health</description><value>75.5%</value></item>
+</battery_information>";
+            var b = BatteryInfoViewParser.Parse(xml);
+            Assert.True(b.Present);
+            Assert.Null(b.FullChargeCapacityMWh);
+            Assert.Equal(75.5, b.HealthPercent);
+        }
+
     }
 }
