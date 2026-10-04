@@ -115,5 +115,15 @@ namespace BBTech.Core.Tests
             Assert.Equal(2, a2.Number);
         }
 
+        [Fact]
+        public void Starting_an_inspection_without_an_operator_name_fails()
+        {
+            var repo = Open();
+            var dev = repo.RegisterDevice(QcStoreTests.LaptopA, Specs);
+            Assert.Throws<InvalidOperationException>(() => repo.StartInspection(dev.DeviceId, null, "1.0.0", Specs));
+            Assert.Throws<InvalidOperationException>(() => repo.StartInspection(dev.DeviceId, new OperatorSnapshot { Name = "  " }, "1.0.0", Specs));
+            Assert.Empty(repo.GetHistory(dev.DeviceId));
+        }
+
     }
 }
