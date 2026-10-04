@@ -21,5 +21,11 @@ namespace BBTech.Core.Tests
         [InlineData("Dell Inspiron 15 3511", "Inspiron", "15 3511")]
         public void Dell_names(string full, string model, string number) => Split(full, "Dell", model, number);
 
+        [Theory]
+        [InlineData("HP EliteBook 840 G8 Notebook PC", "EliteBook", "840 G8")]
+        [InlineData("HP ZBook Firefly 14 G8 Mobile Workstation PC", "ZBook Firefly", "14 G8")]
+        [InlineData("HP ProBook 450 G9", "ProBook", "450 G9")]
+        public void Hp_names(string full, string model, string number) => Split(full, "HP", model, number);
+
     }
 }
