@@ -111,5 +111,12 @@ namespace BBTech.Core.Tests
             Assert.Equal(expected, BrandCatalog.Normalize(raw));
         }
 
+        [Fact]
+        public void Brand_prefixes_include_the_long_vendor_names()
+        {
+            Assert.Equal(new[] { "HP", "Hewlett-Packard", "Hewlett Packard" }, BrandCatalog.BrandPrefixes("HP").ToArray());
+            Assert.Equal(new[] { "Acer" }, BrandCatalog.BrandPrefixes("Acer").ToArray());
+        }
+
     }
 }
