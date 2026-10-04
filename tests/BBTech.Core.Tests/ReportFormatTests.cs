@@ -151,5 +151,13 @@ namespace BBTech.Core.Tests
             Assert.Contains("\"overall_result\": \"INCOMPLETE\"", TestReportExporter.ToJson(items, null, "9.9.9", When, meta));
         }
 
+        [Fact]
+        public void Json_tool_version_comes_from_the_inspection_when_known()
+        {
+            var items = Items((HardwareTest.Display, TestState.Pass, true, ""));
+            Assert.Contains("\"tool\": \"BBTech Laptop Tool 1.0.0\"", TestReportExporter.ToJson(items, null, "1.0.1", When, new ReportMeta { AppVersion = "1.0.0" }));
+            Assert.Contains("\"tool\": \"BBTech Laptop Tool 1.0.1\"", TestReportExporter.ToJson(items, null, "1.0.1", When));
+        }
+
     }
 }
