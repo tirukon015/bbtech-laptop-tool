@@ -130,5 +130,16 @@ namespace BBTech.Core.Tests
             Assert.Equal(expected, BatteryInfoViewParser.ParsePercent(s));
         }
 
+        [Fact]
+        public void Cycle_counts_and_grouped_energy_values_are_parsed()
+        {
+            Assert.Equal(123, BatteryInfoViewParser.ParseInt("123 cycles"));
+            Assert.Null(BatteryInfoViewParser.ParseInt("none"));
+            Assert.Null(BatteryInfoViewParser.ParseInt(""));
+            Assert.Equal(57000L, BatteryInfoViewParser.ParseEnergy("57,000 mWh"));
+            Assert.Equal(57000L, BatteryInfoViewParser.ParseEnergy("57'000 mWh"));
+            Assert.Null(BatteryInfoViewParser.ParseEnergy("n/a"));
+        }
+
     }
 }
