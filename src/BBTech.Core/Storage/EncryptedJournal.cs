@@ -13,6 +13,8 @@ namespace BBTech.Core.Storage
         public int Corrupted { get; set; }
         /// <summary>Bytes of an incomplete final record (power loss / crash during a write) that were cut off.</summary>
         public long TruncatedTailBytes { get; set; }
+        /// <summary>True when the incomplete tail could not be cut off (file not writable); the history was still read.</summary>
+        public bool TailRepairFailed { get; set; }
     }
 
     /// <summary>
@@ -99,7 +101,14 @@ namespace BBTech.Core.Storage
                 if (goodEnd < data.Length)
                 {
                     stats.TruncatedTailBytes = data.Length - goodEnd;
-                    using (var f = new FileStream(_path, FileMode.Open, FileAccess.Write, FileShare.Read)) f.SetLength(goodEnd);
+                    // The repair is best effort: if the file cannot be written right now (read-only copy,
+                    // permissions), the readable history is still returned and the tail is cut next time.
+                    try
+                    {
+                        using (var f = new FileStream(_path, FileMode.Open, FileAccess.Write, FileShare.Read)) f.SetLength(goodEnd);
+                    }
+                    catch (IOException) { stats.TailRepairFailed = true; }
+                    catch (UnauthorizedAccessException) { stats.TailRepairFailed = true; }
                 }
             }
             return records;
