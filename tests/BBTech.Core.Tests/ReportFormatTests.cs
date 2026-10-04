@@ -41,5 +41,12 @@ namespace BBTech.Core.Tests
             finally { Thread.CurrentThread.CurrentCulture = old; }
         }
 
+        [Fact]
+        public void Non_finite_numbers_become_null()
+        {
+            Assert.Equal("null", JsonWriter.Serialize(double.NaN));
+            Assert.Equal("null", JsonWriter.Serialize(double.PositiveInfinity));
+        }
+
     }
 }
