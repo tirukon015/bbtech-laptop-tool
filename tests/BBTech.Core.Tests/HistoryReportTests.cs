@@ -27,5 +27,14 @@ namespace BBTech.Core.Tests
             Assert.Equal(new[] { HardwareTest.Display, HardwareTest.Keyboard }, items.Select(i => i.Kind));
             Assert.Equal(TestState.NotTested, items[1].State);
         }
+
+        [Fact]
+        public void Stored_results_are_sorted_by_catalog_order_and_unknown_ids_skipped()
+        {
+            var items = HistoryReport.Items(new[] { Res("Storage", "PASS"), Res("Hologram", "PASS"), Res("Display", "FAIL", "dead pixel") });
+            Assert.Equal(new[] { HardwareTest.Display, HardwareTest.Storage }, items.Select(i => i.Kind));
+            Assert.Equal("dead pixel", items[0].Notes);
+        }
+
     }
 }
