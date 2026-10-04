@@ -207,5 +207,15 @@ namespace BBTech.Core.Tests
             Assert.Equal(new[] { "1.0.1", "1.0.0" }, history.Select(h => h.Inspection.AppVersion));
         }
 
+        [Fact]
+        public void A_read_only_open_on_an_untested_laptop_creates_nothing()
+        {
+            var r = QcRepository.Open(_dir, new FakeMachine(7), QcStoreTests.LaptopA, null, createIfMissing: false);
+            Assert.True(r.NoStore);
+            Assert.False(r.Ok);
+            Assert.Equal("No QC inspection found for this device.", r.Message);
+            Assert.False(Directory.Exists(_dir));
+        }
+
     }
 }
