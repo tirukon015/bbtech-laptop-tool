@@ -60,5 +60,16 @@ namespace BBTech.Core.Tests
             Assert.Equal(new[] { HardwareTest.Display, HardwareTest.Speaker, HardwareTest.Keyboard, HardwareTest.Battery }, mandatory);
         }
 
+        [Theory]
+        [InlineData(HardwareTest.Speaker, "Sound")]
+        [InlineData(HardwareTest.Storage, "Storage / SSD")]
+        [InlineData(HardwareTest.Usb, "USB")]
+        [InlineData(HardwareTest.WiFi, "Wi-Fi")]
+        [InlineData(HardwareTest.Bluetooth, "Bluetooth")]
+        public void Tests_have_friendly_names(HardwareTest t, string name)
+        {
+            Assert.Equal(name, TestText.Name(t));
+        }
+
     }
 }
