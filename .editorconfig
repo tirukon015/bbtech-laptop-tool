@@ -1,0 +1,40 @@
+# Code style used across BBTech Laptop Tool.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+[*.md]
+trim_trailing_whitespace = false
+
+[*.{csproj,props,targets,xml,xaml,manifest,yml,yaml,json}]
+indent_size = 2
+
+[*.cs]
+csharp_new_line_before_open_brace = all
+csharp_prefer_braces = when_multiline:silent
+csharp_style_var_for_built_in_types = true:silent
+csharp_style_expression_bodied_methods = when_on_single_line:silent
+dotnet_sort_system_directives_first = true
+dotnet_style_qualification_for_field = false:suggestion
+# Private static/const fields: PascalCase (e.g. Header, MaxRecord)
+dotnet_naming_rule.private_static_pascal.symbols = private_static_fields
+dotnet_naming_rule.private_static_pascal.style = pascal
+dotnet_naming_rule.private_static_pascal.severity = suggestion
+dotnet_naming_symbols.private_static_fields.applicable_kinds = field
+dotnet_naming_symbols.private_static_fields.applicable_accessibilities = private
+dotnet_naming_symbols.private_static_fields.required_modifiers = static
+dotnet_naming_style.pascal.capitalization = pascal_case
+# Private instance fields: _camelCase
+dotnet_naming_rule.private_fields_underscore.symbols = private_fields
+dotnet_naming_rule.private_fields_underscore.style = underscore_camel
+dotnet_naming_rule.private_fields_underscore.severity = suggestion
+dotnet_naming_symbols.private_fields.applicable_kinds = field
+dotnet_naming_symbols.private_fields.applicable_accessibilities = private
+dotnet_naming_style.underscore_camel.required_prefix = _
+dotnet_naming_style.underscore_camel.capitalization = camel_case
