@@ -28,5 +28,17 @@ namespace BBTech.Core.Tests
             Assert.Contains("Notes", changed);
         }
 
+        [Fact]
+        public void Setting_the_same_state_again_does_not_notify()
+        {
+            var item = new TestItem(HardwareTest.Keyboard, "");
+            int count = 0;
+            item.PropertyChanged += (s, e) => count++;
+            item.State = TestState.NotTested;
+            item.Notes = "";
+            item.Required = true;
+            Assert.Equal(0, count);
+        }
+
     }
 }
