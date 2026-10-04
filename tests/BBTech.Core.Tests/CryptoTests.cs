@@ -162,5 +162,14 @@ namespace BBTech.Core.Tests
             Assert.False(PinHasher.Verify("97531", salt, null, 1000));
         }
 
+        [Fact]
+        public void The_stored_pin_hash_does_not_reveal_the_pin()
+        {
+            string salt = PinHasher.NewSalt();
+            string hash = PinHasher.Hash("424242", salt, 1000);
+            Assert.DoesNotContain("424242", hash);
+            Assert.Equal(32, Convert.FromBase64String(hash).Length);
+        }
+
     }
 }
