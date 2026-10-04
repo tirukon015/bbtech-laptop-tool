@@ -27,5 +27,11 @@ namespace BBTech.Core.Tests
         [InlineData("HP ProBook 450 G9", "ProBook", "450 G9")]
         public void Hp_names(string full, string model, string number) => Split(full, "HP", model, number);
 
+        [Theory]
+        [InlineData("Lenovo ThinkPad X1 Carbon Gen 9", "ThinkPad", "X1 Carbon Gen 9")]
+        [InlineData("Lenovo ThinkPad E14 Gen 2", "ThinkPad", "E14 Gen 2")]
+        [InlineData("Lenovo ThinkBook 14 G2 ITL", "ThinkBook", "14 G2 ITL")]
+        public void Lenovo_names(string full, string model, string number) => Split(full, "Lenovo", model, number);
+
     }
 }
