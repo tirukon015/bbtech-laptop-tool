@@ -120,5 +120,12 @@ namespace BBTech.Core.Tests
             Assert.NotNull(WlanProfileXml.Validate("BBTECH_EXAMPLE", WifiSecurity.Wpa2Personal, new string('x', 64)));
         }
 
+        [Fact]
+        public void Build_rejects_invalid_settings()
+        {
+            var ex = Assert.Throws<ArgumentException>(() => WlanProfileXml.Build(Net(pw: "short")));
+            Assert.Contains("8 to 63", ex.Message);
+        }
+
     }
 }
