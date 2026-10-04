@@ -106,7 +106,7 @@ namespace BBTech.Core.Tests
         [Theory]
         [InlineData("", "Enter the Wi-Fi password")]
         [InlineData("1234567", "8 to 63")]
-        [InlineData("pÃ¤ssword-1", "standard keyboard characters")]
+        [InlineData("pässword-1", "standard keyboard characters")]
         public void Passphrases_must_be_8_to_63_printable_ascii_characters(string pw, string message)
         {
             Assert.Contains(message, WlanProfileXml.Validate("BBTECH_EXAMPLE", WifiSecurity.Wpa2Personal, pw));
