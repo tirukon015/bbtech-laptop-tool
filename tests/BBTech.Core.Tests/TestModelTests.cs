@@ -172,5 +172,18 @@ namespace BBTech.Core.Tests
             Assert.Equal("PASS", HistoryReport.Meta(open).OverallStatus);
         }
 
+        [Fact]
+        public void Report_device_uses_inspection_specs_then_device_specs()
+        {
+            var device = new DeviceRecord { Manufacturer = "Dell", Model = "Latitude", ModelNumber = "5420", SerialNumber = "SERIAL-EXAMPLE", Specs = new DeviceSpecs { Cpu = "i5", Ram = "8 GB" } };
+            var withSpecs = new InspectionRecord { Specs = new DeviceSpecs { Cpu = "i7", Ram = "16 GB" } };
+            Assert.Equal("i7", HistoryReport.Device(device, withSpecs).Cpu);
+            var r = HistoryReport.Device(device, new InspectionRecord());
+            Assert.Equal("i5", r.Cpu);
+            Assert.Equal("Unknown", r.Storage);
+            Assert.Equal("SERIAL-EXAMPLE", r.System.SerialNumber);
+            Assert.Equal("", r.System.SystemUuid);
+        }
+
     }
 }
