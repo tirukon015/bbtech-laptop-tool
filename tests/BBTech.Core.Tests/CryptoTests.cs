@@ -80,5 +80,12 @@ namespace BBTech.Core.Tests
             Assert.Null(c.TryDecrypt(enc));
         }
 
+        [Fact]
+        public void Data_encrypted_with_another_key_cannot_be_read()
+        {
+            byte[] enc = new EnvelopeCrypto(EnvelopeCrypto.NewKey()).Encrypt(new byte[] { 1, 2, 3 });
+            Assert.Null(new EnvelopeCrypto(EnvelopeCrypto.NewKey()).TryDecrypt(enc));
+        }
+
     }
 }
