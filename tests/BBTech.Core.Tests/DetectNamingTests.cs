@@ -104,5 +104,15 @@ namespace BBTech.Core.Tests
         [InlineData(21, "21st")]
         public void Ordinals(int n, string expected) => Assert.Equal(expected, CpuParser.Ordinal(n));
 
+        [Theory]
+        [InlineData("520", 1)]
+        [InlineData("8250", 8)]
+        [InlineData("1145", 11)]
+        [InlineData("10210", 10)]
+        [InlineData("14650", 14)]
+        [InlineData("16000", 0)]
+        [InlineData("12", 0)]
+        [InlineData("", 0)]
+        public void Intel_generation_from_model_digits(string digits, int gen) => Assert.Equal(gen, CpuParser.IntelGenerationFromDigits(digits));
     }
 }
