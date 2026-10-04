@@ -171,5 +171,24 @@ namespace BBTech.Core.Tests
             Assert.Equal(32, Convert.FromBase64String(hash).Length);
         }
 
+        [Fact]
+        public void Atomic_write_creates_the_file_and_keeps_the_previous_version_as_bak()
+        {
+            string dir = Path.Combine(Path.GetTempPath(), "bbtech-safefile-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(dir);
+            try
+            {
+                string p = Path.Combine(dir, "x.dat");
+                SafeFile.WriteAllBytesAtomic(p, new byte[] { 1 });
+                Assert.Equal(new byte[] { 1 }, File.ReadAllBytes(p));
+                Assert.False(File.Exists(p + ".bak"));
+                SafeFile.WriteAllBytesAtomic(p, new byte[] { 2, 2 });
+                Assert.Equal(new byte[] { 2, 2 }, File.ReadAllBytes(p));
+                Assert.Equal(new byte[] { 1 }, File.ReadAllBytes(p + ".bak"));
+                Assert.False(File.Exists(p + ".tmp"));
+            }
+            finally { Directory.Delete(dir, true); }
+        }
+
     }
 }
