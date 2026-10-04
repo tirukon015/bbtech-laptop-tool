@@ -91,7 +91,7 @@ namespace BBTech.Core.Export
         {
             var headers = new[] { "brand", "model", "model_number", "cpu", "generation", "ram", "storage", "battery_health", "serial_number", "detected_at" };
             var values = new[] { r.Brand, r.Model, r.ModelNumber, r.Cpu, r.Generation, r.Ram, r.Storage, r.BatteryHealth,
-                                 r.System.SerialNumber, r.DetectedAt.ToString("yyyy-MM-dd HH:mm:ss") };
+                                 r.System.SerialNumber, r.DetectedAt.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture) };
             return string.Join(",", headers) + "\r\n" + string.Join(",", values.Select(Csv)) + "\r\n";
         }
 
