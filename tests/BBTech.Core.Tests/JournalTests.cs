@@ -165,5 +165,12 @@ namespace BBTech.Core.Tests
             Assert.True(File.Exists(FilePath));
         }
 
+        [Fact]
+        public void Large_binary_payloads_round_trip()
+        {
+            byte[] big = Enumerable.Range(0, 300000).Select(i => (byte)(i * 31)).ToArray();
+            Journal().Append(big);
+            Assert.Equal(big, Journal().ReadAll(out _).Single());
+        }
     }
 }
