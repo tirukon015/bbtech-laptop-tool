@@ -30,5 +30,14 @@ namespace BBTech.Core.Tests
             Assert.Equal(expected, CapacityFormatter.FormatDrive(bytes));
         }
 
+        [Fact]
+        public void Zero_or_negative_capacities_are_unknown()
+        {
+            Assert.Equal("Unknown", CapacityFormatter.FormatDrive(0));
+            Assert.Equal("Unknown", CapacityFormatter.FormatDrive(-1));
+            Assert.Equal("Unknown", CapacityFormatter.FormatRamFromModules(0));
+            Assert.Equal("Unknown", CapacityFormatter.FormatRamFromVisible(-5));
+        }
+
     }
 }
