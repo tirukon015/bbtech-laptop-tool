@@ -144,5 +144,17 @@ namespace BBTech.Core.Tests
             Assert.Contains("current Windows user only", r.Message);
         }
 
+        [Theory]
+        [InlineData(WifiProvisioner.ErrorBadProfile, "Windows rejected the network settings")]
+        [InlineData(87, "error 87")]
+        public void Windows_errors_are_reported_without_the_password(int code, string expected)
+        {
+            var api = new ScriptedWlan { OnSet = (xml, all) => code };
+            var r = P(api).ProvisionAll(new[] { Net() }).Single();
+            Assert.Equal(ProvisionOutcome.Failed, r.Outcome);
+            Assert.Contains(expected, r.Message);
+            Assert.DoesNotContain(Pass, r.Message);
+        }
+
     }
 }
