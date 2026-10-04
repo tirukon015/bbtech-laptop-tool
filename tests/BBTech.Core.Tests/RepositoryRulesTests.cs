@@ -180,5 +180,17 @@ namespace BBTech.Core.Tests
             Assert.Equal("i7", Open().Devices.Single().Specs.Cpu);
         }
 
+        [Fact]
+        public void No_open_inspection_remains_after_completion()
+        {
+            var repo = Open();
+            var dev = repo.RegisterDevice(QcStoreTests.LaptopA, Specs);
+            var insp = repo.StartInspection(dev.DeviceId, Op, "1.0.0", Specs);
+            Assert.NotNull(repo.GetOpenInspection(dev.DeviceId));
+            repo.CompleteInspection(insp.InspectionId, "FAIL");
+            Assert.Null(repo.GetOpenInspection(dev.DeviceId));
+            Assert.Equal("FAIL", Open().GetHistory(dev.DeviceId).Single().Inspection.OverallStatus);
+        }
+
     }
 }
