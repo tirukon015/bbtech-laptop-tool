@@ -99,5 +99,21 @@ namespace BBTech.Core.Tests
             Assert.Equal("Created despite identity conflict", flagged.IdentityNote);
             Assert.Equal(2, repo.Devices.Count);
         }
+
+        [Fact]
+        public void Inspection_numbers_count_up_per_laptop()
+        {
+            var repo = Open();
+            var a = repo.RegisterDevice(QcStoreTests.LaptopA, Specs);
+            var b = repo.RegisterDevice(QcStoreTests.LaptopB, Specs);
+            var a1 = repo.StartInspection(a.DeviceId, Op, "1.0.0", Specs);
+            repo.CompleteInspection(a1.InspectionId, "PASS");
+            var b1 = repo.StartInspection(b.DeviceId, Op, "1.0.0", Specs);
+            var a2 = repo.StartInspection(a.DeviceId, Op, "1.0.0", Specs);
+            Assert.Equal(1, a1.Number);
+            Assert.Equal(1, b1.Number);
+            Assert.Equal(2, a2.Number);
+        }
+
     }
 }
