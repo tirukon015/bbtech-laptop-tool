@@ -23,5 +23,16 @@ namespace BBTech.Core.Tests
         {
             Assert.Equal(valid, PinHasher.IsValidPin(pin));
         }
+
+        [Fact]
+        public void Pin_verification_with_a_damaged_salt_or_hash_fails_without_throwing()
+        {
+            string salt = PinHasher.NewSalt();
+            string hash = PinHasher.Hash("2468", salt, 1000);
+            Assert.True(PinHasher.Verify("2468", salt, hash, 1000));
+            Assert.False(PinHasher.Verify("2468", "not base64!", hash, 1000));
+            Assert.False(PinHasher.Verify("2468", salt, "%%%", 1000));
+            Assert.False(PinHasher.Verify("2468", salt, hash, 0));
+        }
     }
 }

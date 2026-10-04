@@ -123,9 +123,14 @@ namespace BBTech.Core.Security
 
         public static bool Verify(string pin, string saltBase64, string expectedHash, int iterations = Iterations)
         {
-            if (string.IsNullOrEmpty(saltBase64) || string.IsNullOrEmpty(expectedHash)) return false;
-            byte[] a = Convert.FromBase64String(Hash(pin, saltBase64, iterations));
-            byte[] b = Convert.FromBase64String(expectedHash);
+            if (string.IsNullOrEmpty(saltBase64) || string.IsNullOrEmpty(expectedHash) || iterations <= 0) return false;
+            byte[] a, b;
+            try
+            {
+                a = Convert.FromBase64String(Hash(pin, saltBase64, iterations));
+                b = Convert.FromBase64String(expectedHash);
+            }
+            catch (FormatException) { return false; } // damaged salt/hash: never unlock, never crash the PIN dialog
             if (a.Length != b.Length) return false;
             int diff = 0;
             for (int i = 0; i < a.Length; i++) diff |= a[i] ^ b[i];
