@@ -31,5 +31,19 @@ namespace BBTech.Core.Tests
             Assert.Equal("Unknown device.", ex.Message);
             Assert.Throws<InvalidOperationException>(() => repo.UpdateDevice(null, QcStoreTests.LaptopA, Specs));
         }
+
+        [Fact]
+        public void Results_with_an_unknown_status_or_missing_test_id_are_rejected_and_not_stored()
+        {
+            var repo = Open();
+            var dev = repo.RegisterDevice(QcStoreTests.LaptopA, Specs);
+            var insp = repo.StartInspection(dev.DeviceId, Op, "1.0.0", Specs);
+            Assert.Throws<ArgumentException>(() => repo.SaveResult(insp.InspectionId, "Display", "Display", "OK", true, ""));
+            Assert.Throws<ArgumentException>(() => repo.SaveResult(insp.InspectionId, "Display", "Display", "pass", true, ""));
+            Assert.Throws<ArgumentException>(() => repo.SaveResult(insp.InspectionId, "", "Display", "PASS", true, ""));
+            Assert.Empty(repo.GetResults(insp.InspectionId));
+            foreach (var s in QcRepository.ResultStatuses) repo.SaveResult(insp.InspectionId, "Display", "Display", s, true, "");
+            Assert.Equal("SKIPPED", repo.GetResults(insp.InspectionId).Single().Status);
+        }
     }
 }

@@ -222,9 +222,14 @@ namespace BBTech.Core.Storage
                 return _inspections.Values.Where(i => i.DeviceId == deviceId && i.IsOpen).OrderByDescending(i => i.StartedAt).ThenByDescending(i => i.Number).FirstOrDefault();
         }
 
+        /// <summary>Test status labels that may be stored (see TestText.Label).</summary>
+        public static readonly string[] ResultStatuses = { "NOT TESTED", "TESTING", "PASS", "FAIL", "SKIPPED" };
+
         /// <summary>Records one test's current state; persisted immediately.</summary>
         public TestResultRecord SaveResult(string inspectionId, string testId, string testName, string status, bool required, string comment, string details = null)
         {
+            if (string.IsNullOrWhiteSpace(testId)) throw new ArgumentException("A test id is required.", nameof(testId));
+            if (Array.IndexOf(ResultStatuses, status) < 0) throw new ArgumentException("Unknown test status: " + status, nameof(status));
             lock (_sync)
             {
                 RequireOpen(inspectionId);
