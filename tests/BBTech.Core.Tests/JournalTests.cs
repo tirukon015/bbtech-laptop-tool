@@ -137,5 +137,22 @@ namespace BBTech.Core.Tests
             Assert.Contains("third", records.Select(r => Encoding.UTF8.GetString(r)));
         }
 
+        [Fact]
+        public void A_partially_written_last_record_is_cut_off_and_appending_continues()
+        {
+            var j = Journal();
+            j.Append(B("kept"));
+            long good = new FileInfo(FilePath).Length;
+            using (var f = new FileStream(FilePath, FileMode.Append)) f.Write(new byte[] { 0x42, 0x51, 0x52, 0x31, 0x40, 0, 0, 0, 1, 2, 3 }, 0, 11);
+
+            Journal().ReadAll(out var stats);
+            Assert.Equal(11, stats.TruncatedTailBytes);
+            Assert.False(stats.TailRepairFailed);
+            Assert.Equal(good, new FileInfo(FilePath).Length);
+
+            Journal().Append(B("next"));
+            Assert.Equal(new[] { "kept", "next" }, Journal().ReadAll(out _).Select(r => Encoding.UTF8.GetString(r)));
+        }
+
     }
 }
