@@ -53,5 +53,12 @@ namespace BBTech.Core.Tests
             Assert.Null(item.CompletedAt);
         }
 
+        [Fact]
+        public void Only_display_sound_keyboard_and_battery_are_mandatory()
+        {
+            var mandatory = TestCatalog.All.Where(t => new TestItem(t, "").Mandatory).ToList();
+            Assert.Equal(new[] { HardwareTest.Display, HardwareTest.Speaker, HardwareTest.Keyboard, HardwareTest.Battery }, mandatory);
+        }
+
     }
 }
