@@ -66,5 +66,19 @@ namespace BBTech.Core.Tests
             Assert.NotEqual(a, b);
         }
 
+        [Theory]
+        [InlineData(0)]    // version byte
+        [InlineData(1)]    // IV
+        [InlineData(20)]   // ciphertext
+        [InlineData(-1)]   // HMAC (last byte)
+        public void Changing_any_byte_of_the_envelope_is_detected(int offset)
+        {
+            var c = new EnvelopeCrypto(EnvelopeCrypto.NewKey());
+            byte[] enc = c.Encrypt(Encoding.UTF8.GetBytes("operator one, overall PASS"));
+            int i = offset < 0 ? enc.Length + offset : offset;
+            enc[i] ^= 0x01;
+            Assert.Null(c.TryDecrypt(enc));
+        }
+
     }
 }
