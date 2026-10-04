@@ -93,5 +93,14 @@ namespace BBTech.Core.Tests
             Assert.True(EncryptedJournal.HasData(FilePath));
         }
 
+        [Fact]
+        public void Reading_a_missing_journal_returns_no_records_and_creates_nothing()
+        {
+            var records = Journal().ReadAll(out var stats);
+            Assert.Empty(records);
+            Assert.Equal(0, stats.Valid);
+            Assert.False(File.Exists(FilePath));
+        }
+
     }
 }
