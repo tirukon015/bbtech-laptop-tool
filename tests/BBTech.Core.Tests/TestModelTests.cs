@@ -215,5 +215,15 @@ namespace BBTech.Core.Tests
             Assert.Equal(new[] { "brand", "model", "model_number", "cpu", "generation", "ram", "storage", "battery_health" }, keys);
             Assert.DoesNotContain("SERIAL-EXAMPLE", json);
         }
+
+        [Fact]
+        public void Resetting_an_untested_item_raises_no_completed_at_notification()
+        {
+            var item = new TestItem(HardwareTest.Camera, "");
+            var changed = new List<string>();
+            item.PropertyChanged += (s, e) => changed.Add(e.PropertyName);
+            item.Reset();
+            Assert.Empty(changed);
+        }
     }
 }

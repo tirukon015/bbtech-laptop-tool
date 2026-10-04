@@ -98,7 +98,7 @@ namespace BBTech.Core.Testing
         public DateTime? CompletedAt
         {
             get => _completedAt;
-            set { _completedAt = value; Raise(); }
+            set { if (_completedAt != value) { _completedAt = value; Raise(); } }
         }
 
         public void Complete(TestState state, string notes)
