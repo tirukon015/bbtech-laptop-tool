@@ -44,5 +44,17 @@ namespace BBTech.Core.Tests
             Assert.Equal("BBTECH_EXAMPLE", p.Ssid);
             Assert.Equal("manual", p.ConnectionMode);
         }
+
+        [Fact]
+        public void Ssid_and_passphrase_are_xml_escaped_and_hex_encoded()
+        {
+            string xml = WlanProfileXml.Build(Net(ssid: "A&B <shop>", pw: "p&ss<word>\"'"));
+            Assert.Contains("<name>A&amp;B &lt;shop&gt;</name>", xml);
+            Assert.Contains("<hex>412642203C73686F703E</hex>", xml);
+            Assert.Contains("<keyMaterial>p&amp;ss&lt;word&gt;&quot;&apos;</keyMaterial>", xml);
+            Assert.NotNull(System.Xml.Linq.XDocument.Parse(xml));
+            Assert.Equal("A&B <shop>", WlanProfileXml.Parse(xml).Ssid);
+        }
+
     }
 }
