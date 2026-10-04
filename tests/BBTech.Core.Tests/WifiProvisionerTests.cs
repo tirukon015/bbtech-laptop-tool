@@ -211,5 +211,15 @@ namespace BBTech.Core.Tests
             Assert.Contains("when in range", r.Message);
         }
 
+        [Fact]
+        public void Visible_networks_are_reported_in_range()
+        {
+            var api = new ScriptedWlan();
+            api.Visible.Add("BBTECH_EXAMPLE");
+            var r = P(api).ProvisionAll(new[] { Net() }).Single();
+            Assert.True(r.InRange);
+            Assert.EndsWith("in range.", r.Message);
+        }
+
     }
 }
