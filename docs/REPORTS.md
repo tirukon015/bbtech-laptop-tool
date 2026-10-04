@@ -73,7 +73,14 @@ The same data: `inspection_date`, `inspection_time`, `inspection_id`, `inspectio
 - **JSON** starts with the eight ITMS fields, in this order: `brand, model, model_number, cpu, generation, ram, storage, battery_health`. It then has `storage_devices` and `details` (serial number, product code, firmware values, CPU details, RAM modules, battery capacities, warnings, time and tool version).
 - **CSV:** the eight fields plus `serial_number` and `detected_at`.
 
-## 3. Privacy
+## 3. Format guarantees
+
+- **Locale independence:** dates and times in file names and report contents use a fixed format (`yyyy-MM-dd`, `HH:mm:ss`, invariant culture). A laptop set to a Thai (Buddhist calendar), Arabic or Bengali region still produces `2026-10-05`. JSON numbers always use a dot.
+- **Formula neutralisation:** CSV cells starting with `=`, `+`, `-`, `@`, tab or CR get a leading apostrophe, so Excel shows them as text instead of running them.
+- **Quoting:** cells containing commas, quotes or line breaks are quoted (`""` for a quote).
+- **Line endings:** CSV files use Windows line endings (CRLF).
+
+## 4. Privacy
 
 - **Content:** reports contain hardware identification (serial, UUID) and test results, which is the purpose of an inspection record. The motherboard serial and internal hashes are not exported.
 - **Sharing:** handle exported files as internal BBTech records.
