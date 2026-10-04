@@ -86,5 +86,17 @@ namespace BBTech.Core.Tests
             Assert.Equal(expected, ReportNaming.Part(value, "X", 30));
         }
 
+        [Theory]
+        [InlineData("A/B:C*?\"<>|D", "ABCD")]
+        [InlineData("ThinkPad X1 Carbon Gen 9", "ThinkPad-X1-Carbon-Gen-9")]
+        [InlineData("845_G11", "845-G11")]
+        [InlineData("  ___  ", "FALLBACK")]
+        [InlineData("Unknown", "FALLBACK")]
+        [InlineData("Model (2021)", "Model-2021")]
+        public void File_name_parts_are_sanitised(string value, string expected)
+        {
+            Assert.Equal(expected, ReportNaming.Part(value, "FALLBACK", 30));
+        }
+
     }
 }
