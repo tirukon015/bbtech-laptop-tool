@@ -15,8 +15,8 @@ Home → **Settings** → admin PIN → **BBTech Wi-Fi**:
 
 | Action | Behaviour |
 |---|---|
-| **Add network** | SSID (1–32 bytes), security (WPA2-Personal / WPA3-Personal / Open), password (8–63 printable characters or 64 hex), hidden-network option. Saving also **installs it on the current laptop** and shows the verified result. |
-| **Edit network** | The password is never displayed; leaving it empty keeps the current one. The network's version is incremented, so laptops update on the next Provision. |
+| **Add network** | SSID (1–32 bytes), security (WPA2-Personal / WPA3-Personal / Open), password (8–63 printable ASCII characters; WPA2 also accepts a 64-digit hex key, WPA3 does not), hidden-network option. Saving also **installs it on the current laptop** and shows the verified result. |
+| **Edit network** | The password is never displayed; leaving it empty keeps the current one. When something actually changed, the network's version is incremented so laptops update on the next Provision. Saving without changes keeps the version. |
 | **Remove network** | Removes it from the managed list only. Profiles already on laptops are **not** removed (by design). |
 
 The list is stored in the encrypted USB settings file (`BBTech Data\config\settings.dat`).
@@ -67,7 +67,9 @@ It also shows CONNECTED, IN RANGE or NOT IN RANGE.
 
 | Situation | Message (summary) |
 |---|---|
-| No adapter / WLAN service not running | "Wi-Fi is not available on this laptop…" |
+| No adapter | "Wi-Fi is not available on this laptop…" |
+| WLAN AutoConfig service stopped or not responding | "Wi-Fi is not available on this laptop right now (the Windows Wi-Fi service did not respond)." |
+| Native WLAN call throws (driver problem) | Reported as a failed provision or connection with the exception type only; the profile XML (which holds the key) is never shown |
 | Radio off | "Wi-Fi is switched off…" (profiles can still be installed) |
 | Windows rejects the profile (`ERROR_BAD_PROFILE`) | "Windows rejected the network settings…" |
 | Permission denied for all-user profiles | Installs for the current user and reports it |
