@@ -188,5 +188,15 @@ namespace BBTech.Core.Tests
             Assert.Equal(2, SettingsStore.Load(FilePath).WifiNetworks.Count());
         }
 
+        [Fact]
+        public void Removing_a_network_deletes_it_from_the_managed_list()
+        {
+            var s = SettingsStore.Load(FilePath);
+            var a = s.AddOrUpdateWifi(null, "BBTECH_EXAMPLE", WifiSecurity.Wpa2Personal, "example-pass", false);
+            s.AddOrUpdateWifi(null, "BBTECH_EXAMPLE_5G", WifiSecurity.Wpa2Personal, "example-pass", false);
+            s.RemoveWifi(a.NetworkId);
+            Assert.Equal(new[] { "BBTECH_EXAMPLE_5G" }, SettingsStore.Load(FilePath).WifiNetworks.Select(n => n.Ssid));
+        }
+
     }
 }
