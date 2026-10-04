@@ -1,0 +1,51 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    BBTech Laptop Tool - portable WPF application, shipped as ONE executable.
+
+    Runtime: .NET Framework 4.7.2+, which is part of every Windows 10 (1803+) and Windows 11
+    x64 installation, so nothing has to be installed and start-up is fast (no bundled runtime).
+    Core logic and the third-party utilities (embedded "bundle.*" resources) are compiled into
+    the EXE; no .config or DLL files are needed next to it.
+  -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net472</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <AssemblyName>BBTech Laptop Tool</AssemblyName>
+    <RootNamespace>BBTech.LaptopTool</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\bbtech.ico</ApplicationIcon>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <Prefer32Bit>false</Prefer32Bit>
+    <DebugType>embedded</DebugType>
+    <AutoGenerateBindingRedirects>false</AutoGenerateBindingRedirects>
+    <!-- Created by build\build.ps1 (trimmed tools from TEST-Laptop.zip). -->
+    <BundleDir>$(MSBuildThisFileDirectory)..\..\artifacts\bundle</BundleDir>
+  </PropertyGroup>
+
+  <!-- Core logic is compiled in so the app ships as a single executable. -->
+  <ItemGroup>
+    <Compile Include="..\BBTech.Core\**\*.cs" Exclude="..\BBTech.Core\obj\**;..\BBTech.Core\bin\**" Link="Core\%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="System.Management" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.IO.Compression" />
+    <Reference Include="System.Security" />
+    <Reference Include="System.Runtime.Serialization" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\bbtech.ico" />
+    <Resource Include="Assets\Branding\logo-tile-256.png" />
+    <!-- Shown by Windows immediately on launch, before the main window has loaded. -->
+    <SplashScreen Include="Assets\Branding\splash.png" />
+  </ItemGroup>
+
+  <!-- Embedded third-party utilities (extracted to %TEMP% only when first used). -->
+  <ItemGroup Condition="Exists('$(BundleDir)')">
+    <EmbeddedResource Include="$(BundleDir)\*" LogicalName="bundle.%(Filename)%(Extension)" />
+  </ItemGroup>
+</Project>
+

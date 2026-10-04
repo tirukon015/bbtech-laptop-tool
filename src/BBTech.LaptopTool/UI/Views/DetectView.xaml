@@ -1,0 +1,111 @@
+﻿<UserControl x:Class="BBTech.LaptopTool.UI.Views.DetectView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid>
+        <ScrollViewer VerticalScrollBarVisibility="Auto" Focusable="False">
+            <StackPanel x:Name="Root" Margin="24,18,24,24">
+                <!-- Toolbar -->
+                <Grid x:Name="ToolbarGrid" Margin="0,0,0,14">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <StackPanel>
+                        <TextBlock Text="Laptop information" Style="{StaticResource H1}" />
+                        <TextBlock x:Name="SubTitle" Style="{StaticResource Muted}" Text="Detecting..." Margin="0,2,0,0" />
+                    </StackPanel>
+                    <WrapPanel x:Name="ToolbarButtons" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Button x:Name="RescanButton" Style="{StaticResource BaseButton}" Margin="0,0,8,8" Click="Rescan_Click" AutomationProperties.Name="Detect again">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock FontFamily="{StaticResource IconFont}" Text="&#xE72C;" VerticalAlignment="Center" />
+                                <TextBlock Text="Detect again" Margin="8,0,0,0" />
+                            </StackPanel>
+                        </Button>
+                        <Button x:Name="CopyButton" Style="{StaticResource BaseButton}" Margin="0,0,8,8" Click="Copy_Click" Content="Copy" ToolTip="Copy the ITMS fields to the clipboard" />
+                        <Button x:Name="CsvButton" Style="{StaticResource BaseButton}" Margin="0,0,8,8" Click="Csv_Click" Content="Export CSV" />
+                        <Button x:Name="JsonButton" Style="{StaticResource PrimaryButton}" Margin="0,0,8,8" Click="Json_Click" Content="Export JSON" />
+                        <Button x:Name="ItmsButton" Style="{StaticResource BaseButton}" Content="Send to ITMS" VerticalAlignment="Top" IsEnabled="False"
+                                ToolTipService.ShowOnDisabled="True" ToolTip="ITMS integration will be added in a later version." Margin="0,0,0,0" />
+                    </WrapPanel>
+                </Grid>
+
+                <!-- Saved-file notice -->
+                <Border x:Name="Notice" Visibility="Collapsed" Background="{StaticResource PassSoft}" CornerRadius="8" Padding="14,10" Margin="0,0,0,14">
+                    <DockPanel>
+                        <Button DockPanel.Dock="Right" Style="{StaticResource LinkButton}" Content="Open folder" Click="OpenExports_Click" />
+                        <TextBlock x:Name="NoticeText" VerticalAlignment="Center" Foreground="{StaticResource PassBrush}" FontWeight="SemiBold" />
+                    </DockPanel>
+                </Border>
+
+                <!-- Primary ITMS fields -->
+                <UniformGrid x:Name="FieldGrid" Columns="4" Margin="-6,0" />
+
+                <!-- QC history found on THIS laptop (encrypted local store) -->
+                <Border x:Name="HistoryBox" Style="{StaticResource Card}" Margin="0,14,0,0" Visibility="Collapsed">
+                    <StackPanel x:Name="HistoryPanel" />
+                </Border>
+
+                <!-- Warnings -->
+                <Border x:Name="WarningsBox" Visibility="Collapsed" Background="{StaticResource WarnSoft}" CornerRadius="8" Padding="16,12" Margin="0,14,0,0">
+                    <StackPanel>
+                        <TextBlock Text="Notes" FontWeight="SemiBold" Foreground="{StaticResource WarnBrush}" Margin="0,0,0,4" />
+                        <ItemsControl x:Name="WarningsList">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding StringFormat='•  {0}'}" Foreground="#7A4A00" Margin="0,2" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
+                <!-- Details -->
+                <TextBlock Text="Details" Style="{StaticResource H2}" Margin="0,26,0,10" />
+                <Grid x:Name="DetailsGrid">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="16" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <StackPanel x:Name="DetailsLeft" />
+                    <StackPanel x:Name="DetailsRight" Grid.Column="2" />
+                </Grid>
+
+                <!-- Reused external tools -->
+                <TextBlock Text="Advanced tools" Style="{StaticResource H2}" Margin="0,22,0,10" />
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource Muted}" Margin="0,0,0,10"
+                                   Text="Optional utilities from the BBTech toolkit for deeper inspection. Detection above does not depend on them (except battery data from BatteryInfoView, which has Windows fallbacks)." />
+                        <WrapPanel>
+                            <Button x:Name="AuditButton" Style="{StaticResource BaseButton}" Margin="0,0,8,8" Click="Audit_Click" Content="Free PC Audit (full system audit)" />
+                            <Button x:Name="BivButton" Style="{StaticResource BaseButton}" Margin="0,0,8,8" Click="Biv_Click" Content="BatteryInfoView" />
+                            <Button x:Name="HdsButton" Style="{StaticResource BaseButton}" Margin="0,0,8,8" Click="Hds_Click" Content="HD Sentinel (needs admin)" />
+                        </WrapPanel>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Progress overlay -->
+        <Border x:Name="Overlay" Background="#E6F2F4F8" Visibility="Collapsed">
+            <Border Style="{StaticResource Card}" HorizontalAlignment="Center" VerticalAlignment="Center" Width="420" Padding="28">
+                <StackPanel>
+                    <TextBlock Text="Detecting laptop hardware" Style="{StaticResource H2}" />
+                    <ProgressBar IsIndeterminate="True" Height="6" Margin="0,8,0,12" Foreground="{StaticResource Brand}" BorderThickness="0" />
+                    <TextBlock x:Name="ProgressText" Style="{StaticResource Muted}" Text="Starting..." />
+                </StackPanel>
+            </Border>
+        </Border>
+    </Grid>
+</UserControl>
+
+
