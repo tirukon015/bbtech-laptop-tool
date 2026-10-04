@@ -205,5 +205,15 @@ namespace BBTech.Core.Tests
             Assert.Equal("LOCAL_ONLY", record.SyncStatus);
         }
 
+        [Fact]
+        public void Itms_payload_contains_only_the_eight_fields_in_order()
+        {
+            var r = new DetectionResult { Brand = "Dell", Model = "Latitude", ModelNumber = "5420", Cpu = "i5", Generation = "11th Gen", Ram = "16 GB", Storage = "256 GB SSD", BatteryHealth = "91%" };
+            r.System.SerialNumber = "SERIAL-EXAMPLE";
+            string json = ItmsPayload.Build(r);
+            var keys = System.Text.RegularExpressions.Regex.Matches(json, "\"([a-z_]+)\":").Cast<System.Text.RegularExpressions.Match>().Select(m => m.Groups[1].Value);
+            Assert.Equal(new[] { "brand", "model", "model_number", "cpu", "generation", "ram", "storage", "battery_health" }, keys);
+            Assert.DoesNotContain("SERIAL-EXAMPLE", json);
+        }
     }
 }
