@@ -82,5 +82,13 @@ namespace BBTech.Core.Tests
             Assert.Equal(new[] { "Operator One" }, again.ActiveOperators.Select(o => o.Name));
         }
 
+        [Fact]
+        public void A_file_with_a_foreign_header_is_treated_as_damaged()
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(FilePath));
+            File.WriteAllText(FilePath, "{\"Operators\":[]}");
+            Assert.True(SettingsStore.Load(FilePath).LoadFailed);
+        }
+
     }
 }
