@@ -117,5 +117,15 @@ namespace BBTech.Core.Tests
             Assert.Equal(expected, DeviceIdentity.NormalizeName(raw));
         }
 
+        [Fact]
+        public void ToString_reports_uuid_presence_without_the_value()
+        {
+            var id = new DeviceIdentity("Dell", "Latitude", "5420", "ABC12345", Uuid, "BRD-0001");
+            string s = id.ToString();
+            Assert.DoesNotContain(Uuid, s);
+            Assert.DoesNotContain("BRD-0001", s);
+            Assert.Contains("uuid=yes", s);
+        }
+
     }
 }
