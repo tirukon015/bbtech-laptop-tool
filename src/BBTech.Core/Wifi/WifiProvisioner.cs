@@ -149,12 +149,24 @@ namespace BBTech.Core.Wifi
                 return r;
             }
 
-            int rc = _api.SetProfile(iface.Id, xml, true, out string reason);
+            int rc;
+            string reason;
             bool allUsers = true;
-            if (rc == ErrorAccessDenied)
+            try
             {
-                rc = _api.SetProfile(iface.Id, xml, false, out reason); // policy forbids all-user profiles
-                allUsers = false;
+                rc = _api.SetProfile(iface.Id, xml, true, out reason);
+                if (rc == ErrorAccessDenied)
+                {
+                    rc = _api.SetProfile(iface.Id, xml, false, out reason); // policy forbids all-user profiles
+                    allUsers = false;
+                }
+            }
+            catch (Exception ex) when (!(ex is OutOfMemoryException))
+            {
+                // The native call failed outright (driver/service problem). Never include the XML: it holds the key.
+                r.Outcome = ProvisionOutcome.Failed;
+                r.Message = "The Wi-Fi profile could not be installed (" + ex.GetType().Name + ").";
+                return r;
             }
 
             if (rc != 0)
