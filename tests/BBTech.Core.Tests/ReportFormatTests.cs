@@ -132,5 +132,15 @@ namespace BBTech.Core.Tests
         private static List<TestItem> Items(params (HardwareTest Kind, TestState State, bool Required, string Notes)[] rows) =>
             rows.Select(r => new TestItem(r.Kind, "", r.Required) { State = r.State, Notes = r.Notes ?? "" }).ToList();
 
+        [Fact]
+        public void Csv_marks_tests_that_are_not_required()
+        {
+            var items = Items((HardwareTest.Display, TestState.Pass, true, ""), (HardwareTest.Camera, TestState.Skipped, false, "shutter closed"), (HardwareTest.Usb, TestState.NotTested, false, ""));
+            string csv = TestReportExporter.ToCsv(items, new DetectionResult(), When);
+            Assert.Contains("Camera,SKIPPED,Not required; shutter closed", csv);
+            Assert.Contains("USB,NOT TESTED,Not required", csv);
+            Assert.Contains("Overall Result,PASS", csv);
+        }
+
     }
 }
