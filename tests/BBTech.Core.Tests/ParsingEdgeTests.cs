@@ -118,5 +118,17 @@ namespace BBTech.Core.Tests
             Assert.Equal(new[] { "Acer" }, BrandCatalog.BrandPrefixes("Acer").ToArray());
         }
 
+        [Theory]
+        [InlineData("87,9 %", 87.9)]
+        [InlineData("100%", 100.0)]
+        [InlineData("99.7%", 99.7)]
+        [InlineData("abc", null)]
+        [InlineData("", null)]
+        [InlineData("87.9", null)]
+        public void Battery_percentages_are_parsed_locale_independently(string s, double? expected)
+        {
+            Assert.Equal(expected, BatteryInfoViewParser.ParsePercent(s));
+        }
+
     }
 }
