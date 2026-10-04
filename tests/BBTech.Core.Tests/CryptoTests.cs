@@ -198,5 +198,24 @@ namespace BBTech.Core.Tests
             Assert.StartsWith("usb-settings:", a);
             Assert.Equal(a, AppSecret.Value("usb-settings"));
         }
+
+        [Fact]
+        public void A_failed_atomic_write_keeps_the_original_and_removes_the_temp_file()
+        {
+            string dir = Path.Combine(Path.GetTempPath(), "bbtech-safefail-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(dir);
+            try
+            {
+                string p = Path.Combine(dir, "x.dat");
+                SafeFile.WriteAllBytesAtomic(p, new byte[] { 1 });
+                File.SetAttributes(p, FileAttributes.ReadOnly); // File.Replace cannot replace a read-only file
+                Assert.ThrowsAny<Exception>(() => SafeFile.WriteAllBytesAtomic(p, new byte[] { 2 }));
+                File.SetAttributes(p, FileAttributes.Normal);
+                Assert.Equal(new byte[] { 1 }, File.ReadAllBytes(p));
+                Assert.False(File.Exists(p + ".tmp"));
+                Assert.Throws<ArgumentNullException>(() => SafeFile.WriteAllBytesAtomic(p, null));
+            }
+            finally { Directory.Delete(dir, true); }
+        }
     }
 }

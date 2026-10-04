@@ -150,14 +150,24 @@ namespace BBTech.Core.Security
     {
         public static void WriteAllBytesAtomic(string path, byte[] data)
         {
+            if (data == null) throw new ArgumentNullException(nameof(data));
             string tmp = path + ".tmp";
-            using (var f = new FileStream(tmp, FileMode.Create, FileAccess.Write, FileShare.None))
+            try
             {
-                f.Write(data, 0, data.Length);
-                f.Flush(true);
+                using (var f = new FileStream(tmp, FileMode.Create, FileAccess.Write, FileShare.None))
+                {
+                    f.Write(data, 0, data.Length);
+                    f.Flush(true);
+                }
+                if (File.Exists(path)) File.Replace(tmp, path, path + ".bak", true);
+                else File.Move(tmp, path);
             }
-            if (File.Exists(path)) File.Replace(tmp, path, path + ".bak", true);
-            else File.Move(tmp, path);
+            catch
+            {
+                // The original file is untouched; do not leave a half-written temporary file behind.
+                try { if (File.Exists(tmp)) File.Delete(tmp); } catch { }
+                throw;
+            }
         }
     }
 }
