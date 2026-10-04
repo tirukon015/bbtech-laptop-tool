@@ -102,5 +102,23 @@ namespace BBTech.Core.Tests
             Assert.False(File.Exists(FilePath));
         }
 
+        [Fact]
+        public void A_damaged_record_is_skipped_and_later_records_are_still_read()
+        {
+            var j = Journal();
+            j.Append(B("first"));
+            long secondStart = new FileInfo(FilePath).Length;
+            j.Append(B("second"));
+            j.Append(B("third"));
+            byte[] data = File.ReadAllBytes(FilePath);
+            data[secondStart + 8 + 20] ^= 0xFF; // inside the second record's ciphertext
+            File.WriteAllBytes(FilePath, data);
+
+            var records = Journal().ReadAll(out var stats);
+            Assert.Equal(new[] { "first", "third" }, records.Select(r => Encoding.UTF8.GetString(r)));
+            Assert.Equal(1, stats.Corrupted);
+            Assert.Equal(data.Length, new FileInfo(FilePath).Length); // complete bytes are never cut
+        }
+
     }
 }
