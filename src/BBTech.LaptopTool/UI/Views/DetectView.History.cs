@@ -120,7 +120,7 @@ namespace BBTech.LaptopTool.UI.Views
                     g.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
                     g.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
                     Add(g, 0, "#" + i.Number);
-                    Add(g, 1, (i.CompletedAt ?? i.StartedAt).ToString("dd MMM yyyy"));
+                    Add(g, 1, DisplayFormat.Date(i.CompletedAt ?? i.StartedAt));
                     Add(g, 2, i.OperatorNameSnapshot + " (" + i.OperatorRoleSnapshot + ")");
                     var chip = Chip(StatusLabel(i), Kind(i));
                     chip.HorizontalAlignment = HorizontalAlignment.Right;
@@ -141,7 +141,7 @@ namespace BBTech.LaptopTool.UI.Views
             head.Children.Add(Field("Inspection", "#" + i.Number));
             head.Children.Add(Field("Tested By", i.OperatorNameSnapshot));
             head.Children.Add(Field("Role", i.OperatorRoleSnapshot));
-            head.Children.Add(Field("Date", (i.CompletedAt ?? i.StartedAt).ToString("dd MMM yyyy, HH:mm")));
+            head.Children.Add(Field("Date", DisplayFormat.DateTime(i.CompletedAt ?? i.StartedAt)));
             head.Children.Add(Field("Overall", StatusLabel(i), Kind(i) + "Brush"));
             string mode = BBTech.Core.Export.HistoryReport.ModeLabel(i);
             if (mode.Length > 0) head.Children.Add(Field("Test mode", mode));
@@ -184,9 +184,9 @@ namespace BBTech.LaptopTool.UI.Views
             var owner = Window.GetWindow(this);
             if (!AdminGate.Unlock(owner)) return;
             var text = string.Join("\n\n", match.Candidates.Select(d =>
-                "Record: " + d.DisplayName + "  ·  Serial " + (d.SerialNumber ?? "-") + "\nCreated " + d.CreatedAt.ToString("dd MMM yyyy") +
+                "Record: " + d.DisplayName + "  ·  Serial " + (d.SerialNumber ?? "-") + "\nCreated " + DisplayFormat.Date(d.CreatedAt) +
                 (string.IsNullOrEmpty(d.IdentityNote) ? "" : "\nNote: " + d.IdentityNote) + "\n" +
-                string.Join("\n", repo.GetHistory(d.DeviceId).Select(h => "   #" + h.Inspection.Number + "  " + (h.Inspection.CompletedAt ?? h.Inspection.StartedAt).ToString("dd MMM yyyy") +
+                string.Join("\n", repo.GetHistory(d.DeviceId).Select(h => "   #" + h.Inspection.Number + "  " + DisplayFormat.Date(h.Inspection.CompletedAt ?? h.Inspection.StartedAt) +
                     "  " + h.Inspection.OperatorNameSnapshot + "  " + StatusLabel(h.Inspection)))));
             AppLog.Info("Admin reviewed conflicting device records");
             Dialogs.Info(owner, "Conflicting records (admin review)", match.Reason + "\n\n" + text);

@@ -239,7 +239,7 @@ namespace BBTech.LaptopTool.UI.Views
                     var done = QcStoreService.Current.GetResults(open.InspectionId).Count(r => r.Status != "NOT TESTED");
                     int choice = Dialogs.Choice(owner, "Unfinished inspection", "Unfinished inspection found",
                         "Inspection #" + open.Number + " on this laptop was started by " + open.OperatorNameSnapshot + " on " +
-                        open.StartedAt.ToString("dd MMM yyyy, HH:mm") + " and was not completed (" + done + " test result(s) saved).\n\n" +
+                        DisplayFormat.DateTime(open.StartedAt) + " and was not completed (" + done + " test result(s) saved).\n\n" +
                         "Resume it, or start a new inspection? (The unfinished one is kept in history either way.)",
                         "Resume", "Start new inspection");
                     if (choice == 1) _mgr.AbandonPending();

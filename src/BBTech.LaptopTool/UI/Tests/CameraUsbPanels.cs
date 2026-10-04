@@ -154,7 +154,7 @@ namespace BBTech.LaptopTool.UI.Tests
         {
             base.Attach(host);
             _monitor.DeviceArrived += name => Ui(() => OnArrived(name));
-            _monitor.DeviceRemoved += () => Ui(() => _events.Text = DateTime.Now.ToString("HH:mm:ss") + "  Device removed. Plug it into the next port.\n" + _events.Text);
+            _monitor.DeviceRemoved += () => Ui(() => _events.Text = DisplayFormat.Time(DateTime.Now) + "  Device removed. Plug it into the next port.\n" + _events.Text);
             _monitor.Start();
             _events.Text = "Watching for USB devices...";
             UpdateSuggestion();
@@ -163,7 +163,7 @@ namespace BBTech.LaptopTool.UI.Tests
         private void OnArrived(string name)
         {
             int idx = _ports.FindIndex(p => p.Length == 0);
-            _events.Text = DateTime.Now.ToString("HH:mm:ss") + "  Detected: " + name + (idx >= 0 ? "  →  Port " + (idx + 1) + " OK" : "") + "\n" + _events.Text;
+            _events.Text = DisplayFormat.Time(DateTime.Now) + "  Detected: " + name + (idx >= 0 ? "  →  Port " + (idx + 1) + " OK" : "") + "\n" + _events.Text;
             if (idx >= 0) _ports[idx] = name;
             AppLog.Info("USB arrival detected" + (idx >= 0 ? " (port " + (idx + 1) + ")" : ""));
             RenderPorts();

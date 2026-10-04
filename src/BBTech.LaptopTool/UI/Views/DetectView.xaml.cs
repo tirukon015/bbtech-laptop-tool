@@ -89,7 +89,7 @@ namespace BBTech.LaptopTool.UI.Views
 
         private void Render(DetectionResult r)
         {
-            SubTitle.Text = "Detected " + r.DetectedAt.ToString("dd MMM yyyy, HH:mm") + "  ·  values below are the ITMS fields";
+            SubTitle.Text = "Detected " + DisplayFormat.DateTime(r.DetectedAt) + "  ·  values below are the ITMS fields";
 
             FieldGrid.Children.Clear();
             AddField("Brand", r.Brand);
