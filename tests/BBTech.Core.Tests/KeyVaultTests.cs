@@ -40,5 +40,17 @@ namespace BBTech.Core.Tests
             Assert.Equal(key, next.Key);
         }
 
+        [Fact]
+        public void Another_installation_without_identifiers_stays_locked()
+        {
+            KeyVault.Open(_dir, new FakeMachine(1), Laptop, false);
+            byte[] before = File.ReadAllBytes(KeyPath);
+            var r = KeyVault.Open(_dir, new FakeMachine(2), null, true);
+            Assert.Equal(KeyState.Locked, r.State);
+            Assert.Null(r.Key);
+            Assert.Contains("different hardware identity", r.Message);
+            Assert.Equal(before, File.ReadAllBytes(KeyPath));
+        }
+
     }
 }
