@@ -217,5 +217,14 @@ namespace BBTech.Core.Tests
             Assert.False(Directory.Exists(_dir));
         }
 
+        [Fact]
+        public void The_key_file_contains_no_identifiers()
+        {
+            Open().RegisterDevice(QcStoreTests.LaptopA, Specs);
+            string raw = System.Text.Encoding.UTF8.GetString(File.ReadAllBytes(Path.Combine(_dir, "qc.key")));
+            Assert.DoesNotContain("SERIALEX01", raw);
+            Assert.DoesNotContain("6A3F2C10", raw);
+            Assert.DoesNotContain("RecoveryWraps", raw);
+        }
     }
 }
