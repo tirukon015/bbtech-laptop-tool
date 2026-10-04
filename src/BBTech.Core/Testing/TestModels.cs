@@ -81,7 +81,7 @@ namespace BBTech.Core.Testing
 
         public string StateLabel => TestText.Label(State);
 
-        /// <summary>Optional tests do not affect the overall result (e.g. no Bluetooth on this model).</summary>
+        /// <summary>True when the test is selected for the inspection; only selected tests affect the overall result.</summary>
         public bool Required
         {
             get => _required;
@@ -122,12 +122,12 @@ namespace BBTech.Core.Testing
     public static class OverallResultCalculator
     {
         /// <summary>
-        /// Rules (required tests only):
+        /// Rules (tests selected for the inspection only; <see cref="TestItem.Required"/> = selected):
         ///   any FAIL                    -> FAIL
         ///   all PASS                    -> PASS
         ///   otherwise (NOT TESTED, TESTING or SKIPPED remaining) -> INCOMPLETE
-        /// A required test that was skipped is not a pass. Untick "Required" for hardware the
-        /// laptop does not have, so it is excluded from the result.
+        /// A selected test that was skipped is not a pass. Tests that are not selected (see TestPlan)
+        /// never affect the result.
         /// </summary>
         public static OverallResult Calculate(IEnumerable<TestItem> items)
         {
