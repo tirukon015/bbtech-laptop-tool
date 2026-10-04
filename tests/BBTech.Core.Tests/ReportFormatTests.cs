@@ -62,5 +62,12 @@ namespace BBTech.Core.Tests
             Assert.Equal("{\"z\":1,\"a\":[1,2],\"m\":{},\"e\":[]}", JsonWriter.Serialize(o, false));
         }
 
+        [Fact]
+        public void Indented_json_uses_two_spaces_per_level()
+        {
+            var o = new JsonObject { { "a", new JsonObject { { "b", 1 } } } };
+            Assert.Equal("{\n  \"a\": {\n    \"b\": 1\n  }\n}", JsonWriter.Serialize(o));
+        }
+
     }
 }
