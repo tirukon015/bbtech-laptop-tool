@@ -44,5 +44,17 @@ namespace BBTech.Core.Tests
             Assert.Equal(1 + 16 + 16 + 32, empty.Length); // one padding block
             Assert.Empty(c.TryDecrypt(empty));
         }
+
+        [Fact]
+        public void Encrypted_data_round_trips_and_has_the_documented_layout()
+        {
+            var c = new EnvelopeCrypto(EnvelopeCrypto.NewKey());
+            byte[] plain = Encoding.UTF8.GetBytes("inspection #1 PASS");
+            byte[] enc = c.Encrypt(plain);
+            Assert.Equal(1, enc[0]);                                  // version
+            Assert.Equal(0, (enc.Length - 1 - 16 - 32) % 16);         // IV + AES blocks + HMAC
+            Assert.Equal(plain, c.TryDecrypt(enc));
+        }
+
     }
 }
