@@ -259,6 +259,8 @@ namespace BBTech.Core.Storage
         /// <summary>Finishes an inspection. It becomes immutable history.</summary>
         public InspectionRecord CompleteInspection(string inspectionId, string overallStatus)
         {
+            if (overallStatus != "PASS" && overallStatus != "FAIL" && overallStatus != "INCOMPLETE")
+                throw new ArgumentException("Unknown overall result: " + overallStatus, nameof(overallStatus));
             lock (_sync)
             {
                 var insp = Clone(RequireOpen(inspectionId));

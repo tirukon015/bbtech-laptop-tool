@@ -45,5 +45,17 @@ namespace BBTech.Core.Tests
             foreach (var s in QcRepository.ResultStatuses) repo.SaveResult(insp.InspectionId, "Display", "Display", s, true, "");
             Assert.Equal("SKIPPED", repo.GetResults(insp.InspectionId).Single().Status);
         }
+
+        [Fact]
+        public void Completing_with_an_unknown_overall_result_is_rejected_and_the_inspection_stays_open()
+        {
+            var repo = Open();
+            var dev = repo.RegisterDevice(QcStoreTests.LaptopA, Specs);
+            var insp = repo.StartInspection(dev.DeviceId, Op, "1.0.0", Specs);
+            Assert.Throws<ArgumentException>(() => repo.CompleteInspection(insp.InspectionId, "OK"));
+            Assert.Throws<ArgumentException>(() => repo.CompleteInspection(insp.InspectionId, null));
+            Assert.True(repo.GetInspection(insp.InspectionId).IsOpen);
+            Assert.Empty(repo.SyncRecords);
+        }
     }
 }
