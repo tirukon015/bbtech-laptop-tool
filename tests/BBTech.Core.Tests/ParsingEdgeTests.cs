@@ -101,5 +101,15 @@ namespace BBTech.Core.Tests
             Assert.Equal("Unknown", BrandCatalog.Normalize(raw));
         }
 
+        [Theory]
+        [InlineData("Tongfang Hongkong Limited", "Tongfang Hongkong")]
+        [InlineData("XYZ Corp.", "XYZ")]
+        [InlineData("THUNDEROBOT TECHNOLOGY CO., LTD.", "Thunderobot")]
+        [InlineData("ACME CO., LTD.", "ACME")]      // short all-caps names are kept as acronyms
+        public void Unknown_vendors_are_title_cased_without_corporate_suffixes(string raw, string expected)
+        {
+            Assert.Equal(expected, BrandCatalog.Normalize(raw));
+        }
+
     }
 }
