@@ -21,5 +21,28 @@ namespace BBTech.Core.Tests
             Assert.Null(WlanProfileXml.Validate("BBTECH_EXAMPLE", WifiSecurity.Wpa2Personal, Hex64));
             Assert.Contains("<keyType>networkKey</keyType>", WlanProfileXml.Build(Net(pw: Hex64)));
         }
+
+        [Fact]
+        public void Parse_keeps_connection_mode_when_the_ssid_hex_is_malformed()
+        {
+            string xml = "<WLANProfile xmlns=\"http://www.microsoft.com/networking/WLAN/profile/v1\"><name>x</name>" +
+                         "<SSIDConfig><SSID><hex>ZZ1</hex></SSID></SSIDConfig><connectionMode>auto</connectionMode>" +
+                         "<MSM><security><authEncryption><authentication>WPA2PSK</authentication></authEncryption></security></MSM></WLANProfile>";
+            var p = WlanProfileXml.Parse(xml);
+            Assert.NotNull(p);
+            Assert.Equal("", p.Ssid);
+            Assert.Equal("auto", p.ConnectionMode);
+            Assert.Equal("WPA2PSK", p.Authentication);
+        }
+
+        [Fact]
+        public void Parse_reads_the_ssid_from_hex_when_the_name_is_missing()
+        {
+            string xml = "<WLANProfile xmlns=\"http://www.microsoft.com/networking/WLAN/profile/v1\"><SSIDConfig><SSID>" +
+                         "<hex>4242544543485F4558414D504C45</hex></SSID></SSIDConfig><connectionMode>manual</connectionMode></WLANProfile>";
+            var p = WlanProfileXml.Parse(xml);
+            Assert.Equal("BBTECH_EXAMPLE", p.Ssid);
+            Assert.Equal("manual", p.ConnectionMode);
+        }
     }
 }

@@ -84,8 +84,7 @@ namespace BBTech.Core.Wifi
                 string V(string local) => doc.Descendants().FirstOrDefault(e => e.Name.LocalName == local)?.Value ?? "";
                 var ssidName = doc.Descendants().Where(e => e.Name.LocalName == "SSID").Elements().FirstOrDefault(e => e.Name.LocalName == "name")?.Value;
                 var ssidHex = doc.Descendants().Where(e => e.Name.LocalName == "SSID").Elements().FirstOrDefault(e => e.Name.LocalName == "hex")?.Value;
-                if (string.IsNullOrEmpty(ssidName) && !string.IsNullOrEmpty(ssidHex))
-                    ssidName = Encoding.UTF8.GetString(Enumerable.Range(0, ssidHex.Length / 2).Select(i => Convert.ToByte(ssidHex.Substring(i * 2, 2), 16)).ToArray());
+                if (string.IsNullOrEmpty(ssidName)) ssidName = FromHex(ssidHex);
                 return new InstalledProfileInfo
                 {
                     Ssid = ssidName ?? "",
@@ -95,6 +94,14 @@ namespace BBTech.Core.Wifi
                 };
             }
             catch { return null; }
+        }
+
+        /// <summary>SSID from its hex form; null when the hex is missing or malformed (the rest of the profile is still read).</summary>
+        private static string FromHex(string hex)
+        {
+            hex = (hex ?? "").Trim();
+            if (hex.Length == 0 || hex.Length % 2 != 0 || !hex.All(Uri.IsHexDigit)) return null;
+            return Encoding.UTF8.GetString(Enumerable.Range(0, hex.Length / 2).Select(i => Convert.ToByte(hex.Substring(i * 2, 2), 16)).ToArray());
         }
 
         private static string Esc(string s) => SecurityElement.Escape(s);
