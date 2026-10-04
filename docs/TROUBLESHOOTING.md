@@ -16,6 +16,9 @@ Logs: `BBTech Data\logs\app.log` next to the EXE (or `%LOCALAPPDATA%\BBTech Lapt
 | Settings locked for 60 seconds | 5 wrong admin PIN attempts | Wait, then enter the correct PIN |
 | Forgotten admin PIN | Only a hash is stored; there is no reset | Copy `BBTech Data\config\` from a USB with a known PIN |
 | Wi-Fi: "INSTALLED · MANUAL ONLY" | A profile with the same name exists without auto-connect | Click **Provision BBTech Wi-Fi** |
+| "Wi-Fi is not available on this laptop right now (the Windows Wi-Fi service did not respond)." | The WLAN AutoConfig service is stopped or the driver is not responding | Start the "WLAN AutoConfig" service or restart the laptop, then try again |
+| "WPA3 networks need a passphrase of 8 to 63 characters…" | A 64-digit hex key was entered for a WPA3 network | Use the passphrase, or choose WPA2-Personal if the router really uses a hex key |
+| "An active operator with this name already exists." when renaming or reactivating | Two active operators would have the same name | Rename one of them first (e.g. add a surname initial) |
 | Wi-Fi provisioning reports "current user only" | Windows policy denied an all-user profile | Run as administrator for an all-user profile |
 | "BBTech test media is unavailable." | The EXE was built with `-NoMedia` or the media was missing at build time | Use the generated left/right tones, or rebuild with media |
 | Camera preview black or unavailable | Privacy shutter, camera disabled, or the camera is used by another app | Open the shutter or close other apps; the Windows Camera fallback is offered |
