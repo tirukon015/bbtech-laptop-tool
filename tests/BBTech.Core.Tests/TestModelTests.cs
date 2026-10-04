@@ -71,5 +71,13 @@ namespace BBTech.Core.Tests
             Assert.Equal(name, TestText.Name(t));
         }
 
+        [Fact]
+        public void Overall_results_have_explicit_labels()
+        {
+            Assert.Equal("PASS", TestText.Label(OverallResult.Pass));
+            Assert.Equal("FAIL", TestText.Label(OverallResult.Fail));
+            Assert.Equal("INCOMPLETE", TestText.Label(OverallResult.Incomplete));
+        }
+
     }
 }
