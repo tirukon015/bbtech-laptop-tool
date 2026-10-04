@@ -36,6 +36,7 @@ namespace BBTech.Core.Security
 
         public byte[] Encrypt(byte[] plain)
         {
+            if (plain == null) throw new ArgumentNullException(nameof(plain));
             byte[] iv = RandomBytes(16);
             byte[] ct;
             using (var aes = Aes.Create())

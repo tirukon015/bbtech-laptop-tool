@@ -34,5 +34,15 @@ namespace BBTech.Core.Tests
             Assert.False(PinHasher.Verify("2468", salt, "%%%", 1000));
             Assert.False(PinHasher.Verify("2468", salt, hash, 0));
         }
+
+        [Fact]
+        public void Encrypting_null_is_rejected_but_empty_data_round_trips()
+        {
+            var c = new EnvelopeCrypto(EnvelopeCrypto.NewKey());
+            Assert.Throws<ArgumentNullException>(() => c.Encrypt(null));
+            byte[] empty = c.Encrypt(new byte[0]);
+            Assert.Equal(1 + 16 + 16 + 32, empty.Length); // one padding block
+            Assert.Empty(c.TryDecrypt(empty));
+        }
     }
 }
