@@ -126,5 +126,17 @@ namespace BBTech.Core.Tests
             Assert.True(SettingsStore.Load(FilePath).VerifyPin("8642"));
         }
 
+        [Fact]
+        public void New_operators_get_the_qc_role_by_default_and_a_trimmed_name()
+        {
+            var s = SettingsStore.Load(FilePath, () => Fixed);
+            var op = s.AddOperator("  Operator One  ", "  ");
+            Assert.Equal("Operator One", op.Name);
+            Assert.Equal("QC", op.Role);
+            Assert.True(op.Active);
+            Assert.Equal(Fixed, op.CreatedAt);
+            Assert.Equal(32, op.OperatorId.Length);
+        }
+
     }
 }
