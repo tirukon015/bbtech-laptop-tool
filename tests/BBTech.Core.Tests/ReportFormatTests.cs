@@ -76,5 +76,15 @@ namespace BBTech.Core.Tests
             Assert.Equal("{\"brand\":\"Dell\",\"count\":2}", JsonWriter.Serialize(d, false));
         }
 
+        [Theory]
+        [InlineData("CON", "CON-")]
+        [InlineData("nul", "nul-")]
+        [InlineData("COM1", "COM1-")]
+        [InlineData("CONSOLE", "CONSOLE")]
+        public void Reserved_device_names_are_made_safe(string value, string expected)
+        {
+            Assert.Equal(expected, ReportNaming.Part(value, "X", 30));
+        }
+
     }
 }
