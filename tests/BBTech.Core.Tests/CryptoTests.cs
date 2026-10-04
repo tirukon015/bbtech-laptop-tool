@@ -108,5 +108,15 @@ namespace BBTech.Core.Tests
             Assert.Throws<ArgumentException>(() => new EnvelopeCrypto(new byte[size]));
         }
 
+        [Fact]
+        public void Clearing_the_key_buffer_does_not_affect_an_existing_instance()
+        {
+            byte[] key = EnvelopeCrypto.NewKey();
+            var c = new EnvelopeCrypto(key);
+            byte[] enc = c.Encrypt(new byte[] { 9 });
+            Array.Clear(key, 0, key.Length);
+            Assert.Equal(new byte[] { 9 }, c.TryDecrypt(enc));
+        }
+
     }
 }
