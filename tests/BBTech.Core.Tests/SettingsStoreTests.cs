@@ -169,5 +169,14 @@ namespace BBTech.Core.Tests
             Assert.Equal(new[] { "Anika", "jimmy", "rahim" }, s.ActiveOperators.Select(o => o.Name));
         }
 
+        [Fact]
+        public void Open_networks_are_saved_without_a_password()
+        {
+            var s = SettingsStore.Load(FilePath);
+            var n = s.AddOrUpdateWifi(null, "BBTECH_GUEST_EXAMPLE", WifiSecurity.Open, "ignored-pass", true);
+            Assert.Equal("", n.Password);
+            Assert.True(SettingsStore.Load(FilePath).WifiNetworks.Single().Hidden);
+        }
+
     }
 }
