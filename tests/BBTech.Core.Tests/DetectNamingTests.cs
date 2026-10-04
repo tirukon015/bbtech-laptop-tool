@@ -74,5 +74,13 @@ namespace BBTech.Core.Tests
             Assert.Equal("120U", r.ModelCode);
         }
 
+        [Fact]
+        public void Cpu_clean_name_drops_trademarks_and_clock_speed()
+        {
+            Assert.Equal("Intel Core i5-8250U", CpuParser.CleanName("Intel(R) Core(TM) i5-8250U CPU @ 1.60GHz"));
+            Assert.Equal("AMD Ryzen 5 5500U", CpuParser.CleanName("AMD Ryzen 5 5500U with Radeon Graphics"));
+            Assert.Equal("AMD Ryzen 7 3700X", CpuParser.CleanName("AMD Ryzen 7 3700X 8-Core Processor"));
+        }
+
     }
 }
