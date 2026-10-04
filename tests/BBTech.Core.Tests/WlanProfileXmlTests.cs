@@ -65,5 +65,14 @@ namespace BBTech.Core.Tests
             Assert.DoesNotContain("sharedKey", xml);
         }
 
+        [Fact]
+        public void Wpa3_profiles_use_sae_with_a_passphrase()
+        {
+            string xml = WlanProfileXml.Build(Net(sec: WifiSecurity.Wpa3Personal));
+            Assert.Contains("<authentication>WPA3SAE</authentication>", xml);
+            Assert.Contains("<encryption>AES</encryption>", xml);
+            Assert.Contains("<keyType>passPhrase</keyType>", xml);
+        }
+
     }
 }
