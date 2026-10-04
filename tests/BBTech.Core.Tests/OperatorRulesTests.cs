@@ -68,5 +68,17 @@ namespace BBTech.Core.Tests
             Assert.Null(SettingsStore.Load(FilePath).CurrentOperator);
         }
 
+        [Fact]
+        public void Operator_edits_update_the_timestamp_from_the_clock()
+        {
+            var t = new DateTime(2026, 10, 5, 8, 0, 0);
+            var s = SettingsStore.Load(FilePath, () => t);
+            var op = s.AddOperator("Operator One", "QC");
+            t = t.AddHours(2);
+            s.UpdateOperator(op.OperatorId, "Operator 1", "QC");
+            var again = SettingsStore.Load(FilePath).FindOperator(op.OperatorId);
+            Assert.Equal(new DateTime(2026, 10, 5, 8, 0, 0), again.CreatedAt);
+            Assert.Equal(t, again.UpdatedAt);
+        }
     }
 }
