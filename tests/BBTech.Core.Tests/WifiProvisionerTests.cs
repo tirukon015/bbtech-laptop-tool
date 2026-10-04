@@ -221,5 +221,18 @@ namespace BBTech.Core.Tests
             Assert.EndsWith("in range.", r.Message);
         }
 
+        [Fact]
+        public void A_connected_equivalent_profile_is_kept_not_overwritten()
+        {
+            var api = new ScriptedWlan { ConnectedSsid = "BBTECH_EXAMPLE" };
+            api.Profiles["BBTECH_EXAMPLE"] = WlanProfileXml.Build(Net()).Replace(Pass, "PROTECTED");
+            var state = new Dictionary<string, WifiProvisionRecord>();
+            var r = P(api, state).ProvisionAll(new[] { Net() }).Single();
+            Assert.Equal(ProvisionOutcome.AlreadyInstalled, r.Outcome);
+            Assert.Contains("kept the existing profile", r.Message);
+            Assert.Equal(0, api.SetCalls);
+            Assert.Equal(WifiProvisioner.Fingerprint(Net()), state["BBTECH_EXAMPLE"].SettingsFingerprint);
+        }
+
     }
 }
