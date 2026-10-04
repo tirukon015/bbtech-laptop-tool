@@ -56,5 +56,15 @@ namespace BBTech.Core.Tests
             Assert.Equal(plain, c.TryDecrypt(enc));
         }
 
+        [Fact]
+        public void Encrypting_the_same_data_twice_gives_different_ciphertext()
+        {
+            var c = new EnvelopeCrypto(EnvelopeCrypto.NewKey());
+            byte[] plain = Encoding.UTF8.GetBytes("same text");
+            byte[] a = c.Encrypt(plain), b = c.Encrypt(plain);
+            Assert.NotEqual(a.Skip(1).Take(16), b.Skip(1).Take(16));
+            Assert.NotEqual(a, b);
+        }
+
     }
 }
