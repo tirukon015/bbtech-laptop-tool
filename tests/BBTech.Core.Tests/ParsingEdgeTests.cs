@@ -89,5 +89,17 @@ namespace BBTech.Core.Tests
             Assert.Equal(expected, BrandCatalog.Normalize(raw));
         }
 
+        [Theory]
+        [InlineData("To Be Filled By O.E.M.")]
+        [InlineData("System manufacturer")]
+        [InlineData("Default string")]
+        [InlineData("   ")]
+        [InlineData(null)]
+        [InlineData("Inc.")]
+        public void Placeholder_manufacturers_are_unknown(string raw)
+        {
+            Assert.Equal("Unknown", BrandCatalog.Normalize(raw));
+        }
+
     }
 }
