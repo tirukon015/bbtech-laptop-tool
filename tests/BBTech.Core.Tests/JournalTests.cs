@@ -54,5 +54,24 @@ namespace BBTech.Core.Tests
             Assert.Equal(Enumerable.Range(0, 25).Select(i => "record " + i), records.Select(r => Encoding.UTF8.GetString(r)));
         }
 
+        private static int CountOf(string s, string part)
+        {
+            int n = 0;
+            for (int i = s.IndexOf(part, StringComparison.Ordinal); i >= 0; i = s.IndexOf(part, i + 1, StringComparison.Ordinal)) n++;
+            return n;
+        }
+
+        [Fact]
+        public void The_file_header_is_written_once_at_the_start()
+        {
+            var j = Journal();
+            j.Append(B("a"));
+            j.Append(B("b"));
+            byte[] data = File.ReadAllBytes(FilePath);
+            string text = Encoding.ASCII.GetString(data);
+            Assert.StartsWith("BBQCJ001BQR1", text);
+            Assert.Equal(1, CountOf(text, "BBQCJ001"));
+        }
+
     }
 }
