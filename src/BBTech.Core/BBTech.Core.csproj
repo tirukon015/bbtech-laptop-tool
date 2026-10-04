@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Pure logic library: data models, parsers, export, test-result rules, device identity,
+    encrypted local QC store, operators and Wi-Fi vault. No UI and no hardware access, so it is
+    fully unit-testable. The WPF app compiles these sources directly (linked) so the shipped
+    executable is a single file.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <RootNamespace>BBTech.Core</RootNamespace>
+    <AssemblyName>BBTech.Core</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Security" />
+    <Reference Include="System.Runtime.Serialization" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="BBTech.Core.Tests" />
+  </ItemGroup>
+</Project>
