@@ -185,5 +185,15 @@ namespace BBTech.Core.Tests
             Assert.Equal("", r.System.SystemUuid);
         }
 
+        [Fact]
+        public async Task The_shipped_itms_client_is_not_configured_and_sends_nothing()
+        {
+            IItmsClient client = new NotConfiguredItmsClient();
+            Assert.False(client.IsConfigured);
+            var r = await client.SubmitNewDeviceAsync(new DetectionResult());
+            Assert.False(r.Success);
+            Assert.Equal("ITMS integration is not configured yet.", r.Message);
+        }
+
     }
 }
