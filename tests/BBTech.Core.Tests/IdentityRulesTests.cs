@@ -70,5 +70,14 @@ namespace BBTech.Core.Tests
             Assert.Matches("^[0-9a-f]{64}$", DeviceIdentity.Hash("uuid", Uuid));
         }
 
+        [Fact]
+        public void Serial_hash_ignores_case_and_surrounding_whitespace()
+        {
+            var a = new DeviceIdentity("Dell", "Latitude", "5420", "abc12345", null, null);
+            var b = new DeviceIdentity("Dell", "Latitude", "5420", "  ABC12345 ", null, null);
+            Assert.Equal(a.SerialHash, b.SerialHash);
+            Assert.Equal(a.Fingerprint, b.Fingerprint);
+        }
+
     }
 }
