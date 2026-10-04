@@ -68,5 +68,26 @@ namespace BBTech.Core.Tests
             }));
         }
 
+        [Theory]
+        [InlineData("Dell Inc.", "Dell")]
+        [InlineData("Hewlett-Packard", "HP")]
+        [InlineData("HP", "HP")]
+        [InlineData("LENOVO", "Lenovo")]
+        [InlineData("ASUSTeK COMPUTER INC.", "ASUS")]
+        [InlineData("Micro-Star International Co., Ltd.", "MSI")]
+        [InlineData("Microsoft Corporation", "Microsoft")]
+        [InlineData("SAMSUNG ELECTRONICS CO., LTD.", "Samsung")]
+        [InlineData("FUJITSU CLIENT COMPUTING LIMITED", "Fujitsu")]
+        [InlineData("Dynabook Inc.", "Dynabook")]
+        [InlineData("TIMI", "Xiaomi")]
+        [InlineData("LG Electronics", "LG")]
+        [InlineData("VAIO Corporation", "VAIO")]
+        [InlineData("HONOR", "Honor")]
+        [InlineData("Alienware", "Alienware")]
+        public void Manufacturer_strings_become_clean_brands(string raw, string expected)
+        {
+            Assert.Equal(expected, BrandCatalog.Normalize(raw));
+        }
+
     }
 }
