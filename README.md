@@ -74,7 +74,8 @@ BBTech refurbishes laptops. Two teams use this tool:
 
 - **Stack:** C# / WPF, .NET Framework 4.7.2 (`net472`). Built with the .NET SDK 8. Tests use xUnit.
 - **Build:** `powershell -ExecutionPolicy Bypass -File build\build.ps1` produces `dist\release\BBTech Laptop Tool.exe`. See [docs/BUILD.md](docs/BUILD.md).
-- **Tests:** 224 automated unit tests, all passing on 2026-10-04. See [docs/TESTING.md](docs/TESTING.md).
+- **Tests:** 587 automated test cases (358 test methods), all passing on 2026-10-05. GitHub Actions runs them and builds the app on every push to `main`. See [docs/TESTING.md](docs/TESTING.md).
+- **Repository:** private GitHub repository `tirukon015/bbtech-laptop-tool`.
 - **Third-party tools:** BatteryInfoView, Hard Disk Sentinel and Free PC Audit are embedded from the BBTech toolkit. `Activation.bat` from that toolkit is excluded and never used.
 
 ## Author
