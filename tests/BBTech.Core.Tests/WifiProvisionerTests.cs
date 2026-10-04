@@ -20,18 +20,29 @@ namespace BBTech.Core.Tests
             public Func<string, bool, int> OnSet = (xml, all) => 0;
             public Func<string, int> OnConnect = name => 0;
             public HashSet<string> Visible = new HashSet<string>();
+            public bool Keep = true;           // false: Windows accepts the call but does not keep the profile
+            public bool StoreAsManual;         // Windows keeps the profile without automatic connection
+            public string ConnectedSsid;
+            public int SetCalls, ScanCalls;
+            public List<string> ConnectCalls = new List<string>();
             public WlanInterface GetInterface() => Iface;
             public string GetProfileXml(Guid iface, string name) => Profiles.TryGetValue(name, out var x) ? x : null;
             public int SetProfile(Guid iface, string xml, bool allUsers, out string reason)
             {
                 reason = "";
+                SetCalls++;
                 int rc = OnSet(xml, allUsers);
-                if (rc == 0) Profiles[WlanProfileXml.Parse(xml).Ssid] = xml.Replace(Pass, "PROTECTED");
+                if (rc == 0 && Keep)
+                {
+                    string stored = xml.Replace(Pass, "PROTECTED").Replace("changed-pass", "PROTECTED");
+                    if (StoreAsManual) stored = stored.Replace("<connectionMode>auto</connectionMode>", "<connectionMode>manual</connectionMode>");
+                    Profiles[WlanProfileXml.Parse(xml).Ssid] = stored;
+                }
                 return rc;
             }
-            public int Connect(Guid iface, string name) => OnConnect(name);
-            public HashSet<string> VisibleSsids(Guid iface) => Visible;
-            public string ConnectedProfile(Guid iface) => null;
+            public int Connect(Guid iface, string name) { ConnectCalls.Add(name); return OnConnect(name); }
+            public HashSet<string> VisibleSsids(Guid iface) { ScanCalls++; return Visible; }
+            public string ConnectedProfile(Guid iface) => ConnectedSsid;
         }
 
         private static WifiNetwork Net(string ssid = "BBTECH_EXAMPLE") =>
@@ -83,5 +94,20 @@ namespace BBTech.Core.Tests
             Assert.Contains("not available", p.ConnectNow(Net()));
             Assert.Null(p.IsAutoConnect("BBTECH_EXAMPLE"));
         }
+
+        [Fact]
+        public void A_new_network_is_installed_for_all_users_and_verified()
+        {
+            var api = new ScriptedWlan();
+            var state = new Dictionary<string, WifiProvisionRecord>();
+            var r = P(api, state).ProvisionAll(new[] { Net() }).Single();
+            Assert.Equal(ProvisionOutcome.Installed, r.Outcome);
+            Assert.True(r.AllUsers);
+            Assert.True(r.AutoConnectVerified);
+            Assert.Contains("verified in Windows", r.Message);
+            Assert.Contains("<connectionMode>auto</connectionMode>", api.Profiles["BBTECH_EXAMPLE"]);
+            Assert.True(state.ContainsKey("BBTECH_EXAMPLE"));
+        }
+
     }
 }
