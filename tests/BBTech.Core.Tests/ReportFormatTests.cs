@@ -142,5 +142,14 @@ namespace BBTech.Core.Tests
             Assert.Contains("Overall Result,PASS", csv);
         }
 
+        [Fact]
+        public void Stored_overall_result_wins_over_recalculation()
+        {
+            var items = Items((HardwareTest.Display, TestState.Pass, true, ""));
+            var meta = new ReportMeta { OverallStatus = "INCOMPLETE", AppVersion = "1.0.0" };
+            Assert.Contains("Overall Result,INCOMPLETE", TestReportExporter.ToCsv(items, null, When, meta));
+            Assert.Contains("\"overall_result\": \"INCOMPLETE\"", TestReportExporter.ToJson(items, null, "9.9.9", When, meta));
+        }
+
     }
 }
