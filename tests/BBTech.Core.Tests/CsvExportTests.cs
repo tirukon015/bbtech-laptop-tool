@@ -49,5 +49,13 @@ namespace BBTech.Core.Tests
             Assert.Equal(expected, DetectionExporter.Csv(value));
         }
 
+        [Fact]
+        public void Csv_reports_use_windows_line_endings()
+        {
+            string csv = TestReportExporter.ToCsv(new[] { new Testing.TestItem(Testing.HardwareTest.Display, "") }, new DetectionResult(), new DateTime(2026, 10, 5));
+            Assert.DoesNotContain("\n", csv.Replace("\r\n", ""));
+            Assert.EndsWith("\r\n", csv);
+        }
+
     }
 }
