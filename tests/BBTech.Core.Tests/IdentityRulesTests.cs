@@ -159,5 +159,13 @@ namespace BBTech.Core.Tests
             SerialHash = id.SerialHash, UuidHash = id.UuidHash, BoardSerialHash = id.BoardSerialHash,
         };
 
+        [Fact]
+        public void Matching_against_no_records_is_not_found()
+        {
+            var id = new DeviceIdentity("Dell", "Latitude", "5420", "ABC12345", null, null);
+            Assert.Equal(MatchStatus.NotFound, DeviceMatcher.Match(id, null).Status);
+            Assert.Equal(MatchStatus.NotFound, DeviceMatcher.Match(id, new DeviceRecord[0]).Status);
+        }
+
     }
 }
