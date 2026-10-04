@@ -82,5 +82,16 @@ namespace BBTech.Core.Tests
             Assert.Equal("AMD Ryzen 7 3700X", CpuParser.CleanName("AMD Ryzen 7 3700X 8-Core Processor"));
         }
 
+        [Theory]
+        [InlineData(null)]
+        [InlineData("")]
+        [InlineData("Virtual CPU")]
+        public void Unrecognised_cpus_are_unknown(string name)
+        {
+            var r = CpuParser.Parse(name);
+            Assert.Equal("Unknown", r.Family);
+            Assert.Equal("Unknown", r.Generation);
+        }
+
     }
 }
