@@ -38,6 +38,19 @@ Core sources are linked into the app project, so the release stays a single EXE.
 - **Text encoding:** keep source and docs as UTF-8. Do not round-trip files through Windows PowerShell 5 `Get-Content` / `Set-Content`, which corrupted characters once during development.
 - **Placeholders:** use them in tests and docs (`SERIALEX01`, `SERIAL-EXAMPLE`, `UUID-EXAMPLE`, `BBTECH_EXAMPLE`, `[REDACTED]`), never real device serials or passwords.
 
+## Repository settings
+
+- **`.editorconfig`:** 4-space indentation (2 for project/XAML/YAML files), UTF-8, LF, `_camelCase` private instance fields and PascalCase static fields.
+- **`.gitattributes`:** text files are stored with LF; images, video, archives and executables are binary.
+- **CI:** `.github/workflows/ci.yml` runs the unit tests and builds the app on every push to `main` and every pull request.
+
+## Writing tests
+
+- One test class per area (for example `JournalTests`, `KeyVaultTests`, `WifiProvisionerTests`). Use temporary folders and delete them in `Dispose`.
+- **Fakes, not real system state:** `FakeMachine` stands in for DPAPI and `ScriptedWlan` / `FakeWlan` for the Windows WLAN API, so tests never change the developer's Wi-Fi profiles or `ProgramData`.
+- Tests that open the QC store are slow (PBKDF2 key derivation). Run a subset while iterating, e.g. `dotnet test --filter "FullyQualifiedName~JournalTests"`, and the whole suite before committing.
+- Avoid locale-dependent expectations; when behaviour must not depend on the Windows region, test it under another culture (see `CsvExportTests`).
+
 ## Commits
 
 - **Content:** one logical change per commit, with a clear message.
