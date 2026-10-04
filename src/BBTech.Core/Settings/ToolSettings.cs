@@ -202,6 +202,9 @@ namespace BBTech.Core.Settings
             if (err != null) throw new ArgumentException(err);
             var existing = networkId == null ? null : Settings.WifiNetworks.FirstOrDefault(n => n.NetworkId == networkId);
             if (Settings.WifiNetworks.Any(n => n != existing && n.Ssid == ssid)) throw new ArgumentException("This network is already in the list.");
+            string newPassword = security == WifiSecurity.Open ? "" : password;
+            if (existing != null && existing.Ssid == ssid && existing.Security == security && existing.Password == newPassword && existing.Hidden == hidden)
+                return existing; // nothing changed: keep the version so laptops are not re-provisioned
             if (existing == null)
             {
                 existing = new WifiNetwork { NetworkId = Guid.NewGuid().ToString("N"), Version = 0 };
@@ -209,7 +212,7 @@ namespace BBTech.Core.Settings
             }
             existing.Ssid = ssid;
             existing.Security = security;
-            existing.Password = security == WifiSecurity.Open ? "" : password;
+            existing.Password = newPassword;
             existing.Hidden = hidden;
             existing.Version++;
             existing.UpdatedAt = _clock();
