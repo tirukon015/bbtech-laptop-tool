@@ -36,5 +36,12 @@ namespace BBTech.Core.Tests
             Assert.Equal("dead pixel", items[0].Notes);
         }
 
+        [Fact]
+        public void Inspections_without_a_stored_selection_show_their_results()
+        {
+            var view = new InspectionView { Inspection = new InspectionRecord(), Results = new List<TestResultRecord> { Res("Keyboard", "PASS") } };
+            Assert.Equal(HardwareTest.Keyboard, HistoryReport.Items(view).Single().Kind);
+        }
+
     }
 }
