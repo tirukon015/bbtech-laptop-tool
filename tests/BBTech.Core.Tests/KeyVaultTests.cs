@@ -28,5 +28,17 @@ namespace BBTech.Core.Tests
             Assert.Equal(first.Key, second.Key);
         }
 
+        [Fact]
+        public void After_recovery_the_new_windows_installation_unlocks_with_the_machine_lock()
+        {
+            byte[] key = KeyVault.Open(_dir, new FakeMachine(1), Laptop, false).Key;
+            var recovered = KeyVault.Open(_dir, new FakeMachine(2), Laptop, true);
+            Assert.Equal(KeyState.UnlockedRecovery, recovered.State);
+            Assert.Equal(key, recovered.Key);
+            var next = KeyVault.Open(_dir, new FakeMachine(2), null, true);
+            Assert.Equal(KeyState.UnlockedMachine, next.State);
+            Assert.Equal(key, next.Key);
+        }
+
     }
 }
