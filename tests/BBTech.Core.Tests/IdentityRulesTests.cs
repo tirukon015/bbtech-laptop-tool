@@ -167,5 +167,14 @@ namespace BBTech.Core.Tests
             Assert.Equal(MatchStatus.NotFound, DeviceMatcher.Match(id, new DeviceRecord[0]).Status);
         }
 
+        [Fact]
+        public void MatchedOn_lists_all_agreeing_identifiers()
+        {
+            var id = new DeviceIdentity("Dell", "Latitude", "5420", "ABC12345", Uuid, "BRD-0001");
+            var m = DeviceMatcher.Match(id, new[] { Rec(id) });
+            Assert.Equal("serial number, system UUID, motherboard serial", m.MatchedOn);
+            Assert.Empty(m.Candidates);
+        }
+
     }
 }
