@@ -90,5 +90,19 @@ namespace BBTech.Core.Tests
             Assert.True(SettingsStore.Load(FilePath).LoadFailed);
         }
 
+        [Fact]
+        public void Admin_pin_is_hashed_verified_and_persisted()
+        {
+            var s = SettingsStore.Load(FilePath);
+            Assert.False(s.VerifyPin("2468"));
+            s.SetPin("2468");
+            Assert.True(s.HasPin);
+            Assert.Equal(120000, s.Settings.AdminPinIterations);
+            var again = SettingsStore.Load(FilePath);
+            Assert.True(again.VerifyPin("2468"));
+            Assert.False(again.VerifyPin("2469"));
+            Assert.DoesNotContain("2468", again.Settings.AdminPinHash);
+        }
+
     }
 }
