@@ -116,5 +116,15 @@ namespace BBTech.Core.Tests
             Assert.False(s.HasPin);
         }
 
+        [Fact]
+        public void A_pin_without_a_stored_iteration_count_uses_the_default()
+        {
+            var s = SettingsStore.Load(FilePath);
+            s.SetPin("8642");
+            s.Settings.AdminPinIterations = 0;
+            s.Save();
+            Assert.True(SettingsStore.Load(FilePath).VerifyPin("8642"));
+        }
+
     }
 }
