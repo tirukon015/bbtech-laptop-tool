@@ -137,6 +137,11 @@ namespace BBTech.Core.Storage
             if (id == null || !id.HasStrongIdentifier) throw new InvalidOperationException("A device needs at least one stable identifier.");
             lock (_sync)
             {
+                // Never silently create a second record for a laptop that already has history: that would
+                // split its inspections. A conflict may only be overridden explicitly (with a note).
+                var existing = DeviceMatcher.Match(id, _devices.Values);
+                if (existing.Status == MatchStatus.Matched || (existing.Status == MatchStatus.Conflict && string.IsNullOrWhiteSpace(identityNote)))
+                    throw new InvalidOperationException("This laptop already has a device record (" + existing.Status + ").");
                 var now = _clock();
                 var d = new DeviceRecord
                 {

@@ -82,5 +82,22 @@ namespace BBTech.Core.Tests
             Assert.Equal("fp-1", again.SettingsFingerprint);
             Assert.True(again.AllUsers);
         }
+
+        [Fact]
+        public void A_second_record_for_the_same_laptop_is_refused_unless_a_conflict_is_confirmed()
+        {
+            var repo = Open();
+            repo.RegisterDevice(QcStoreTests.LaptopA, Specs);
+            Assert.Throws<InvalidOperationException>(() => repo.RegisterDevice(QcStoreTests.LaptopA, Specs));
+            Assert.Throws<InvalidOperationException>(() => repo.RegisterDevice(QcStoreTests.LaptopA, Specs, "note"));
+            Assert.Single(repo.Devices);
+
+            // Same serial, different motherboard: a conflict that staff may override with a note.
+            var swapped = new DeviceIdentity("LENOVO", "ThinkPad", "T14 Gen 2", "SERIALEX01", "11111111-2222-3333-4444-555555555555", "BRD-NEW");
+            Assert.Throws<InvalidOperationException>(() => repo.RegisterDevice(swapped, Specs));
+            var flagged = repo.RegisterDevice(swapped, Specs, "Created despite identity conflict");
+            Assert.Equal("Created despite identity conflict", flagged.IdentityNote);
+            Assert.Equal(2, repo.Devices.Count);
+        }
     }
 }
