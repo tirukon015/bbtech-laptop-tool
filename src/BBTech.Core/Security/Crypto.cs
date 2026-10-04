@@ -132,8 +132,11 @@ namespace BBTech.Core.Security
             return diff == 0;
         }
 
-        /// <summary>PIN rules: 4-12 digits.</summary>
-        public static bool IsValidPin(string pin) => pin != null && pin.Length >= 4 && pin.Length <= 12 && pin.All(char.IsDigit);
+        /// <summary>
+        /// PIN rules: 4-12 ASCII digits. char.IsDigit is not used because it also accepts Bengali,
+        /// Arabic-Indic and full-width digits, which would make the PIN depend on the keyboard layout.
+        /// </summary>
+        public static bool IsValidPin(string pin) => pin != null && pin.Length >= 4 && pin.Length <= 12 && pin.All(c => c >= '0' && c <= '9');
     }
 
     /// <summary>Atomic file replace: write to .tmp, then swap (keeps the old file as .bak).</summary>
