@@ -22,5 +22,13 @@ namespace BBTech.Core.Tests
             Assert.Equal(expected, CapacityFormatter.FormatDrive(bytes));
         }
 
+        [Theory]
+        [InlineData(700000000000L, "700 GB")]
+        [InlineData(3500000000000L, "3.5 TB")]
+        public void Non_standard_drive_sizes_are_shown_as_measured(long bytes, string expected)
+        {
+            Assert.Equal(expected, CapacityFormatter.FormatDrive(bytes));
+        }
+
     }
 }
