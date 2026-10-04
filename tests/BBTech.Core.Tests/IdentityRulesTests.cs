@@ -185,5 +185,12 @@ namespace BBTech.Core.Tests
             Assert.Equal(MatchStatus.Matched, DeviceMatcher.Match(id, new[] { rec }).Status);
         }
 
+        [Fact]
+        public void A_null_identity_is_reported_as_no_identifiers()
+        {
+            var m = DeviceMatcher.Match(null, new DeviceRecord[0]);
+            Assert.Equal(MatchStatus.NoIdentifiers, m.Status);
+            Assert.Contains("cannot be matched safely", m.Reason);
+        }
     }
 }
