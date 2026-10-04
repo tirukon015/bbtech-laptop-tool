@@ -138,5 +138,16 @@ namespace BBTech.Core.Tests
             Assert.Equal(32, op.OperatorId.Length);
         }
 
+        [Fact]
+        public void Editing_without_a_role_keeps_the_existing_role()
+        {
+            var s = SettingsStore.Load(FilePath);
+            var op = s.AddOperator("Operator One", "Senior QC");
+            s.UpdateOperator(op.OperatorId, "Operator 1", "");
+            var again = SettingsStore.Load(FilePath).FindOperator(op.OperatorId);
+            Assert.Equal("Operator 1", again.Name);
+            Assert.Equal("Senior QC", again.Role);
+        }
+
     }
 }
