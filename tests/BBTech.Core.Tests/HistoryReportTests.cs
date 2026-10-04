@@ -43,5 +43,12 @@ namespace BBTech.Core.Tests
             Assert.Equal(HardwareTest.Keyboard, HistoryReport.Items(view).Single().Kind);
         }
 
+        [Fact]
+        public void Unknown_or_missing_test_modes_have_an_empty_label()
+        {
+            Assert.Equal("", HistoryReport.ModeLabel(null));
+            Assert.Equal("", HistoryReport.ModeLabel(new InspectionRecord { TestMode = "Custom" }));
+            Assert.Equal("REQUIRED", HistoryReport.ModeLabel(new InspectionRecord { TestMode = "Required" }));
+        }
     }
 }
