@@ -142,5 +142,19 @@ namespace BBTech.Core.Tests
             Assert.Equal("PASS", repo.GetResults(insp.InspectionId).Single().Status);
         }
 
+        [Fact]
+        public void Not_tested_and_running_results_have_no_completion_time()
+        {
+            var repo = Open();
+            var dev = repo.RegisterDevice(QcStoreTests.LaptopA, Specs);
+            var insp = repo.StartInspection(dev.DeviceId, Op, "1.0.0", Specs);
+            var notTested = repo.SaveResult(insp.InspectionId, "Camera", "Camera", "NOT TESTED", false, "");
+            var running = repo.SaveResult(insp.InspectionId, "Display", "Display", "TESTING", true, "");
+            Assert.Null(notTested.StartedAt);
+            Assert.Null(notTested.CompletedAt);
+            Assert.NotNull(running.StartedAt);
+            Assert.Null(running.CompletedAt);
+        }
+
     }
 }
