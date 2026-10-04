@@ -57,5 +57,16 @@ namespace BBTech.Core.Tests
             Assert.Throws<ArgumentException>(() => s.SetOperatorActive(old.OperatorId, true));
         }
 
+        [Fact]
+        public void Current_operator_is_null_when_the_stored_selection_is_inactive()
+        {
+            var s = SettingsStore.Load(FilePath);
+            var op = s.AddOperator("Operator One", "QC");
+            s.SelectOperator(op.OperatorId);
+            op.Active = false; // e.g. deactivated by an older version that kept the selection
+            s.Save();
+            Assert.Null(SettingsStore.Load(FilePath).CurrentOperator);
+        }
+
     }
 }
