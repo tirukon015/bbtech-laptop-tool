@@ -234,5 +234,15 @@ namespace BBTech.Core.Tests
             Assert.Equal(WifiProvisioner.Fingerprint(Net()), state["BBTECH_EXAMPLE"].SettingsFingerprint);
         }
 
+        [Fact]
+        public void An_external_profile_that_is_not_connected_is_replaced()
+        {
+            var api = new ScriptedWlan();
+            api.Profiles["BBTECH_EXAMPLE"] = WlanProfileXml.Build(Net()).Replace(Pass, "PROTECTED");
+            var r = P(api).ProvisionAll(new[] { Net() }).Single();
+            Assert.Equal(ProvisionOutcome.Updated, r.Outcome);
+            Assert.Equal(1, api.SetCalls);
+        }
+
     }
 }
