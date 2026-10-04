@@ -31,5 +31,14 @@ namespace BBTech.Core.Tests
             Assert.Null(DeviceIdentity.CleanSerial(raw));
         }
 
+        [Theory]
+        [InlineData("  pf-1a2b \t3c ", "PF-1A2B 3C")]
+        [InlineData("serial-example", "SERIAL-EXAMPLE")]
+        [InlineData("5CD1234XYZ", "5CD1234XYZ")]
+        public void Serials_are_trimmed_upper_cased_and_whitespace_collapsed(string raw, string expected)
+        {
+            Assert.Equal(expected, DeviceIdentity.CleanSerial(raw));
+        }
+
     }
 }
