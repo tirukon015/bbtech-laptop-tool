@@ -122,5 +122,15 @@ namespace BBTech.Core.Tests
             Assert.Contains("_20261005-3_", ReportNaming.BuildFileName("Dell", "Latitude", "5420", "S1", OverallResult.Pass, When, "json", 3));
         }
 
+        [Fact]
+        public void Missing_detection_gives_placeholder_parts()
+        {
+            Assert.Equal("UNKNOWN_UNKNOWN_NOMODEL_NOSERIAL_20261005_INCOMPLETE.json",
+                ReportNaming.BuildFileName((DetectionResult)null, OverallResult.Incomplete, When, "json"));
+        }
+
+        private static List<TestItem> Items(params (HardwareTest Kind, TestState State, bool Required, string Notes)[] rows) =>
+            rows.Select(r => new TestItem(r.Kind, "", r.Required) { State = r.State, Notes = r.Notes ?? "" }).ToList();
+
     }
 }
