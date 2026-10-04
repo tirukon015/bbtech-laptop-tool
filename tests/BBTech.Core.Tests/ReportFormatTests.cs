@@ -105,5 +105,12 @@ namespace BBTech.Core.Tests
             Assert.Equal("AB12", ReportNaming.Part("ＡＢ１２", "X", 30));
         }
 
+        [Fact]
+        public void Long_parts_are_capped_without_a_trailing_hyphen()
+        {
+            Assert.Equal(new string('A', 30), ReportNaming.Part(new string('A', 45), "X", 30));
+            Assert.Equal(new string('A', 9), ReportNaming.Part(new string('A', 9) + " BBBB", "X", 10));
+        }
+
     }
 }
