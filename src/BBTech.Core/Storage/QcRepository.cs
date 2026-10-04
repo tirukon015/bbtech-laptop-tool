@@ -155,9 +155,10 @@ namespace BBTech.Core.Storage
         /// <summary>Refreshes the latest hardware summary and fills identifiers that were missing before.</summary>
         public DeviceRecord UpdateDevice(string deviceId, DeviceIdentity id, DeviceSpecs specs)
         {
+            if (id == null) throw new ArgumentNullException(nameof(id));
             lock (_sync)
             {
-                var old = _devices[deviceId];
+                if (deviceId == null || !_devices.TryGetValue(deviceId, out var old)) throw new InvalidOperationException("Unknown device.");
                 var d = Clone(old);
                 d.Specs = specs ?? old.Specs;
                 if (d.SerialHash == null && id.SerialHash != null) { d.SerialHash = id.SerialHash; d.SerialNumber = id.SerialNumber; }
