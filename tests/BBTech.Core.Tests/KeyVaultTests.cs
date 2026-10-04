@@ -52,5 +52,14 @@ namespace BBTech.Core.Tests
             Assert.Equal(before, File.ReadAllBytes(KeyPath));
         }
 
+        [Fact]
+        public void A_missing_key_file_with_existing_history_is_reported_not_replaced()
+        {
+            var r = KeyVault.Open(_dir, new FakeMachine(1), Laptop, journalHasData: true);
+            Assert.Equal(KeyState.KeyMissing, r.State);
+            Assert.False(r.Ok);
+            Assert.False(File.Exists(KeyPath));
+        }
+
     }
 }
