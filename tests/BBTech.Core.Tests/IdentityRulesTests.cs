@@ -176,5 +176,14 @@ namespace BBTech.Core.Tests
             Assert.Empty(m.Candidates);
         }
 
+        [Fact]
+        public void A_stored_record_without_manufacturer_still_matches()
+        {
+            var id = new DeviceIdentity("Dell", "Latitude", "5420", "ABC12345", null, null);
+            var rec = Rec(id);
+            rec.Manufacturer = "";
+            Assert.Equal(MatchStatus.Matched, DeviceMatcher.Match(id, new[] { rec }).Status);
+        }
+
     }
 }
