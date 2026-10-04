@@ -34,5 +34,16 @@ namespace BBTech.Core.Tests
             Assert.Equal("Jimmy", again.Name);
             Assert.Equal("Senior QC", again.Role);
         }
+
+        [Fact]
+        public void Reactivating_is_rejected_when_an_active_operator_already_uses_the_name()
+        {
+            var s = SettingsStore.Load(FilePath);
+            var oldJimmy = s.AddOperator("Jimmy", "QC");
+            s.SetOperatorActive(oldJimmy.OperatorId, false);
+            s.AddOperator("Jimmy", "QC"); // a new staff member with the same name
+            Assert.Throws<ArgumentException>(() => s.SetOperatorActive(oldJimmy.OperatorId, true));
+            Assert.Single(SettingsStore.Load(FilePath).ActiveOperators);
+        }
     }
 }

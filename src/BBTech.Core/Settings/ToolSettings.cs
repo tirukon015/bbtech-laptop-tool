@@ -176,6 +176,7 @@ namespace BBTech.Core.Settings
         public void SetOperatorActive(string id, bool active)
         {
             var op = FindOperator(id) ?? throw new ArgumentException("Unknown operator.");
+            if (active && !op.Active) EnsureUniqueActiveName(op.Name, op.OperatorId);
             op.Active = active;
             op.UpdatedAt = _clock();
             if (!active && Settings.CurrentOperatorId == id) Settings.CurrentOperatorId = null;
