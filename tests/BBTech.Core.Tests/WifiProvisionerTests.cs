@@ -168,5 +168,14 @@ namespace BBTech.Core.Tests
             Assert.Empty(state);
         }
 
+        [Fact]
+        public void A_profile_that_windows_did_not_keep_is_a_failure()
+        {
+            var api = new ScriptedWlan { Keep = false };
+            var r = P(api).ProvisionAll(new[] { Net() }).Single();
+            Assert.Equal(ProvisionOutcome.Failed, r.Outcome);
+            Assert.Equal("Windows did not keep the Wi-Fi profile.", r.Message);
+        }
+
     }
 }
