@@ -79,5 +79,11 @@ namespace BBTech.Core.Tests
             Assert.Equal("INCOMPLETE", TestText.Label(OverallResult.Incomplete));
         }
 
+        [Fact]
+        public void No_items_is_incomplete()
+        {
+            Assert.Equal(OverallResult.Incomplete, OverallResultCalculator.Calculate(null));
+        }
+
     }
 }
