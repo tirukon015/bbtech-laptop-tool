@@ -149,5 +149,18 @@ namespace BBTech.Core.Tests
             Assert.Equal(PinHasher.Hash("1234", s1, 1000), PinHasher.Hash("1234", s1, 1000));
         }
 
+        [Fact]
+        public void Wrong_pin_or_iteration_count_does_not_verify()
+        {
+            string salt = PinHasher.NewSalt();
+            string hash = PinHasher.Hash("97531", salt, 1000);
+            Assert.False(PinHasher.Verify("97532", salt, hash, 1000));
+            Assert.False(PinHasher.Verify("", salt, hash, 1000));
+            Assert.False(PinHasher.Verify(null, salt, hash, 1000));
+            Assert.False(PinHasher.Verify("97531", salt, hash, 1001));
+            Assert.False(PinHasher.Verify("97531", null, hash, 1000));
+            Assert.False(PinHasher.Verify("97531", salt, null, 1000));
+        }
+
     }
 }
