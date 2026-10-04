@@ -95,9 +95,14 @@ namespace BBTech.Core.Export
             return string.Join(",", headers) + "\r\n" + string.Join(",", values.Select(Csv)) + "\r\n";
         }
 
+        /// <summary>
+        /// One CSV cell. Text that Excel would run as a formula (starting with = + - @ or a tab/CR) gets a
+        /// leading apostrophe, so an operator comment such as "=HYPERLINK(...)" is shown, never executed.
+        /// </summary>
         public static string Csv(string v)
         {
             v = v ?? "";
+            if (v.Length > 0 && "=+-@\t\r".IndexOf(v[0]) >= 0) v = "'" + v;
             if (v.IndexOfAny(new[] { ',', '"', '\r', '\n' }) >= 0) return "\"" + v.Replace("\"", "\"\"") + "\"";
             return v;
         }

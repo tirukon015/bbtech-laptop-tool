@@ -26,5 +26,17 @@ namespace BBTech.Core.Tests
             Assert.Contains("2026-10-05 09:07:03", th);
             Assert.Contains("2026-10-05 09:07:03", ar);
         }
+
+        [Theory]
+        [InlineData("=HYPERLINK(\"http://x\")", "\"'=HYPERLINK(\"\"http://x\"\")\"")]
+        [InlineData("+1+2", "'+1+2")]
+        [InlineData("-2+3", "'-2+3")]
+        [InlineData("@SUM(A1)", "'@SUM(A1)")]
+        [InlineData("Keys 79/79", "Keys 79/79")]
+        [InlineData("87%", "87%")]
+        public void Csv_cells_that_excel_would_run_as_formulas_are_neutralised(string value, string expected)
+        {
+            Assert.Equal(expected, DetectionExporter.Csv(value));
+        }
     }
 }
