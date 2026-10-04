@@ -140,5 +140,14 @@ namespace BBTech.Core.Tests
             Assert.Empty(EnvelopeCrypto.RandomBytes(0));
         }
 
+        [Fact]
+        public void The_same_pin_with_different_salts_gives_different_hashes()
+        {
+            string s1 = PinHasher.NewSalt(), s2 = PinHasher.NewSalt();
+            Assert.NotEqual(s1, s2);
+            Assert.NotEqual(PinHasher.Hash("1234", s1, 1000), PinHasher.Hash("1234", s2, 1000));
+            Assert.Equal(PinHasher.Hash("1234", s1, 1000), PinHasher.Hash("1234", s1, 1000));
+        }
+
     }
 }
