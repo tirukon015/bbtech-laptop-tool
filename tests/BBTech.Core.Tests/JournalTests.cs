@@ -73,5 +73,15 @@ namespace BBTech.Core.Tests
             Assert.Equal(1, CountOf(text, "BBQCJ001"));
         }
 
+        [Fact]
+        public void Journal_files_contain_no_readable_record_text()
+        {
+            Journal().Append(B("Tested By: Operator One | Serial SERIAL-EXAMPLE | PASS"));
+            string raw = Encoding.UTF8.GetString(File.ReadAllBytes(FilePath));
+            Assert.DoesNotContain("Operator One", raw);
+            Assert.DoesNotContain("SERIAL-EXAMPLE", raw);
+            Assert.DoesNotContain("PASS", raw);
+        }
+
     }
 }
