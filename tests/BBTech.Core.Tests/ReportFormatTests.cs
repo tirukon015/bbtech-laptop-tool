@@ -48,5 +48,12 @@ namespace BBTech.Core.Tests
             Assert.Equal("null", JsonWriter.Serialize(double.PositiveInfinity));
         }
 
+        [Fact]
+        public void Json_strings_escape_special_and_control_characters()
+        {
+            Assert.Equal("\"a\\\"b\\\\c\\n\\t\\u0001\"", JsonWriter.Serialize("a\"b\\c\n\t\u0001"));
+            Assert.Equal("\"Sound – left/right ✓\"", JsonWriter.Serialize("Sound – left/right ✓"));
+        }
+
     }
 }
