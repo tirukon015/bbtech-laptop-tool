@@ -127,5 +127,15 @@ namespace BBTech.Core.Tests
             Assert.Contains("8 to 63", ex.Message);
         }
 
+        [Theory]
+        [InlineData(null)]
+        [InlineData("")]
+        [InlineData("   ")]
+        [InlineData("<WLANProfile><name>broken")]
+        public void Parse_returns_null_for_missing_or_broken_xml(string xml)
+        {
+            Assert.Null(WlanProfileXml.Parse(xml));
+        }
+
     }
 }
