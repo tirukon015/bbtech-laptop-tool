@@ -34,6 +34,8 @@ namespace BBTech.Core.Wifi
             if (security == WifiSecurity.Open) return null;
             if (string.IsNullOrEmpty(password)) return "Enter the Wi-Fi password.";
             bool hex64 = password.Length == 64 && password.All(Uri.IsHexDigit);
+            // WPA3-Personal (SAE) only accepts a passphrase; a raw 64-hex PSK is a WPA2 feature.
+            if (hex64 && security == WifiSecurity.Wpa3Personal) return "WPA3 networks need a passphrase of 8 to 63 characters, not a 64-digit hex key.";
             if (!hex64 && (password.Length < 8 || password.Length > 63)) return "The Wi-Fi password must be 8 to 63 characters.";
             if (!hex64 && password.Any(c => c < 32 || c > 126)) return "The Wi-Fi password may only contain standard keyboard characters.";
             return null;
