@@ -141,5 +141,16 @@ namespace BBTech.Core.Tests
             Assert.Null(BatteryInfoViewParser.ParseEnergy("n/a"));
         }
 
+        [Fact]
+        public void Battery_health_requires_plausible_design_and_full_capacities()
+        {
+            Assert.Equal(87.9, BatteryHealth.Compute(50000, 43950));
+            Assert.Equal(150.0, BatteryHealth.Compute(50000, 75000));
+            Assert.Null(BatteryHealth.Compute(50000, 400));     // below 1 %
+            Assert.Null(BatteryHealth.Compute(0, 40000));
+            Assert.Null(BatteryHealth.Compute(50000, 0));
+            Assert.Null(BatteryHealth.Compute(null, 40000));
+        }
+
     }
 }
