@@ -145,8 +145,7 @@ namespace BBTech.Core.Settings
         {
             name = (name ?? "").Trim();
             if (name.Length == 0) throw new ArgumentException("Enter a name.");
-            if (Settings.Operators.Any(o => o.Active && o.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
-                throw new ArgumentException("An active operator with this name already exists.");
+            EnsureUniqueActiveName(name, null);
             var now = _clock();
             var op = new OperatorRecord { OperatorId = Guid.NewGuid().ToString("N"), Name = name, Role = string.IsNullOrWhiteSpace(role) ? "QC" : role.Trim(), Active = true, CreatedAt = now, UpdatedAt = now };
             Settings.Operators.Add(op);
@@ -160,10 +159,17 @@ namespace BBTech.Core.Settings
             var op = FindOperator(id) ?? throw new ArgumentException("Unknown operator.");
             name = (name ?? "").Trim();
             if (name.Length == 0) throw new ArgumentException("Enter a name.");
+            if (op.Active) EnsureUniqueActiveName(name, op.OperatorId);
             op.Name = name;
             op.Role = string.IsNullOrWhiteSpace(role) ? op.Role : role.Trim();
             op.UpdatedAt = _clock();
             Save();
+        }
+
+        private void EnsureUniqueActiveName(string name, string exceptId)
+        {
+            if (Settings.Operators.Any(o => o.Active && o.OperatorId != exceptId && o.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
+                throw new ArgumentException("An active operator with this name already exists.");
         }
 
         /// <summary>Deactivated operators are hidden for new inspections but kept for history.</summary>
