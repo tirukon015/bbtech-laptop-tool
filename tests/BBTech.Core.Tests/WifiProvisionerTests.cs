@@ -274,5 +274,15 @@ namespace BBTech.Core.Tests
             Assert.Contains("<nonBroadcast>true</nonBroadcast>", api.Profiles["BBTECH_EXAMPLE"]);
         }
 
+        [Fact]
+        public void Connect_now_reports_a_failed_connection_request()
+        {
+            var api = new ScriptedWlan { OnConnect = name => 1168 };
+            api.Visible.Add("BBTECH_EXAMPLE");
+            string msg = P(api).ConnectNow(Net());
+            Assert.Contains("error 1168", msg);
+            Assert.DoesNotContain(Pass, msg);
+        }
+
     }
 }
