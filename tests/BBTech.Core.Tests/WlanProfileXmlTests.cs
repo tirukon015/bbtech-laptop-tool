@@ -74,5 +74,16 @@ namespace BBTech.Core.Tests
             Assert.Contains("<keyType>passPhrase</keyType>", xml);
         }
 
+        [Fact]
+        public void Profiles_connect_automatically_and_do_not_roam_away()
+        {
+            string xml = WlanProfileXml.Build(Net(hidden: true));
+            Assert.Contains("<connectionMode>auto</connectionMode>", xml);
+            Assert.Contains("<autoSwitch>false</autoSwitch>", xml);
+            Assert.Contains("<nonBroadcast>true</nonBroadcast>", xml);
+            Assert.Contains("<protected>false</protected>", xml); // Windows protects the key when it stores the profile
+            Assert.True(WlanProfileXml.Parse(xml).NonBroadcast);
+        }
+
     }
 }
