@@ -131,5 +131,14 @@ namespace BBTech.Core.Tests
             Assert.Equal(32, EnvelopeCrypto.DeriveKey("secret", salt, 1000, 32).Length);
         }
 
+        [Fact]
+        public void Random_bytes_have_the_requested_length_and_differ()
+        {
+            byte[] a = EnvelopeCrypto.RandomBytes(32), b = EnvelopeCrypto.RandomBytes(32);
+            Assert.Equal(32, a.Length);
+            Assert.NotEqual(a, b);
+            Assert.Empty(EnvelopeCrypto.RandomBytes(0));
+        }
+
     }
 }
