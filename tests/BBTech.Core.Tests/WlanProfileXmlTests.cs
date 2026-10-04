@@ -56,5 +56,14 @@ namespace BBTech.Core.Tests
             Assert.Equal("A&B <shop>", WlanProfileXml.Parse(xml).Ssid);
         }
 
+        [Fact]
+        public void Open_networks_have_no_shared_key()
+        {
+            string xml = WlanProfileXml.Build(Net(sec: WifiSecurity.Open, pw: ""));
+            Assert.Contains("<authentication>open</authentication>", xml);
+            Assert.Contains("<encryption>none</encryption>", xml);
+            Assert.DoesNotContain("sharedKey", xml);
+        }
+
     }
 }
