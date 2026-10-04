@@ -127,5 +127,21 @@ namespace BBTech.Core.Tests
             Assert.Contains("uuid=yes", s);
         }
 
+        [Fact]
+        public void Identity_factory_uses_the_detection_result()
+        {
+            var r = new DetectionResult { Brand = "Dell", Model = "Latitude", ModelNumber = "5420", Cpu = "i5", Generation = "11th Gen", Ram = "16 GB", Storage = "256 GB SSD", BatteryHealth = "91%" };
+            r.System.SerialNumber = "abc12345";
+            r.System.SystemUuid = Uuid.ToLowerInvariant();
+            r.System.BoardSerial = "Default string";
+            var id = IdentityFactory.From(r);
+            Assert.Equal("ABC12345", id.SerialNumber);
+            Assert.Equal(Uuid, id.SystemUuid);
+            Assert.Null(id.BoardSerial);
+            var specs = IdentityFactory.SpecsFrom(r);
+            Assert.Equal("i5", specs.Cpu);
+            Assert.Equal("91%", specs.BatteryHealth);
+        }
+
     }
 }
