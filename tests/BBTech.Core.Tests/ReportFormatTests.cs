@@ -159,5 +159,16 @@ namespace BBTech.Core.Tests
             Assert.Contains("\"tool\": \"BBTech Laptop Tool 1.0.1\"", TestReportExporter.ToJson(items, null, "1.0.1", When));
         }
 
+        [Fact]
+        public void Test_mode_is_omitted_when_not_recorded()
+        {
+            var items = Items((HardwareTest.Display, TestState.Pass, true, ""));
+            var meta = new ReportMeta { InspectionId = "id-1", Number = 1 };
+            Assert.DoesNotContain("Test Mode", TestReportExporter.ToCsv(items, null, When, meta));
+            Assert.DoesNotContain("test_mode", TestReportExporter.ToJson(items, null, "1.0.0", When, meta));
+            meta.TestMode = "ALL TESTS";
+            Assert.Contains("Test Mode,ALL TESTS", TestReportExporter.ToCsv(items, null, When, meta));
+        }
+
     }
 }
