@@ -154,5 +154,16 @@ namespace BBTech.Core.Tests
             Assert.Equal(new[] { "kept", "next" }, Journal().ReadAll(out _).Select(r => Encoding.UTF8.GetString(r)));
         }
 
+        [Fact]
+        public void A_journal_opened_with_the_wrong_key_yields_no_records()
+        {
+            Journal().Append(B("secret"));
+            var other = new EncryptedJournal(FilePath, new EnvelopeCrypto(EnvelopeCrypto.NewKey()));
+            var records = other.ReadAll(out var stats);
+            Assert.Empty(records);
+            Assert.Equal(1, stats.Corrupted);
+            Assert.True(File.Exists(FilePath));
+        }
+
     }
 }
