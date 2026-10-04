@@ -134,5 +134,15 @@ namespace BBTech.Core.Tests
             Assert.Equal(2, api.SetCalls);
         }
 
+        [Fact]
+        public void Access_denied_for_all_users_falls_back_to_the_current_user()
+        {
+            var api = new ScriptedWlan { OnSet = (xml, all) => all ? WifiProvisioner.ErrorAccessDenied : 0 };
+            var r = P(api).ProvisionAll(new[] { Net() }).Single();
+            Assert.Equal(ProvisionOutcome.Installed, r.Outcome);
+            Assert.False(r.AllUsers);
+            Assert.Contains("current Windows user only", r.Message);
+        }
+
     }
 }
