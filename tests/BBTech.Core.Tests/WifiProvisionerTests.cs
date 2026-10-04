@@ -263,5 +263,16 @@ namespace BBTech.Core.Tests
             Assert.Empty(api.ConnectCalls);
         }
 
+        [Fact]
+        public void Connect_now_tries_hidden_networks_even_when_not_visible()
+        {
+            var api = new ScriptedWlan();
+            var hidden = Net();
+            hidden.Hidden = true;
+            Assert.Null(P(api).ConnectNow(hidden));
+            Assert.Equal(new[] { "BBTECH_EXAMPLE" }, api.ConnectCalls);
+            Assert.Contains("<nonBroadcast>true</nonBroadcast>", api.Profiles["BBTECH_EXAMPLE"]);
+        }
+
     }
 }
