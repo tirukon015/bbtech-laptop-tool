@@ -1,0 +1,9 @@
+bin/
+obj/
+dist/
+artifacts/
+*.user
+.vs/
+# Third-party binaries are re-created from TEST-Laptop.zip with build\import-toolkit.ps1
+third_party/
+*.lnk
