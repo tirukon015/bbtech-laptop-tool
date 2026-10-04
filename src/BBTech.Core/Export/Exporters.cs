@@ -108,10 +108,6 @@ namespace BBTech.Core.Export
         }
     }
 
-    /// <summary>
-    /// TEST inspection report. The laptop identification comes from the same
-    /// <see cref="DetectionResult"/> that DETECT produces (no separate detection).
-    /// </summary>
     /// <summary>Inspection details added to exported reports (from the laptop's QC history).</summary>
     public sealed class ReportMeta
     {
@@ -129,6 +125,10 @@ namespace BBTech.Core.Export
         public string TestMode { get; set; } = "";
     }
 
+    /// <summary>
+    /// TEST inspection report. The laptop identification comes from the same
+    /// <see cref="DetectionResult"/> that DETECT produces (no separate detection).
+    /// </summary>
     public static class TestReportExporter
     {
         private static string Serial(DetectionResult d) =>
