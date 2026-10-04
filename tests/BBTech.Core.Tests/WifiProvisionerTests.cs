@@ -299,5 +299,16 @@ namespace BBTech.Core.Tests
             Assert.DoesNotContain(Pass, fp);
         }
 
+        [Fact]
+        public void IsAutoConnect_reads_the_installed_profile()
+        {
+            var api = new ScriptedWlan();
+            var p = P(api);
+            Assert.Null(p.IsAutoConnect("BBTECH_EXAMPLE"));
+            p.ProvisionAll(new[] { Net() });
+            Assert.True(p.IsAutoConnect("BBTECH_EXAMPLE"));
+            api.Profiles["BBTECH_EXAMPLE"] = api.Profiles["BBTECH_EXAMPLE"].Replace(">auto<", ">manual<");
+            Assert.False(p.IsAutoConnect("BBTECH_EXAMPLE"));
+        }
     }
 }
