@@ -85,5 +85,16 @@ namespace BBTech.Core.Tests
             Assert.Equal(OverallResult.Incomplete, OverallResultCalculator.Calculate(null));
         }
 
+        [Fact]
+        public void A_failure_wins_even_while_other_tests_are_running()
+        {
+            var items = new[]
+            {
+                new TestItem(HardwareTest.Display, "") { State = TestState.Testing },
+                new TestItem(HardwareTest.Keyboard, "") { State = TestState.Fail },
+            };
+            Assert.Equal(OverallResult.Fail, OverallResultCalculator.Calculate(items));
+        }
+
     }
 }
