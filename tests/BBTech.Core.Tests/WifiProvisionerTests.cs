@@ -189,5 +189,15 @@ namespace BBTech.Core.Tests
             Assert.Equal(0, api.SetCalls);
         }
 
+        [Fact]
+        public void No_adapter_fails_every_network_with_the_same_message()
+        {
+            var api = new ScriptedWlan { Iface = null };
+            var results = P(api).ProvisionAll(new[] { Net("BBTECH_EXAMPLE"), Net("BBTECH_EXAMPLE_5G") });
+            Assert.Equal(2, results.Count);
+            Assert.All(results, r => Assert.Equal(ProvisionOutcome.Failed, r.Outcome));
+            Assert.All(results, r => Assert.Contains("no Wi-Fi adapter", r.Message));
+        }
+
     }
 }
