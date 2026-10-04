@@ -49,5 +49,14 @@ namespace BBTech.Core.Tests
             Assert.Equal(expected, CapacityFormatter.FormatRamFromModules(bytes));
         }
 
+        [Theory]
+        [InlineData(4080218931L, "4 GB")]    // 3.8 GiB visible
+        [InlineData(12562779750L, "12 GB")]  // 11.7 GiB visible
+        [InlineData(6335076761L, "6 GB")]    // 5.9 GiB visible
+        public void Visible_memory_is_rounded_up_to_a_common_size(long bytes, string expected)
+        {
+            Assert.Equal(expected, CapacityFormatter.FormatRamFromVisible(bytes));
+        }
+
     }
 }
