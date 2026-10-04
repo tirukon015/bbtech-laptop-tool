@@ -69,5 +69,12 @@ namespace BBTech.Core.Tests
             Assert.Equal("{\n  \"a\": {\n    \"b\": 1\n  }\n}", JsonWriter.Serialize(o));
         }
 
+        [Fact]
+        public void Dictionaries_are_written_as_objects()
+        {
+            var d = new Dictionary<string, object> { { "brand", "Dell" }, { "count", 2 } };
+            Assert.Equal("{\"brand\":\"Dell\",\"count\":2}", JsonWriter.Serialize(d, false));
+        }
+
     }
 }
