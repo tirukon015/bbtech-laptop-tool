@@ -65,5 +65,14 @@ namespace BBTech.Core.Tests
             Assert.Equal(gen, r.Generation);
         }
 
+        [Fact]
+        public void Intel_core_series_names_without_i_prefix()
+        {
+            var r = CpuParser.Parse("Intel(R) Core(TM) 5 120U");
+            Assert.Equal("Core 5", r.Family);
+            Assert.Equal("Series 1", r.Generation);
+            Assert.Equal("120U", r.ModelCode);
+        }
+
     }
 }
