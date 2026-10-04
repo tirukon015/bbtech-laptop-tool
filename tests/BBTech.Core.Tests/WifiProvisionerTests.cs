@@ -156,5 +156,17 @@ namespace BBTech.Core.Tests
             Assert.DoesNotContain(Pass, r.Message);
         }
 
+        [Fact]
+        public void A_profile_stored_as_manual_is_a_failure()
+        {
+            var api = new ScriptedWlan { StoreAsManual = true };
+            var state = new Dictionary<string, WifiProvisionRecord>();
+            var r = P(api, state).ProvisionAll(new[] { Net() }).Single();
+            Assert.Equal(ProvisionOutcome.Failed, r.Outcome);
+            Assert.Contains("without automatic connection (manual)", r.Message);
+            Assert.False(r.AutoConnectVerified);
+            Assert.Empty(state);
+        }
+
     }
 }
