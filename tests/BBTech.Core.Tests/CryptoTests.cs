@@ -190,5 +190,13 @@ namespace BBTech.Core.Tests
             finally { Directory.Delete(dir, true); }
         }
 
+        [Fact]
+        public void App_secret_values_differ_per_purpose()
+        {
+            string a = AppSecret.Value("usb-settings"), b = AppSecret.Value("qc-recovery");
+            Assert.NotEqual(a, b);
+            Assert.StartsWith("usb-settings:", a);
+            Assert.Equal(a, AppSecret.Value("usb-settings"));
+        }
     }
 }
