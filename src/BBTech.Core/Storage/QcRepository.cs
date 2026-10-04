@@ -323,11 +323,14 @@ namespace BBTech.Core.Storage
 
         public WifiProvisionRecord GetWifiState(string ssid)
         {
+            if (string.IsNullOrEmpty(ssid)) return null;
             lock (_sync) return _wifi.TryGetValue(ssid, out var w) ? w : null;
         }
 
         public void SetWifiState(WifiProvisionRecord record)
         {
+            if (record == null) throw new ArgumentNullException(nameof(record));
+            if (string.IsNullOrEmpty(record.Ssid)) throw new ArgumentException("A provisioning record needs an SSID.", nameof(record));
             lock (_sync) Write(new JournalEntry { Kind = JournalEntry.KindWifi, Wifi = record });
         }
 

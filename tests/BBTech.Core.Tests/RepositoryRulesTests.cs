@@ -69,5 +69,18 @@ namespace BBTech.Core.Tests
             Assert.Null(repo.GetInspection(null));
             Assert.Empty(repo.GetResults(null));
         }
+
+        [Fact]
+        public void Wifi_state_needs_an_ssid_and_round_trips_without_a_password()
+        {
+            var repo = Open();
+            Assert.Null(repo.GetWifiState(null));
+            Assert.Throws<ArgumentNullException>(() => repo.SetWifiState(null));
+            Assert.Throws<ArgumentException>(() => repo.SetWifiState(new WifiProvisionRecord { Ssid = "" }));
+            repo.SetWifiState(new WifiProvisionRecord { Ssid = "BBTECH_EXAMPLE", SettingsFingerprint = "fp-1", AllUsers = true });
+            var again = Open().GetWifiState("BBTECH_EXAMPLE");
+            Assert.Equal("fp-1", again.SettingsFingerprint);
+            Assert.True(again.AllUsers);
+        }
     }
 }
