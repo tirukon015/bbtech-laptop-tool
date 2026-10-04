@@ -10,7 +10,7 @@
 
 ## Release checklist
 
-1. **Acceptance:** all automated tests pass, and the real-hardware acceptance checklist is complete and recorded.
+1. **Acceptance:** all automated tests pass locally **and** the latest GitHub Actions run on `main` is green; the real-hardware acceptance checklist is complete and recorded.
 2. **CHANGELOG:** move `[1.0.0] — Unreleased` to `[1.0.0] — YYYY-MM-DD` with the actual date.
 3. **Clean build:** close any running copy of the app, then run:
    ```powershell
@@ -38,4 +38,4 @@ The journal (`BBQCJ001`) and settings (`BBTS0001`) formats carry version markers
 ## Not implemented
 
 - **Code signing:** no certificate is configured, so Windows SmartScreen may warn.
-- **Automated CI builds.**
+- **Automated release packaging:** CI builds and tests every push (see [BUILD.md](BUILD.md)), but the release EXE with embedded tools is built locally because the tools are not in the repository.
