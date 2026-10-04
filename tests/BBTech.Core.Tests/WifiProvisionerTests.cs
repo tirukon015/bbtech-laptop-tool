@@ -244,5 +244,14 @@ namespace BBTech.Core.Tests
             Assert.Equal(1, api.SetCalls);
         }
 
+        [Fact]
+        public void Connect_now_asks_to_turn_wifi_on_when_the_radio_is_off()
+        {
+            var api = new ScriptedWlan();
+            api.Iface.RadioOn = false;
+            Assert.Contains("switched off", P(api).ConnectNow(Net()));
+            Assert.Empty(api.ConnectCalls);
+        }
+
     }
 }
