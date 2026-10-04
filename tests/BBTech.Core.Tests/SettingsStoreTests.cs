@@ -53,5 +53,22 @@ namespace BBTech.Core.Tests
             Assert.Equal("Operator One", SettingsStore.Load(FilePath).ActiveOperators.Single().Name);
         }
 
+        [Fact]
+        public void A_tampered_file_is_rejected_and_never_overwritten()
+        {
+            var s = SettingsStore.Load(FilePath);
+            s.AddOperator("Operator One", "QC");
+            File.Delete(FilePath + ".bak");
+            byte[] raw = File.ReadAllBytes(FilePath);
+            raw[raw.Length / 2] ^= 0x20;
+            File.WriteAllBytes(FilePath, raw);
+
+            var damaged = SettingsStore.Load(FilePath);
+            Assert.True(damaged.LoadFailed);
+            Assert.Throws<InvalidOperationException>(() => damaged.Save());
+            Assert.Throws<InvalidOperationException>(() => damaged.AddOperator("Operator Two", "QC"));
+            Assert.Equal(raw, File.ReadAllBytes(FilePath));
+        }
+
     }
 }
