@@ -58,5 +58,15 @@ namespace BBTech.Core.Tests
             Assert.Equal(expected, CapacityFormatter.FormatRamFromVisible(bytes));
         }
 
+        [Fact]
+        public void Storage_summary_is_unknown_when_only_external_drives_exist()
+        {
+            Assert.Equal("Unknown", CapacityFormatter.StorageSummary(null));
+            Assert.Equal("Unknown", CapacityFormatter.StorageSummary(new[]
+            {
+                new StorageDevice { CapacityLabel = "64 GB", BusType = "USB", IsExternal = true },
+            }));
+        }
+
     }
 }
