@@ -61,6 +61,7 @@ A conflict is **never resolved silently**:
 
 - **DETECT:** shows "Identity conflict – QC history not shown" with the reason. An admin can review the conflicting records with the admin PIN.
 - **TEST:** asks staff to either **Create separate record** (a new device flagged with an `IdentityNote`) or **Test without saving**.
+- **Store rule:** the repository itself refuses a second record for a matched laptop, and creates one for a conflicting laptop only together with that note. A coding mistake therefore cannot silently split a laptop's history into two records.
 - **Typical causes:** motherboard replaced, BIOS serial re-entered incorrectly, or a disk image cloned from another laptop. The last also protects against showing laptop A's history on laptop B after cloning.
 
 ## Identity and the encryption key
