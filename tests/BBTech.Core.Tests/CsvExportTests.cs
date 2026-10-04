@@ -38,5 +38,16 @@ namespace BBTech.Core.Tests
         {
             Assert.Equal(expected, DetectionExporter.Csv(value));
         }
+
+        [Theory]
+        [InlineData("line1\nline2", "\"line1\nline2\"")]
+        [InlineData("say \"hi\"", "\"say \"\"hi\"\"\"")]
+        [InlineData("a,b", "\"a,b\"")]
+        [InlineData(null, "")]
+        public void Csv_cells_with_separators_are_quoted(string value, string expected)
+        {
+            Assert.Equal(expected, DetectionExporter.Csv(value));
+        }
+
     }
 }
