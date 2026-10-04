@@ -1,0 +1,11 @@
+# Normalise text files to LF in the repository (the working tree already uses LF).
+* text=auto eol=lf
+
+# Binary assets: never diff or convert.
+*.png  binary
+*.ico  binary
+*.jpg  binary
+*.mp4  binary
+*.zip  binary
+*.exe  binary
+*.dll  binary
