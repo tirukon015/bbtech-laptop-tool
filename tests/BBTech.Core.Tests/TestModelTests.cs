@@ -96,5 +96,17 @@ namespace BBTech.Core.Tests
             Assert.Equal(OverallResult.Fail, OverallResultCalculator.Calculate(items));
         }
 
+        [Fact]
+        public void Selected_and_available_tests_follow_the_catalog_order()
+        {
+            var plan = TestPlan.Required();
+            plan.Add(HardwareTest.Storage);
+            plan.Add(HardwareTest.Touchpad);
+            Assert.Equal(new[] { HardwareTest.Display, HardwareTest.Speaker, HardwareTest.Keyboard, HardwareTest.Battery, HardwareTest.Touchpad, HardwareTest.Storage }, plan.Selected);
+            Assert.Equal(new[] { HardwareTest.Touchpad, HardwareTest.Storage }, plan.Additional);
+            Assert.DoesNotContain(HardwareTest.Touchpad, plan.Available);
+            Assert.Equal(TestCatalog.All.Count, plan.Selected.Count + plan.Available.Count);
+        }
+
     }
 }
