@@ -120,5 +120,19 @@ namespace BBTech.Core.Tests
             Assert.Equal(1, api.SetCalls);
         }
 
+        [Fact]
+        public void A_changed_password_updates_the_installed_profile()
+        {
+            var api = new ScriptedWlan();
+            var state = new Dictionary<string, WifiProvisionRecord>();
+            P(api, state).ProvisionAll(new[] { Net() });
+            var changed = Net();
+            changed.Password = "changed-pass";
+            changed.Version = 2;
+            var r = P(api, state).ProvisionAll(new[] { changed }).Single();
+            Assert.Equal(ProvisionOutcome.Updated, r.Outcome);
+            Assert.Equal(2, api.SetCalls);
+        }
+
     }
 }
