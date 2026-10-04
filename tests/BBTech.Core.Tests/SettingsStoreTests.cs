@@ -149,5 +149,15 @@ namespace BBTech.Core.Tests
             Assert.Equal("Senior QC", again.Role);
         }
 
+        [Fact]
+        public void Unknown_operator_ids_are_rejected()
+        {
+            var s = SettingsStore.Load(FilePath);
+            Assert.Throws<ArgumentException>(() => s.UpdateOperator("missing", "X", "QC"));
+            Assert.Throws<ArgumentException>(() => s.SetOperatorActive("missing", false));
+            Assert.Throws<ArgumentException>(() => s.SelectOperator("missing"));
+            Assert.Null(s.FindOperator(null));
+        }
+
     }
 }
