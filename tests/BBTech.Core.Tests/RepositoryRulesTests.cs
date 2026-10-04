@@ -167,5 +167,18 @@ namespace BBTech.Core.Tests
             Assert.Equal(new[] { "Display" }, Open().GetInspection(insp.InspectionId).SelectedTests);
         }
 
+        [Fact]
+        public void Updating_a_device_fills_missing_identifiers_and_keeps_existing_ones()
+        {
+            var repo = Open();
+            var serialOnly = new DeviceIdentity("LENOVO", "ThinkPad", "T14 Gen 2", "SERIALEX01", null, null);
+            var dev = repo.RegisterDevice(serialOnly, Specs);
+            var updated = repo.UpdateDevice(dev.DeviceId, QcStoreTests.LaptopA, new DeviceSpecs { Cpu = "i7" });
+            Assert.Equal(QcStoreTests.LaptopA.UuidHash, updated.UuidHash);
+            Assert.Equal(QcStoreTests.LaptopA.BoardSerialHash, updated.BoardSerialHash);
+            Assert.Equal(dev.SerialHash, updated.SerialHash);
+            Assert.Equal("i7", Open().Devices.Single().Specs.Cpu);
+        }
+
     }
 }
