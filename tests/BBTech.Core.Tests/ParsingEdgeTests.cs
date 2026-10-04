@@ -175,5 +175,18 @@ namespace BBTech.Core.Tests
             Assert.Equal(75.5, b.HealthPercent);
         }
 
+        [Fact]
+        public void Items_without_any_capacity_mean_no_battery()
+        {
+            string xml = @"<battery_information>
+<item><description>Battery Name</description><value>X</value></item>
+<item><description>Power State</description><value>AC Power</value></item>
+</battery_information>";
+            var b = BatteryInfoViewParser.Parse(xml);
+            Assert.False(b.Present);
+            Assert.Equal(0, b.BatteryCount);
+            Assert.Null(b.HealthPercent);
+        }
+
     }
 }
