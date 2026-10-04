@@ -45,5 +45,17 @@ namespace BBTech.Core.Tests
             Assert.Throws<ArgumentException>(() => s.SetOperatorActive(oldJimmy.OperatorId, true));
             Assert.Single(SettingsStore.Load(FilePath).ActiveOperators);
         }
+
+        [Fact]
+        public void An_inactive_operator_can_take_a_used_name_but_cannot_be_reactivated_with_it()
+        {
+            var s = SettingsStore.Load(FilePath);
+            s.AddOperator("Jimmy", "QC");
+            var old = s.AddOperator("Former Staff", "QC");
+            s.SetOperatorActive(old.OperatorId, false);
+            s.UpdateOperator(old.OperatorId, "Jimmy", "QC");
+            Assert.Throws<ArgumentException>(() => s.SetOperatorActive(old.OperatorId, true));
+        }
+
     }
 }
