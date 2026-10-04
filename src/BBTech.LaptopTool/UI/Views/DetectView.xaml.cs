@@ -218,7 +218,7 @@ namespace BBTech.LaptopTool.UI.Views
             if (_result == null) return;
             try
             {
-                string name = "detect_" + _result.DetectedAt.ToString("yyyyMMdd_HHmmss") + "_" + Safe(_result.Brand) + "_" + Safe(_result.Model) + "_" + Safe(_result.ModelNumber) + "." + ext;
+                string name = "detect_" + _result.DetectedAt.ToString("yyyyMMdd_HHmmss", System.Globalization.CultureInfo.InvariantCulture) + "_" + Safe(_result.Brand) + "_" + Safe(_result.Model) + "_" + Safe(_result.ModelNumber) + "." + ext;
                 string path = Path.Combine(AppPaths.Ensure(AppPaths.ExportsDir), name);
                 File.WriteAllText(path, content, new UTF8Encoding(false));
                 NoticeText.Text = "Saved: " + path;
