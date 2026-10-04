@@ -1,0 +1,31 @@
+using System;
+using System.IO;
+using System.Linq;
+using System.Text;
+using BBTech.Core.Settings;
+using Xunit;
+
+namespace BBTech.Core.Tests
+{
+    /// <summary>The encrypted settings file on the BBTech USB (example names and passwords only).</summary>
+    public class SettingsStoreTests : IDisposable
+    {
+        private readonly string _dir = Path.Combine(Path.GetTempPath(), "bbtech-store-" + Guid.NewGuid().ToString("N"));
+        private string FilePath => Path.Combine(_dir, "config", "settings.dat");
+        public void Dispose() { try { Directory.Delete(_dir, true); } catch { } }
+
+        private static readonly DateTime Fixed = new DateTime(2026, 10, 5, 8, 0, 0);
+
+        [Fact]
+        public void A_missing_settings_file_gives_defaults_and_is_not_created_by_loading()
+        {
+            var s = SettingsStore.Load(FilePath);
+            Assert.False(s.LoadFailed);
+            Assert.False(s.HasPin);
+            Assert.Empty(s.ActiveOperators);
+            Assert.Empty(s.WifiNetworks);
+            Assert.False(File.Exists(FilePath));
+        }
+
+    }
+}
