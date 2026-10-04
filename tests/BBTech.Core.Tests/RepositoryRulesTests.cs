@@ -192,5 +192,20 @@ namespace BBTech.Core.Tests
             Assert.Equal("FAIL", Open().GetHistory(dev.DeviceId).Single().Inspection.OverallStatus);
         }
 
+        [Fact]
+        public void Each_inspection_keeps_the_hardware_summary_of_its_time()
+        {
+            var t = new DateTime(2026, 10, 5, 9, 0, 0);
+            var repo = QcRepository.Open(_dir, new FakeMachine(7), QcStoreTests.LaptopA, () => t).Repository;
+            var dev = repo.RegisterDevice(QcStoreTests.LaptopA, Specs);
+            var first = repo.StartInspection(dev.DeviceId, Op, "1.0.0", new DeviceSpecs { Ram = "8 GB" });
+            repo.CompleteInspection(first.InspectionId, "PASS");
+            t = t.AddHours(1);
+            repo.StartInspection(dev.DeviceId, Op, "1.0.1", new DeviceSpecs { Ram = "16 GB" });
+            var history = Open().GetHistory(dev.DeviceId);
+            Assert.Equal(new[] { "16 GB", "8 GB" }, history.Select(h => h.Inspection.Specs.Ram));
+            Assert.Equal(new[] { "1.0.1", "1.0.0" }, history.Select(h => h.Inspection.AppVersion));
+        }
+
     }
 }
