@@ -112,5 +112,13 @@ namespace BBTech.Core.Tests
             Assert.Contains(message, WlanProfileXml.Validate("BBTECH_EXAMPLE", WifiSecurity.Wpa2Personal, pw));
         }
 
+        [Fact]
+        public void Passphrase_boundaries_8_and_63_are_accepted_64_non_hex_is_not()
+        {
+            Assert.Null(WlanProfileXml.Validate("BBTECH_EXAMPLE", WifiSecurity.Wpa2Personal, new string('x', 8)));
+            Assert.Null(WlanProfileXml.Validate("BBTECH_EXAMPLE", WifiSecurity.Wpa2Personal, new string('x', 63)));
+            Assert.NotNull(WlanProfileXml.Validate("BBTECH_EXAMPLE", WifiSecurity.Wpa2Personal, new string('x', 64)));
+        }
+
     }
 }
