@@ -195,5 +195,15 @@ namespace BBTech.Core.Tests
             Assert.Equal("ITMS integration is not configured yet.", r.Message);
         }
 
+        [Fact]
+        public async Task The_shipped_sync_service_leaves_records_local_only()
+        {
+            ISyncService sync = new LocalOnlySyncService();
+            var record = new SyncRecord { SyncId = "s1", SyncStatus = SyncStatus.LocalOnly };
+            Assert.False(sync.IsEnabled);
+            Assert.Same(record, await sync.SyncInspectionAsync(new DeviceRecord(), new InspectionView(), record));
+            Assert.Equal("LOCAL_ONLY", record.SyncStatus);
+        }
+
     }
 }
