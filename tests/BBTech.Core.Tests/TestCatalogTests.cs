@@ -31,5 +31,11 @@ namespace BBTech.Core.Tests
             Assert.True(TestCatalog.Order(HardwareTest.Display) < TestCatalog.Order(HardwareTest.Storage));
         }
 
+        [Fact]
+        public void Unknown_test_values_sort_last()
+        {
+            Assert.Equal(int.MaxValue, TestCatalog.Order((HardwareTest)999));
+            Assert.False(TestCatalog.IsRequired((HardwareTest)999));
+        }
     }
 }
