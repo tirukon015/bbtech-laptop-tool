@@ -31,16 +31,18 @@
 | Evidence | Status |
 |---|---|
 | Git history with author `Touhidul Islam Rukon <tirukon015@gmail.com>` | Starts 2026-10-04 |
-| Development log (`docs/development/DAY-NN.md`) | DAY-01 written; later days are added only when they happen |
+| Development log (`docs/development/DAY-NN.md`) | DAY-01 and DAY-02 written; later days are added only when they happen |
 | Design documentation (`docs/`) | Present |
-| Automated test results (224 passing on 2026-10-04) | Reproducible with `dotnet test` |
+| Automated test results (224 passing on 2026-10-04, 587 on 2026-10-05) | Reproducible with `dotnet test` and in GitHub Actions |
 | Release builds with SHA-256 | Built locally; no published release yet |
 | Signed commits (GPG/SSH) | **Not configured** |
 | Git tags / GitHub releases | **None yet** |
-| Remote repository push | **Not done yet** |
+| Remote repository | Private GitHub repository `tirukon015/bbtech-laptop-tool`, created 2026-10-05; the first push follows the day-2 commits |
+| Continuous integration | GitHub Actions workflow added 2026-10-05 |
 
 ## Git history: honest note
 
 - **Before git:** the code was developed in the working directory **before** the git repository was created. The first commits on 2026-10-04 therefore import already written code in a few logical groups. They do not show the step-by-step evolution.
 - **No fabricated history:** no commits were back-dated, generated to reach a target count, or attributed to anyone who did not make them.
-- **Commit count:** a target of "1,500 commits" was mentioned in the project brief. It was **not** pursued by artificial means. The count will be whatever real work produces.
+- **Commit schedule:** the lead developer set a six-day plan ending at 1,500 commits on `main` (241 by 2026-10-05, then 527, 724, 1,042, 1,265 and 1,500). The 6 commits of 2026-10-04 count toward it, so day 2 added 235 commits.
+- **How the count is reached:** with small, granular commits, each a real change (a fix with its test, a single new test, a configuration or documentation change). There are no empty commits and no changes made only to raise the number. Test batches were written and run together first, then committed one test per commit, so every intermediate commit contains only tests that pass.
