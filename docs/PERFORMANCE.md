@@ -8,6 +8,7 @@
 - **On-demand tools:** embedded tools are extracted only when needed, into `%TEMP%`, and deleted on exit.
 - **Idle:** no background timers when idle; live panels (meters, previews) stop when their window closes.
 - **Audio:** a single audio owner (`AudioArbiter`) prevents overlapping playback.
+- **Test catalog:** the list of tests is built once (from the `HardwareTest` enum) and reused. Before 2026-10-05 it was rebuilt by reflection on every lookup, including inside the sorting of report and history rows.
 
 ## Measurements
 
