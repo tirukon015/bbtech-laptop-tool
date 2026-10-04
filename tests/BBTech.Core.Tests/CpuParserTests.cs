@@ -110,5 +110,18 @@ namespace BBTech.Core.Tests
         [InlineData("99999", 0)]
         public void Generation_from_digits(string digits, int expected) =>
             Assert.Equal(expected, CpuParser.IntelGenerationFromDigits(digits));
+
+        [Theory]
+        [InlineData("Intel(R) Core(TM) i7 CPU       Q 720  @ 1.60GHz", "i7", "1st Gen", "720")]
+        [InlineData("Intel(R) Core(TM) i7 CPU       X 920  @ 2.00GHz", "i7", "1st Gen", "920")]
+        [InlineData("Intel(R) Core(TM) i5 CPU       M 520  @ 2.40GHz", "i5", "1st Gen", "520")]
+        [InlineData("Intel(R) Core(TM) i3 CPU       M 370  @ 2.40GHz", "i3", "1st Gen", "370")]
+        public void First_generation_mobile_names_with_a_letter_before_the_number(string name, string cpu, string gen, string code)
+        {
+            var r = CpuParser.Parse(name);
+            Assert.Equal(cpu, r.Family);
+            Assert.Equal(gen, r.Generation);
+            Assert.Equal(code, r.ModelCode);
+        }
     }
 }

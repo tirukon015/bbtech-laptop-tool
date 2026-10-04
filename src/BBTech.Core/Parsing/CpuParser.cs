@@ -59,10 +59,10 @@ namespace BBTech.Core.Parsing
             return s;
         }
 
-        // Intel Core i3/i5/i7/i9, e.g. "Core i5-1145G7", "Core i5-8250U", "Core i5 M 520".
+        // Intel Core i3/i5/i7/i9, e.g. "Core i5-1145G7", "Core i5-8250U", "Core i5 M 520", "Core i7 Q 720" (1st gen mobile).
         private static bool TryIntelCoreI(string name, CpuParseResult r)
         {
-            var m = Regex.Match(name, @"\bCore\s*(?:\s|-)?(i[3579])\b(?:[\s-]+(?:M\s*)?([A-Z]?)(\d{3,5})([A-Z]{0,2}\d?[A-Z]?))?", I);
+            var m = Regex.Match(name, @"\bCore\s*(?:\s|-)?(i[3579])\b(?:[\s-]+(?:[MQX]\s+|M)?([A-Z]?)(\d{3,5})([A-Z]{0,2}\d?[A-Z]?))?", I);
             if (!m.Success) m = Regex.Match(name, @"\b(i[3579])-(\d{3,5})([A-Z]{0,2}\d?)", I);
             if (!m.Success) return false;
 
