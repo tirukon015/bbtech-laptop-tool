@@ -170,5 +170,16 @@ namespace BBTech.Core.Tests
             Assert.Contains("Test Mode,ALL TESTS", TestReportExporter.ToCsv(items, null, When, meta));
         }
 
+        [Fact]
+        public void Missing_serial_is_unknown_and_missing_uuid_row_is_omitted()
+        {
+            string csv = TestReportExporter.ToCsv(new TestItem[0], new DetectionResult(), When);
+            Assert.Contains("Serial Number,Unknown", csv);
+            Assert.DoesNotContain("System UUID", csv);
+            string json = TestReportExporter.ToJson(new TestItem[0], new DetectionResult(), "1.0.0", When);
+            Assert.Contains("\"serial_number\": \"Unknown\"", json);
+            Assert.Contains("\"system_uuid\": \"\"", json);
+        }
+
     }
 }
