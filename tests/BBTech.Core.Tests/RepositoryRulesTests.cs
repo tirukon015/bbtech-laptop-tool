@@ -125,5 +125,22 @@ namespace BBTech.Core.Tests
             Assert.Empty(repo.GetHistory(dev.DeviceId));
         }
 
+        [Fact]
+        public void Re_running_a_test_replaces_its_result_but_keeps_id_and_start_time()
+        {
+            var t = new DateTime(2026, 10, 5, 9, 0, 0);
+            var r = QcRepository.Open(_dir, new FakeMachine(7), QcStoreTests.LaptopA, () => t);
+            var repo = r.Repository;
+            var dev = repo.RegisterDevice(QcStoreTests.LaptopA, Specs);
+            var insp = repo.StartInspection(dev.DeviceId, Op, "1.0.0", Specs);
+            var first = repo.SaveResult(insp.InspectionId, "Keyboard", "Keyboard", "FAIL", true, "Q key dead");
+            t = t.AddMinutes(5);
+            var second = repo.SaveResult(insp.InspectionId, "Keyboard", "Keyboard", "PASS", true, "replaced keyboard");
+            Assert.Equal(first.TestResultId, second.TestResultId);
+            Assert.Equal(first.StartedAt, second.StartedAt);
+            Assert.Equal(t, second.CompletedAt);
+            Assert.Equal("PASS", repo.GetResults(insp.InspectionId).Single().Status);
+        }
+
     }
 }
