@@ -14,6 +14,7 @@ Tests: `QcStoreTests.cs`, `SettingsAndWifiTests.cs`. The repository's vulnerabil
 | Admin PIN (PBKDF2-SHA256, 120,000 iterations) with lockout | IMPLEMENTED |
 | Wi-Fi passwords handed only to the Windows WLAN API (never logged or exported) | IMPLEMENTED |
 | Log scrubbing (user paths, user name; no results, names, serials, passwords) | IMPLEMENTED |
+| Spreadsheet formula neutralisation in exported CSV cells | IMPLEMENTED (2026-10-05) |
 | Code signing of the EXE | NOT IMPLEMENTED |
 | Signed git commits / tags | NOT IMPLEMENTED |
 | Off-laptop backup of QC history (ITMS sync) | PLANNED (see [ITMS-INTEGRATION.md](ITMS-INTEGRATION.md)) |
@@ -67,7 +68,8 @@ Verified on the real store: neither file contains readable names, results, seria
 
 ## 4. Admin PIN
 
-- **Rules:** 4–12 digits.
+- **Rules:** 4–12 ASCII digits (0–9). Bengali, Arabic-Indic and full-width digits are rejected, so the PIN does not depend on the keyboard layout.
+- **Damaged values:** a damaged salt or hash makes verification fail; it never unlocks Settings and never crashes the PIN dialog.
 - **Storage:** only a salted PBKDF2-SHA256 hash (120,000 iterations), kept inside the encrypted settings file.
 - **Lockout:** 5 wrong attempts lock Settings for 60 seconds.
 - **Tamper evidence:** hand-editing the settings file (for example, to remove the PIN) breaks its authentication. The file is then rejected and not overwritten, so the copy from another USB must be restored.
@@ -89,7 +91,13 @@ Verified on the real store: neither file contains readable names, results, seria
   - Because BBTech keeps the profiles on sold laptops, their owners can read the password.
 - **Recommendation:** use a dedicated, isolated SSID for laptops (internet-only VLAN) and change its password periodically. Edit it in Settings; laptops update the next time Provision is run.
 
-## 6. Privacy
+## 6. Exported reports
+
+- **When:** CSV/JSON files are written only when staff click Export.
+- **Formula neutralisation:** a CSV cell that Excel would run as a formula (starting with `=`, `+`, `-`, `@`, tab or CR) gets a leading apostrophe. An operator comment such as `=HYPERLINK(...)` is therefore displayed, never executed.
+- **Error messages:** Wi-Fi provisioning errors, including exceptions from the native WLAN API, never include the profile XML, which contains the key.
+
+## 7. Privacy
 
 - **Collected:** hardware identification and test results only.
 - **Not collected:** browser data, passwords, personal files or Wi-Fi history.
