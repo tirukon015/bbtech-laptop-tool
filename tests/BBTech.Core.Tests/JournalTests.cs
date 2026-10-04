@@ -120,5 +120,22 @@ namespace BBTech.Core.Tests
             Assert.Equal(data.Length, new FileInfo(FilePath).Length); // complete bytes are never cut
         }
 
+        [Fact]
+        public void A_record_with_an_impossible_length_is_resynchronised()
+        {
+            var j = Journal();
+            j.Append(B("first"));
+            long secondStart = new FileInfo(FilePath).Length;
+            j.Append(B("second"));
+            j.Append(B("third"));
+            byte[] data = File.ReadAllBytes(FilePath);
+            BitConverter.GetBytes(-5).CopyTo(data, secondStart + 4);
+            File.WriteAllBytes(FilePath, data);
+
+            var records = Journal().ReadAll(out _);
+            Assert.Contains("first", records.Select(r => Encoding.UTF8.GetString(r)));
+            Assert.Contains("third", records.Select(r => Encoding.UTF8.GetString(r)));
+        }
+
     }
 }
