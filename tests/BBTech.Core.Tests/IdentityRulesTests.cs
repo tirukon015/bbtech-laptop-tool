@@ -90,5 +90,15 @@ namespace BBTech.Core.Tests
             Assert.Matches("^[0-9a-f]{64}$", id.Fingerprint);
         }
 
+        [Fact]
+        public void Fingerprint_ignores_model_text_but_includes_the_manufacturer()
+        {
+            var a = new DeviceIdentity("Lenovo", "ThinkPad", "T14 Gen 2", "ABC12345", Uuid, null);
+            var renamed = new DeviceIdentity("LENOVO", "Unknown", "20W0", "ABC12345", Uuid, null);
+            var otherVendor = new DeviceIdentity("Dell", "ThinkPad", "T14 Gen 2", "ABC12345", Uuid, null);
+            Assert.Equal(a.Fingerprint, renamed.Fingerprint);
+            Assert.NotEqual(a.Fingerprint, otherVendor.Fingerprint);
+        }
+
     }
 }
