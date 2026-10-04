@@ -87,5 +87,16 @@ namespace BBTech.Core.Tests
             Assert.Null(new EnvelopeCrypto(EnvelopeCrypto.NewKey()).TryDecrypt(enc));
         }
 
+        [Fact]
+        public void Truncated_or_missing_envelopes_return_null()
+        {
+            var c = new EnvelopeCrypto(EnvelopeCrypto.NewKey());
+            byte[] enc = c.Encrypt(new byte[40]);
+            Assert.Null(c.TryDecrypt(enc.Take(enc.Length - 1).ToArray()));
+            Assert.Null(c.TryDecrypt(enc.Take(1 + 16 + 16).ToArray()));
+            Assert.Null(c.TryDecrypt(new byte[0]));
+            Assert.Null(c.TryDecrypt(null));
+        }
+
     }
 }
