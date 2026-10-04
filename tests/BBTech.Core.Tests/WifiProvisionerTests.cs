@@ -109,5 +109,16 @@ namespace BBTech.Core.Tests
             Assert.True(state.ContainsKey("BBTECH_EXAMPLE"));
         }
 
+        [Fact]
+        public void Provisioning_twice_does_not_rewrite_an_unchanged_profile()
+        {
+            var api = new ScriptedWlan();
+            var state = new Dictionary<string, WifiProvisionRecord>();
+            P(api, state).ProvisionAll(new[] { Net() });
+            var again = P(api, state).ProvisionAll(new[] { Net() }).Single();
+            Assert.Equal(ProvisionOutcome.AlreadyInstalled, again.Outcome);
+            Assert.Equal(1, api.SetCalls);
+        }
+
     }
 }
