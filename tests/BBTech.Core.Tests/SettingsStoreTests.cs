@@ -159,5 +159,15 @@ namespace BBTech.Core.Tests
             Assert.Null(s.FindOperator(null));
         }
 
+        [Fact]
+        public void Active_operators_are_sorted_by_name_ignoring_case()
+        {
+            var s = SettingsStore.Load(FilePath);
+            s.AddOperator("rahim", "QC");
+            s.AddOperator("Anika", "QC");
+            s.AddOperator("jimmy", "QC");
+            Assert.Equal(new[] { "Anika", "jimmy", "rahim" }, s.ActiveOperators.Select(o => o.Name));
+        }
+
     }
 }
