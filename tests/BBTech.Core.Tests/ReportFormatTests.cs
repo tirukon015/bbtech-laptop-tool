@@ -181,5 +181,15 @@ namespace BBTech.Core.Tests
             Assert.Contains("\"system_uuid\": \"\"", json);
         }
 
+        [Fact]
+        public void Detection_json_lists_storage_devices_with_unknown_type_when_unsure()
+        {
+            var r = new DetectionResult();
+            r.StorageDevices.Add(new StorageDevice { CapacityLabel = "256 GB", CapacityBytes = 256060514304L, BusType = "SATA", Model = "Example SSD" });
+            string json = DetectionExporter.ToJson(r);
+            Assert.Contains("\"type\": \"Unknown\"", json);
+            Assert.Contains("\"capacity_bytes\": 256060514304", json);
+            Assert.Contains("\"health_percent\": null", json);
+        }
     }
 }
