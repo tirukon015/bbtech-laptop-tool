@@ -55,5 +55,15 @@ namespace BBTech.Core.Tests
             Assert.Equal("Unknown", r.Generation);
         }
 
+        [Theory]
+        [InlineData("Intel(R) Core(TM) m3-7Y30 CPU @ 1.00GHz", "m3", "7th Gen")]
+        [InlineData("Intel(R) Core(TM) M-5Y10c CPU @ 0.80GHz", "Core M", "5th Gen")]
+        public void Core_m_processors(string name, string family, string gen)
+        {
+            var r = CpuParser.Parse(name);
+            Assert.Equal(family, r.Family);
+            Assert.Equal(gen, r.Generation);
+        }
+
     }
 }
