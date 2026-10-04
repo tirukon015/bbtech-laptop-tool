@@ -40,5 +40,15 @@ namespace BBTech.Core.Tests
             Assert.Equal(expected, DeviceIdentity.CleanSerial(raw));
         }
 
+        [Theory]
+        [InlineData("6a3f2c10-1b2d-11b2-a85c-d5a1a3b0c9e1")]
+        [InlineData("6A3F2C101B2D11B2A85CD5A1A3B0C9E1")]
+        [InlineData("(6A3F2C10-1B2D-11B2-A85C-D5A1A3B0C9E1)")]
+        [InlineData("  {6A3F2C10-1B2D-11B2-A85C-D5A1A3B0C9E1}  ")]
+        public void Uuid_formats_are_canonicalised(string raw)
+        {
+            Assert.Equal(Uuid, DeviceIdentity.CleanUuid(raw));
+        }
+
     }
 }
