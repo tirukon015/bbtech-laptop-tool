@@ -177,5 +177,17 @@ namespace BBTech.Core.Tests
             Assert.Equal("Windows did not keep the Wi-Fi profile.", r.Message);
         }
 
+        [Fact]
+        public void Invalid_settings_are_reported_before_calling_windows()
+        {
+            var api = new ScriptedWlan();
+            var bad = Net();
+            bad.Password = "short";
+            var r = P(api).ProvisionAll(new[] { bad }).Single();
+            Assert.Equal(ProvisionOutcome.Failed, r.Outcome);
+            Assert.StartsWith("Invalid network settings", r.Message);
+            Assert.Equal(0, api.SetCalls);
+        }
+
     }
 }
