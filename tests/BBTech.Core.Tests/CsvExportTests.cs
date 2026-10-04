@@ -57,5 +57,11 @@ namespace BBTech.Core.Tests
             Assert.EndsWith("\r\n", csv);
         }
 
+        [Fact]
+        public void Detection_csv_header_lists_the_itms_fields_then_serial_and_time()
+        {
+            string header = DetectionExporter.ToCsv(new DetectionResult()).Split(new[] { "\r\n" }, StringSplitOptions.None)[0];
+            Assert.Equal("brand,model,model_number,cpu,generation,ram,storage,battery_health,serial_number,detected_at", header);
+        }
     }
 }
