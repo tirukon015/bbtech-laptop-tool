@@ -38,5 +38,22 @@ namespace BBTech.Core.Tests
         [InlineData("HP ELITEBOOK 830 G7", "HP", "EliteBook", "830 G7")]
         public void All_caps_firmware_names_get_marketing_casing(string full, string brand, string model, string number) => Split(full, brand, model, number);
 
+        [Theory]
+        [InlineData("Intel(R) Celeron(R) N4020 CPU @ 1.10GHz", "Celeron", "Intel")]
+        [InlineData("Intel(R) Pentium(R) Silver N5030 CPU @ 1.10GHz", "Pentium", "Intel")]
+        [InlineData("Intel(R) Processor N100", "Intel N-series", "Intel")]
+        [InlineData("Intel(R) Xeon(R) W-10855M CPU @ 2.80GHz", "Xeon", "Intel")]
+        [InlineData("AMD Athlon Silver 3050U with Radeon Graphics", "Athlon", "AMD")]
+        [InlineData("AMD A9-9425 RADEON R5, 5 COMPUTE CORES 2C+3G", "AMD A9", "AMD")]
+        [InlineData("Snapdragon(R) X Elite - X1E78100 - Qualcomm(R) Oryon(TM) CPU", "Snapdragon X Elite", "Qualcomm")]
+        [InlineData("Intel(R) Core(TM)2 Duo CPU P8600 @ 2.40GHz", "Core 2", "Intel")]
+        public void Other_cpu_families(string name, string family, string vendor)
+        {
+            var r = CpuParser.Parse(name);
+            Assert.Equal(family, r.Family);
+            Assert.Equal(vendor, r.Vendor);
+            Assert.Equal("Unknown", r.Generation);
+        }
+
     }
 }
