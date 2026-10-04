@@ -108,5 +108,14 @@ namespace BBTech.Core.Tests
             Assert.Equal(Uuid, id.StableIdentifiers[0].Value);
         }
 
+        [Theory]
+        [InlineData("Dell Inc.", "DELLINC")]
+        [InlineData("  hewlett-packard ", "HEWLETTPACKARD")]
+        [InlineData(null, "")]
+        public void Names_are_normalised_to_upper_case_letters_and_digits(string raw, string expected)
+        {
+            Assert.Equal(expected, DeviceIdentity.NormalizeName(raw));
+        }
+
     }
 }
