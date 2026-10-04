@@ -27,5 +27,19 @@ namespace BBTech.Core.Tests
             Assert.False(File.Exists(FilePath));
         }
 
+        [Fact]
+        public void Saved_settings_have_the_magic_header_and_no_readable_content()
+        {
+            var s = SettingsStore.Load(FilePath);
+            s.AddOperator("Operator One", "QC");
+            s.AddOrUpdateWifi(null, "BBTECH_EXAMPLE", WifiSecurity.Wpa2Personal, "example-pass", false);
+            byte[] raw = File.ReadAllBytes(FilePath);
+            Assert.Equal("BBTS0001", Encoding.ASCII.GetString(raw, 0, 8));
+            string text = Encoding.UTF8.GetString(raw);
+            Assert.DoesNotContain("Operator One", text);
+            Assert.DoesNotContain("BBTECH_EXAMPLE", text);
+            Assert.DoesNotContain("example-pass", text);
+        }
+
     }
 }
