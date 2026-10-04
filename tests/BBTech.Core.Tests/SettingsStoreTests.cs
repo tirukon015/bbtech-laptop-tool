@@ -198,5 +198,12 @@ namespace BBTech.Core.Tests
             Assert.Equal(new[] { "BBTECH_EXAMPLE_5G" }, SettingsStore.Load(FilePath).WifiNetworks.Select(n => n.Ssid));
         }
 
+        [Fact]
+        public void Invalid_wifi_settings_are_not_saved()
+        {
+            var s = SettingsStore.Load(FilePath);
+            Assert.Throws<ArgumentException>(() => s.AddOrUpdateWifi(null, "BBTECH_EXAMPLE", WifiSecurity.Wpa2Personal, "short", false));
+            Assert.False(File.Exists(FilePath));
+        }
     }
 }
