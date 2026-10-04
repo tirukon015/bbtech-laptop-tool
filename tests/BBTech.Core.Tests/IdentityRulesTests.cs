@@ -61,5 +61,14 @@ namespace BBTech.Core.Tests
             Assert.Null(DeviceIdentity.CleanUuid(raw));
         }
 
+        [Fact]
+        public void The_same_value_hashes_differently_as_serial_and_board_serial()
+        {
+            Assert.NotEqual(DeviceIdentity.Hash("serial", "ABC12345"), DeviceIdentity.Hash("board", "ABC12345"));
+            Assert.Equal(DeviceIdentity.Hash("serial", "ABC12345"), DeviceIdentity.Hash("serial", "ABC12345"));
+            Assert.Null(DeviceIdentity.Hash("serial", null));
+            Assert.Matches("^[0-9a-f]{64}$", DeviceIdentity.Hash("uuid", Uuid));
+        }
+
     }
 }
