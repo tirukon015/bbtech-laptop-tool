@@ -90,6 +90,11 @@ namespace BBTech.Core.Wifi
             iface = null;
             try { iface = _api.GetInterface(); }
             catch (DllNotFoundException) { return "Wi-Fi is not available on this laptop."; }
+            catch (Exception ex) when (!(ex is OutOfMemoryException))
+            {
+                // e.g. the WLAN AutoConfig service is stopped or the driver is not responding
+                return "Wi-Fi is not available on this laptop right now (the Windows Wi-Fi service did not respond).";
+            }
             if (iface == null) return "Wi-Fi is not available on this laptop (no Wi-Fi adapter found, or it is disabled).";
             return null;
         }

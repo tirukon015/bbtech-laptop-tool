@@ -63,5 +63,25 @@ namespace BBTech.Core.Tests
             Assert.Contains("stays installed", msg);
             Assert.True(api.Profiles.ContainsKey("BBTECH_EXAMPLE"));
         }
+
+        private sealed class BrokenWlan : IWlanApi
+        {
+            public WlanInterface GetInterface() => throw new System.ComponentModel.Win32Exception(1062); // service not started
+            public string GetProfileXml(Guid iface, string name) => null;
+            public int SetProfile(Guid iface, string xml, bool allUsers, out string reason) { reason = ""; return 0; }
+            public int Connect(Guid iface, string name) => 0;
+            public HashSet<string> VisibleSsids(Guid iface) => null;
+            public string ConnectedProfile(Guid iface) => null;
+        }
+
+        [Fact]
+        public void A_stopped_wlan_service_gives_a_friendly_message_everywhere()
+        {
+            var p = P(new BrokenWlan());
+            Assert.Contains("not available", p.CheckAdapter(out _));
+            Assert.Equal(ProvisionOutcome.Failed, p.ProvisionAll(new[] { Net() }).Single().Outcome);
+            Assert.Contains("not available", p.ConnectNow(Net()));
+            Assert.Null(p.IsAutoConnect("BBTECH_EXAMPLE"));
+        }
     }
 }
