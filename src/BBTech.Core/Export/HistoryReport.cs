@@ -44,8 +44,9 @@ namespace BBTech.Core.Export
         public static List<TestItem> Items(IEnumerable<TestResultRecord> results)
         {
             var list = new List<TestItem>();
-            foreach (var r in results)
+            foreach (var r in results ?? Enumerable.Empty<TestResultRecord>())
             {
+                if (r == null) continue;
                 if (!Enum.TryParse(r.TestId, out HardwareTest kind)) continue;
                 var item = new TestItem(kind, "", r.Required) { State = Parse(r.Status), Notes = r.Comment ?? "" };
                 item.CompletedAt = r.CompletedAt;
@@ -65,10 +66,10 @@ namespace BBTech.Core.Export
             if (selected == null) return Items(results);
 
             var list = new List<TestItem>();
-            foreach (var name in selected)
+            foreach (var name in selected.Distinct())
             {
                 if (!Enum.TryParse(name, out HardwareTest kind)) continue;
-                var r = results.FirstOrDefault(x => x.TestId == name);
+                var r = results.FirstOrDefault(x => x?.TestId == name);
                 var item = new TestItem(kind, "", true) { State = r == null ? TestState.NotTested : Parse(r.Status), Notes = r?.Comment ?? "" };
                 item.CompletedAt = r?.CompletedAt;
                 list.Add(item);
