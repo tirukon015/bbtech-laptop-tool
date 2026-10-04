@@ -40,5 +40,18 @@ namespace BBTech.Core.Tests
             Assert.Equal(0, count);
         }
 
+        [Fact]
+        public void Complete_records_state_notes_and_time_and_reset_clears_them()
+        {
+            var item = new TestItem(HardwareTest.Battery, "");
+            item.Complete(TestState.Fail, null);
+            Assert.Equal(TestState.Fail, item.State);
+            Assert.Equal("", item.Notes);
+            Assert.NotNull(item.CompletedAt);
+            item.Reset();
+            Assert.Equal(TestState.NotTested, item.State);
+            Assert.Null(item.CompletedAt);
+        }
+
     }
 }
