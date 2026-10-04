@@ -33,5 +33,10 @@ namespace BBTech.Core.Tests
         [InlineData("Lenovo ThinkBook 14 G2 ITL", "ThinkBook", "14 G2 ITL")]
         public void Lenovo_names(string full, string model, string number) => Split(full, "Lenovo", model, number);
 
+        [Theory]
+        [InlineData("DELL LATITUDE 5420", "Dell", "Latitude", "5420")]
+        [InlineData("HP ELITEBOOK 830 G7", "HP", "EliteBook", "830 G7")]
+        public void All_caps_firmware_names_get_marketing_casing(string full, string brand, string model, string number) => Split(full, brand, model, number);
+
     }
 }
