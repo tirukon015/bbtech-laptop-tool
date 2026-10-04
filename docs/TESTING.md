@@ -6,21 +6,24 @@
 dotnet test tests\BBTech.Core.Tests -c Release
 ```
 
-**Result on 2026-10-04: 224 tests, 224 passed, 0 failed** (xUnit, `net472`). The test methods below expand into 224 cases through `[Theory]` data.
+**Result on 2026-10-05: 587 test cases, 587 passed, 0 failed** (xUnit, `net472`; 358 test methods, expanded by `[Theory]` data). On 2026-10-04 the suite had 224 cases.
 
-| File | Test methods | Covers |
+GitHub Actions (`.github/workflows/ci.yml`) runs the same tests and builds the app on `windows-latest` for every push to `main` and every pull request. The CI build has no embedded third-party tools, because `third_party/` is not in the repository.
+
+| File | Methods | Covers |
 |---|---|---|
-| `CpuParserTests.cs` | 8 | CPU family and generation (Intel Core i, Core Ultra, Ryzen, others) |
+| `CpuParserTests.cs`, `DetectNamingTests.cs` | 9 + 11 | CPU family and generation (Intel Core i incl. 1st-gen M/Q/X names, Core Ultra, Core 3/5/7, Core m, Ryzen, other families), ordinals, laptop name splitting |
 | `ModelParserTests.cs` | 26 | Brand normalisation, Model / Model Number split across vendors |
-| `OtherParserTests.cs` | 25 | Capacity formatting, BatteryInfoView and HD Sentinel parsing, detection export |
-| `IdentityTests.cs` | 14 | Identifier cleaning, hashing, fingerprint, matcher (match / not found / conflict / no identifiers) |
-| `QcStoreTests.cs` | 15 | Encrypted journal, corruption and partial-tail recovery, dual-locked key, DPAPI loss recovery, different-machine lockout, inspections, immutability, history order |
-| `ReportTests.cs` | 14 | Report file naming, sanitising, NOSERIAL / NOMODEL, CSV / JSON contents |
-| `SettingsAndWifiTests.cs` | 22 | Encrypted settings, tamper detection, PIN, operators, WLAN XML, provisioning, verify, adoption |
-| `TestMediaCheckTests.cs` | 8 | Speaker media availability |
-| `TestPlanTests.cs` | 15 | REQUIRED / ALL TESTS modes, selection, overall result on selected tests |
+| `OtherParserTests.cs`, `ParsingEdgeTests.cs` | 25 + 19 | Capacity labels, brand catalog, BatteryInfoView and HD Sentinel parsing, battery health rules, detection export |
+| `IdentityTests.cs`, `IdentityRulesTests.cs` | 14 + 17 | Identifier cleaning, hashing, fingerprint, matcher (match / not found / conflict / no identifiers) |
+| `QcStoreTests.cs`, `RepositoryRulesTests.cs` | 15 + 16 | Encrypted store end to end, recovery, immutability, input validation, duplicate-record refusal, inspection numbering |
+| `JournalTests.cs`, `KeyVaultTests.cs`, `CryptoTests.cs` | 11 + 5 + 18 | Journal format, corruption and tail repair, dual-locked key, AES+HMAC envelope, PBKDF2, PIN hashing, atomic writes |
+| `ReportTests.cs`, `ReportFormatTests.cs`, `CsvExportTests.cs`, `HistoryReportTests.cs` | 14 + 20 + 5 + 4 | File naming, JSON writer, CSV/JSON contents, formula neutralisation, locale independence, history rows |
+| `SettingsAndWifiTests.cs`, `SettingsStoreTests.cs`, `OperatorRulesTests.cs`, `WifiSettingsTests.cs` | 22 + 17 + 6 + 1 | Encrypted USB settings, tamper detection, backup copy, PIN, operators, managed networks |
+| `WlanProfileXmlTests.cs`, `WifiProvisionerTests.cs` | 14 + 22 | WLAN profile XML, validation, provisioning outcomes, verification, adoption, Connect Now, native API failures |
+| `TestPlanTests.cs`, `TestCatalogTests.cs`, `TestModelTests.cs`, `TestMediaCheckTests.cs` | 15 + 4 + 20 + 8 | REQUIRED / ALL TESTS modes, catalog, overall result, test items, ITMS extension points, speaker media |
 
-**Not covered by unit tests:** the WPF UI, WMI, the audio/camera/Bluetooth/Wi-Fi hardware APIs and DPAPI on real systems. These were tested manually (section 2).
+**Not covered by unit tests:** the WPF UI, WMI, the audio/camera/Bluetooth/Wi-Fi hardware APIs and DPAPI on real systems. These were tested manually (section 2). On 2026-10-05 the Release build (with embedded tools, 50.8 MB) was also launched once to confirm the main window opens.
 
 ## 2. Manual end-to-end verification (performed)
 
