@@ -39,5 +39,15 @@ namespace BBTech.Core.Tests
             Assert.Equal("Unknown", CapacityFormatter.FormatRamFromVisible(-5));
         }
 
+        [Theory]
+        [InlineData(536870912L, "512 MB")]
+        [InlineData(12884901888L, "12 GB")]
+        [InlineData(25769803776L, "24 GB")]
+        [InlineData(68719476736L, "64 GB")]
+        public void Ram_module_totals_are_shown_in_binary_units(long bytes, string expected)
+        {
+            Assert.Equal(expected, CapacityFormatter.FormatRamFromModules(bytes));
+        }
+
     }
 }
