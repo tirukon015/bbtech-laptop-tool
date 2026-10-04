@@ -61,5 +61,17 @@ namespace BBTech.Core.Tests
             Assert.False(File.Exists(KeyPath));
         }
 
+        [Fact]
+        public void The_backup_key_file_is_used_when_the_main_key_file_is_damaged()
+        {
+            var serialOnly = new DeviceIdentity("LENOVO", "ThinkPad", "T14 Gen 2", "SERIALEX01", null, null);
+            byte[] key = KeyVault.Open(_dir, new FakeMachine(1), serialOnly, false).Key;
+            KeyVault.Open(_dir, new FakeMachine(1), Laptop, true); // new identifiers -> key file rewritten, old copy kept as .bak
+            Assert.True(File.Exists(KeyPath + ".bak"));
+            File.WriteAllBytes(KeyPath, new byte[] { 1, 2, 3 });
+            var r = KeyVault.Open(_dir, new FakeMachine(1), Laptop, true);
+            Assert.Equal(KeyState.UnlockedMachine, r.State);
+            Assert.Equal(key, r.Key);
+        }
     }
 }
