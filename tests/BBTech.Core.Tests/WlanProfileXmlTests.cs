@@ -85,5 +85,14 @@ namespace BBTech.Core.Tests
             Assert.True(WlanProfileXml.Parse(xml).NonBroadcast);
         }
 
+        [Fact]
+        public void Ssid_length_is_limited_to_32_utf8_bytes()
+        {
+            Assert.Null(WlanProfileXml.Validate(new string('a', 32), WifiSecurity.Open, null));
+            Assert.Contains("too long", WlanProfileXml.Validate(new string('a', 33), WifiSecurity.Open, null));
+            Assert.Contains("too long", WlanProfileXml.Validate(new string('ব', 11), WifiSecurity.Open, null)); // 33 bytes
+            Assert.Null(WlanProfileXml.Validate(new string('ব', 10), WifiSecurity.Open, null));
+        }
+
     }
 }
