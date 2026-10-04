@@ -43,5 +43,16 @@ namespace BBTech.Core.Tests
             Assert.True(stats.TailRepairFailed);
             Assert.Equal(size, new FileInfo(FilePath).Length);
         }
+
+        [Fact]
+        public void Records_are_read_back_in_the_order_they_were_appended()
+        {
+            var j = Journal();
+            for (int i = 0; i < 25; i++) j.Append(B("record " + i));
+            var records = Journal().ReadAll(out var stats);
+            Assert.Equal(25, stats.Valid);
+            Assert.Equal(Enumerable.Range(0, 25).Select(i => "record " + i), records.Select(r => Encoding.UTF8.GetString(r)));
+        }
+
     }
 }
