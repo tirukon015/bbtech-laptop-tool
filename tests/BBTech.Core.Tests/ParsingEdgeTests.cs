@@ -200,5 +200,15 @@ namespace BBTech.Core.Tests
             Assert.Null(d.PerformancePercent);
         }
 
+        [Fact]
+        public void Disk_entries_without_model_or_health_are_skipped()
+        {
+            string xml = "<Hard_Disk_Sentinel><Physical_Disk_Information_Disk_0><Hard_Disk_Summary>" +
+                         "<Interface>USB</Interface></Hard_Disk_Summary></Physical_Disk_Information_Disk_0></Hard_Disk_Sentinel>";
+            Assert.Empty(HdSentinelReportParser.Parse(xml));
+            Assert.Empty(HdSentinelReportParser.Parse(""));
+            Assert.Empty(HdSentinelReportParser.Parse(null));
+        }
+
     }
 }
