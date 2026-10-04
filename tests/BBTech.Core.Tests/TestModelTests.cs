@@ -117,5 +117,14 @@ namespace BBTech.Core.Tests
             Assert.Equal(TestMode.Required, plan.Mode);
         }
 
+        [Fact]
+        public void Removing_a_test_that_is_not_selected_returns_true_and_keeps_the_mode()
+        {
+            var plan = TestPlan.Required();
+            Assert.True(plan.Remove(HardwareTest.Camera));
+            Assert.Equal(TestMode.Required, plan.Mode);
+            Assert.Equal(4, plan.Selected.Count);
+        }
+
     }
 }
