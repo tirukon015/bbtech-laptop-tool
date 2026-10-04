@@ -143,5 +143,21 @@ namespace BBTech.Core.Tests
             Assert.Equal("91%", specs.BatteryHealth);
         }
 
+        [Fact]
+        public void A_laptop_can_be_matched_by_motherboard_serial_only()
+        {
+            var stored = new DeviceIdentity("ASUS", "VivoBook", "X515EA", null, null, "BRD-0001");
+            var now = new DeviceIdentity("ASUS", "VivoBook", "X515EA", null, null, "brd-0001");
+            var m = DeviceMatcher.Match(now, new[] { Rec(stored) });
+            Assert.Equal(MatchStatus.Matched, m.Status);
+            Assert.Equal("motherboard serial", m.MatchedOn);
+        }
+
+        private static DeviceRecord Rec(DeviceIdentity id) => new DeviceRecord
+        {
+            DeviceId = Guid.NewGuid().ToString("N"), Manufacturer = id.Manufacturer,
+            SerialHash = id.SerialHash, UuidHash = id.UuidHash, BoardSerialHash = id.BoardSerialHash,
+        };
+
     }
 }
