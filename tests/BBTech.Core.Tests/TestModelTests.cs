@@ -159,5 +159,18 @@ namespace BBTech.Core.Tests
             Assert.Equal(expected, HistoryReport.Parse(label));
         }
 
+        [Fact]
+        public void Report_meta_copies_the_operator_snapshot_and_hides_overall_while_open()
+        {
+            var open = new InspectionRecord { InspectionId = "i1", Number = 3, OperatorNameSnapshot = "Operator One", OperatorRoleSnapshot = "QC", Status = InspectionStatus.InProgress, OverallStatus = "PASS", TestMode = "AllTests", AppVersion = "1.0.0" };
+            var meta = HistoryReport.Meta(open);
+            Assert.Equal("Operator One", meta.TestedBy);
+            Assert.Equal(3, meta.Number);
+            Assert.Null(meta.OverallStatus);
+            Assert.Equal("ALL TESTS", meta.TestMode);
+            open.Status = InspectionStatus.Completed;
+            Assert.Equal("PASS", HistoryReport.Meta(open).OverallStatus);
+        }
+
     }
 }
