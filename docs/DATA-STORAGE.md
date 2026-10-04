@@ -50,19 +50,21 @@ Example values in this documentation use placeholders such as `SERIAL-EXAMPLE` a
 - **Every change is a new record.** The current state is rebuilt by replaying the journal.
 - **Persistence:** each append is flushed to disk (`FileStream.Flush(true)`) before the call returns, so a test result is durable the moment it is recorded.
 - **Immutability:** once an inspection is COMPLETED or ABANDONED, later entries for it are ignored on replay, and writes are rejected with `InvalidOperationException`.
+- **Validation before writing:** a test result must have a test id and one of the status labels NOT TESTED / TESTING / PASS / FAIL / SKIPPED. Completing requires PASS, FAIL or INCOMPLETE. A Wi-Fi provisioning record needs an SSID. Invalid calls are rejected and nothing is appended.
+- **One record per laptop:** `RegisterDevice` refuses to create a second device record for a laptop that already matches one. On an identity conflict it only does so when staff confirmed it, which stores an `IdentityNote`.
 
 ## 4. Recovery and integrity
 
 | Situation | Behaviour |
 |---|---|
-| Power loss or crash during a write | The incomplete final record is detected on the next open and cut off; all earlier records remain |
+| Power loss or crash during a write | The incomplete final record is detected on the next open and cut off; all earlier records remain. If the file cannot be written at that moment (read-only copy, permissions), the history is still read and the tail is cut on a later open |
 | A damaged record (bit flip, tampering) | Fails HMAC and is skipped; the reader resynchronises on the next record marker, so later records survive. The count is reported. |
 | Garbage or non-journal file | Not readable; reported, not overwritten |
 | App closed mid-inspection | The inspection stays IN_PROGRESS; the next TEST on that laptop offers **Resume** or **Start new** (the old one becomes ABANDONED, still kept) |
 | `qc.key` missing while a journal exists | Reported as "key missing"; the journal is **not** overwritten |
 | Key file damaged | `qc.key.bak` (previous version kept by the atomic replace) is tried |
 
-All of these behaviours are covered by unit tests in `tests/BBTech.Core.Tests/QcStoreTests.cs`.
+All of these behaviours are covered by unit tests in `tests/BBTech.Core.Tests/QcStoreTests.cs`, `JournalTests.cs`, `KeyVaultTests.cs` and `RepositoryRulesTests.cs`.
 
 ## 5. Encryption and keys
 
