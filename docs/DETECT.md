@@ -16,7 +16,7 @@ Primary users: E-commerce staff. Source: `src/BBTech.LaptopTool/Detect/HardwareD
 | **Brand** | `Win32_ComputerSystem.Manufacturer` | Normalised (e.g. "Dell Inc." → Dell, "Hewlett-Packard" → HP, "ASUSTeK COMPUTER INC." → ASUS, "Micro-Star…" → MSI, "TIMI" → Xiaomi). Unknown vendors are title-cased with corporate suffixes removed. Placeholders give **Unknown**. |
 | **Model** / **Model Number** | `Model`, `SystemFamily`, `ComputerSystemProduct.Version` | See below |
 | **CPU** | `Win32_Processor.Name` | Simple family only: `i3/i5/i7/i9`, `Ryzen 3/5/7/9`, `Ryzen AI 9`, `Core Ultra 5/7/9`, `Core 5/7`, `m3/m5/m7`, `Celeron`, `Pentium`, `Xeon`, `Atom`, `Snapdragon X Elite` … Otherwise **Unknown**. The full name appears only under Details. |
-| **Generation** | CPU model number | Intel Core i: 3 digits = 1st; 4 digits = first digit (or first two if the number starts with "1"); 5 digits = first two. An "11th Gen" prefix wins if present. Core Ultra → "Series 1/2". AMD Ryzen → "5000 Series" etc. Otherwise **Unknown**; a generation is never guessed. |
+| **Generation** | CPU model number | Intel Core i: 3 digits = 1st (also old mobile names with a letter before the number, e.g. "i7 CPU Q 720", "i5 CPU M 520"); 4 digits = first digit (or first two if the number starts with "1"); 5 digits = first two. An "11th Gen" prefix wins if present. Core Ultra → "Series 1/2". AMD Ryzen → "5000 Series" etc. Otherwise **Unknown**; a generation is never guessed. |
 | **RAM** | `Win32_PhysicalMemory` (sum of modules) | e.g. "32 GB". Fallback: OS-visible memory rounded up to the next common size. |
 | **Storage** | `MSFT_PhysicalDisk` (fallback `Win32_DiskDrive`) | Each internal drive listed separately (e.g. "512 GB SSD + 1 TB HDD"). Marketing size within ±5 %. SSD/HDD shown only when reliable (media type, NVMe bus, spindle speed, model name). USB drives, including the BBTech USB itself, are external and not counted. |
 | **Battery Health** | BatteryInfoView `/sxml`; fallbacks WMI `root\wmi` and `powercfg /batteryreport /xml` | Full-charge ÷ design capacity, **rounded down** (87.9 % shows as "87%"). Two batteries are combined. Implausible values are rejected. Unknown if not determinable. |
@@ -63,7 +63,12 @@ History is never chosen by model, and another laptop's records are never shown.
 - **Export JSON / CSV / Copy** for the detection result: see [REPORTS.md](REPORTS.md).
 - **Send to ITMS** is visible but disabled (**not implemented**).
 
-## 5. When information is unavailable
+## 5. Display and export formats
+
+- **Dates on screen:** shown with English month names ("05 Oct 2026, 14:30"), whatever the Windows region.
+- **Export file names:** use a fixed `yyyyMMdd_HHmmss` timestamp, so a Thai or Arabic region setting cannot change the year or digits.
+
+## 6. When information is unavailable
 
 | Situation | Behaviour |
 |---|---|
