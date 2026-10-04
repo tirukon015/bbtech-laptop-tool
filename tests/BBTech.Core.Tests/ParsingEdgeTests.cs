@@ -210,5 +210,16 @@ namespace BBTech.Core.Tests
             Assert.Empty(HdSentinelReportParser.Parse(null));
         }
 
+        [Fact]
+        public void Health_above_100_percent_is_ignored()
+        {
+            string xml = "<Hard_Disk_Sentinel><Physical_Disk_Information_Disk_0><Hard_Disk_Summary>" +
+                         "<Hard_Disk_Model_ID>Example HDD</Hard_Disk_Model_ID><Health>140 %</Health><Performance>n/a</Performance>" +
+                         "</Hard_Disk_Summary></Physical_Disk_Information_Disk_0></Hard_Disk_Sentinel>";
+            var d = HdSentinelReportParser.Parse(xml).Single();
+            Assert.Null(d.HealthPercent);
+            Assert.Null(d.PerformancePercent);
+            Assert.Equal("Example HDD", d.Model);
+        }
     }
 }
