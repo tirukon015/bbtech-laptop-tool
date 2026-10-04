@@ -57,5 +57,17 @@ namespace BBTech.Core.Tests
             Assert.True(repo.GetInspection(insp.InspectionId).IsOpen);
             Assert.Empty(repo.SyncRecords);
         }
+
+        [Fact]
+        public void Null_ids_give_clear_errors_or_empty_results_instead_of_crashing()
+        {
+            var repo = Open();
+            Assert.Equal("Unknown device.", Assert.Throws<InvalidOperationException>(() => repo.StartInspection(null, Op, "1.0.0", Specs)).Message);
+            Assert.Equal("Unknown inspection.", Assert.Throws<InvalidOperationException>(() => repo.SaveResult(null, "Display", "Display", "PASS", true, "")).Message);
+            Assert.Throws<InvalidOperationException>(() => repo.CompleteInspection(null, "PASS"));
+            Assert.Throws<InvalidOperationException>(() => repo.AbandonInspection(null));
+            Assert.Null(repo.GetInspection(null));
+            Assert.Empty(repo.GetResults(null));
+        }
     }
 }

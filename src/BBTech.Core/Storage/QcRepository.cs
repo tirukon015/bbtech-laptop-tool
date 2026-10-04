@@ -179,7 +179,7 @@ namespace BBTech.Core.Storage
             if (op == null || string.IsNullOrWhiteSpace(op.Name)) throw new InvalidOperationException("An operator must be selected.");
             lock (_sync)
             {
-                if (!_devices.ContainsKey(deviceId)) throw new InvalidOperationException("Unknown device.");
+                if (deviceId == null || !_devices.ContainsKey(deviceId)) throw new InvalidOperationException("Unknown device.");
                 var now = _clock();
                 var i = new InspectionRecord
                 {
@@ -296,11 +296,13 @@ namespace BBTech.Core.Storage
 
         public InspectionRecord GetInspection(string inspectionId)
         {
+            if (inspectionId == null) return null;
             lock (_sync) return _inspections.TryGetValue(inspectionId, out var i) ? i : null;
         }
 
         public List<TestResultRecord> GetResults(string inspectionId)
         {
+            if (inspectionId == null) return new List<TestResultRecord>();
             lock (_sync)
                 return _results.TryGetValue(inspectionId, out var map) ? map.Values.ToList() : new List<TestResultRecord>();
         }
@@ -333,7 +335,7 @@ namespace BBTech.Core.Storage
 
         private InspectionRecord RequireOpen(string inspectionId)
         {
-            if (!_inspections.TryGetValue(inspectionId, out var insp)) throw new InvalidOperationException("Unknown inspection.");
+            if (inspectionId == null || !_inspections.TryGetValue(inspectionId, out var insp)) throw new InvalidOperationException("Unknown inspection.");
             if (!insp.IsOpen) throw new InvalidOperationException("This inspection is completed and can no longer be changed.");
             return insp;
         }
