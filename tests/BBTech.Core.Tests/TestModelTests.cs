@@ -126,5 +126,16 @@ namespace BBTech.Core.Tests
             Assert.Equal(4, plan.Selected.Count);
         }
 
+        [Fact]
+        public void Stored_plans_ignore_unknown_names_and_survive_null()
+        {
+            var plan = TestPlan.FromStored("Required", new[] { "Camera", "Hologram", "" });
+            Assert.True(plan.IsSelected(HardwareTest.Camera));
+            Assert.Equal(5, plan.Selected.Count);
+            var empty = TestPlan.FromStored(null, null);
+            Assert.Equal(TestMode.Required, empty.Mode);
+            Assert.Equal(4, empty.Selected.Count);
+        }
+
     }
 }
