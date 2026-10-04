@@ -146,5 +146,18 @@ namespace BBTech.Core.Tests
             Assert.False(plan.IsSelected(HardwareTest.Bluetooth));
         }
 
+        [Theory]
+        [InlineData("PASS", TestState.Pass)]
+        [InlineData("FAIL", TestState.Fail)]
+        [InlineData("SKIPPED", TestState.Skipped)]
+        [InlineData("TESTING", TestState.Testing)]
+        [InlineData("NOT TESTED", TestState.NotTested)]
+        [InlineData("garbage", TestState.NotTested)]
+        [InlineData(null, TestState.NotTested)]
+        public void Stored_status_labels_parse_back_to_states(string label, TestState expected)
+        {
+            Assert.Equal(expected, HistoryReport.Parse(label));
+        }
+
     }
 }
