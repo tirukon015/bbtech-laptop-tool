@@ -100,5 +100,13 @@ namespace BBTech.Core.Tests
             Assert.NotEqual(a.Fingerprint, otherVendor.Fingerprint);
         }
 
+        [Fact]
+        public void Stable_identifiers_skip_missing_values_and_keep_their_order()
+        {
+            var id = new DeviceIdentity("Acer", "Aspire", "5", "To be filled by O.E.M.", Uuid, "BRD-0001");
+            Assert.Equal(new[] { "uuid", "board" }, id.StableIdentifiers.Select(p => p.Kind));
+            Assert.Equal(Uuid, id.StableIdentifiers[0].Value);
+        }
+
     }
 }
