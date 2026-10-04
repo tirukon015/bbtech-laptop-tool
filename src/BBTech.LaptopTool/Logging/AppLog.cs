@@ -39,7 +39,7 @@ namespace BBTech.LaptopTool.Logging
         {
             if (_path == null) return;
             var sb = new StringBuilder();
-            sb.Append(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff")).Append(" [").Append(level).Append("] ").Append(Sanitize(message));
+            sb.Append(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture)).Append(" [").Append(level).Append("] ").Append(Sanitize(message));
             if (ex != null) sb.Append(" | ").Append(ex.GetType().Name).Append(": ").Append(ex.Message);
             sb.AppendLine();
             if (ex != null && level == "ERROR") sb.AppendLine("    " + (ex.StackTrace ?? "").Replace(Environment.NewLine, Environment.NewLine + "    "));
