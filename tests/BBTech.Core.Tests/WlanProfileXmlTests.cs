@@ -94,5 +94,14 @@ namespace BBTech.Core.Tests
             Assert.Null(WlanProfileXml.Validate(new string('ব', 10), WifiSecurity.Open, null));
         }
 
+        [Theory]
+        [InlineData("", "Enter the network name")]
+        [InlineData(null, "Enter the network name")]
+        [InlineData("BBTECH\tEXAMPLE", "invalid characters")]
+        public void Ssid_must_be_present_and_printable(string ssid, string message)
+        {
+            Assert.Contains(message, WlanProfileXml.Validate(ssid, WifiSecurity.Wpa2Personal, "example-pass"));
+        }
+
     }
 }
