@@ -33,6 +33,8 @@ namespace BBTech.Core.Models
 
         public DateTime DetectedAt { get; set; } = DateTime.Now;
         public string ToolVersion { get; set; } = "";
+        /// <summary>Stable UUID v4 generated once per detection session for ITMS idempotency.</summary>
+        public string SubmissionId { get; set; } = Guid.NewGuid().ToString("D");
     }
 
     public sealed class SystemDetails
