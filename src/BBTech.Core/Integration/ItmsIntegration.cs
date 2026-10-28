@@ -163,7 +163,7 @@ namespace BBTech.Core.Integration
                             };
                         }
 
-                        if ((int)response.StatusCode == 422)
+                        if ((int)response.StatusCode == 400 || (int)response.StatusCode == 413 || (int)response.StatusCode == 422)
                         {
                             var errMsgMatch = Regex.Match(responseBody, @"""error""\s*:\s*""([^""]+)""");
                             string errDetail = errMsgMatch.Success ? errMsgMatch.Groups[1].Value : "Validation rejected by ITMS.";

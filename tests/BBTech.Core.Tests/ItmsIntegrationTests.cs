@@ -135,6 +135,44 @@ namespace BBTech.Core.Tests
         }
 
         [Fact]
+        public async Task SubmitNewDeviceAsync_Handles400InvalidJsonError()
+        {
+            var handler = new MockHttpMessageHandler
+            {
+                ResponseToReturn = new HttpResponseMessage(HttpStatusCode.BadRequest)
+                {
+                    Content = new StringContent("{\"success\":false,\"error\":\"Invalid JSON body\"}")
+                }
+            };
+            var client = new HttpItmsClient(() => "https://itms.local.dev", () => "valid-key", handler);
+
+            var detection = new DetectionResult { Brand = "Lenovo" };
+            var result = await client.SubmitNewDeviceAsync(detection);
+
+            Assert.False(result.Success);
+            Assert.Contains("ITMS validation failed: Invalid JSON body", result.Message);
+        }
+
+        [Fact]
+        public async Task SubmitNewDeviceAsync_Handles413PayloadTooLargeError()
+        {
+            var handler = new MockHttpMessageHandler
+            {
+                ResponseToReturn = new HttpResponseMessage((HttpStatusCode)413)
+                {
+                    Content = new StringContent("{\"success\":false,\"error\":\"Payload too large. Maximum allowed size is 1MB.\"}")
+                }
+            };
+            var client = new HttpItmsClient(() => "https://itms.local.dev", () => "valid-key", handler);
+
+            var detection = new DetectionResult { Brand = "Lenovo" };
+            var result = await client.SubmitNewDeviceAsync(detection);
+
+            Assert.False(result.Success);
+            Assert.Contains("Payload too large", result.Message);
+        }
+
+        [Fact]
         public async Task SubmitNewDeviceAsync_HandlesTimeoutGracefully()
         {
             var handler = new MockHttpMessageHandler
