@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <!--
     BBTech Laptop Tool - portable WPF application, shipped as ONE executable.
 
@@ -34,6 +34,7 @@
     <Reference Include="System.IO.Compression" />
     <Reference Include="System.Security" />
     <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.Net.Http" />
   </ItemGroup>
 
   <ItemGroup>

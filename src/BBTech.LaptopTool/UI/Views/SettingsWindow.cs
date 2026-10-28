@@ -92,6 +92,7 @@ namespace BBTech.LaptopTool.UI.Views
                 "Settings file: " + SettingsService.FilePath + "\nCopy the whole \"BBTech Data\\config\" folder to other BBTech USBs to share operators and networks.\n\n" +
                 "QC history of this laptop: stored encrypted on this laptop (" + QcStoreService.Folder + ").",
                 Btn("Change admin PIN", ChangePin, "BaseButton"), new Border()) });
+            tabs.Items.Add(new TabItem { Header = "ITMS", Content = ItmsPage() });
             Content = tabs;
             Refresh();
         }
@@ -241,6 +242,52 @@ namespace BBTech.LaptopTool.UI.Views
             string p2 = Dialogs.Pin(this, "Change admin PIN", "Enter the new PIN again");
             if (p1 != p2) { Dialogs.Info(this, "Admin PIN", "The PINs did not match."); return; }
             Try(() => { S.SetPin(p1); AppLog.Info("Admin PIN changed"); Dialogs.Info(this, "Admin PIN", "The admin PIN was changed."); });
+        }
+
+        private UIElement ItmsPage()
+        {
+            var sp = new StackPanel { Margin = new Thickness(16) };
+            sp.Children.Add(new TextBlock
+            {
+                Text = "Configure the Inventory Management System (ITMS) endpoint and API key. " +
+                       "These settings are stored encrypted on this USB and enable one-click direct submission from DETECT.\n\n" +
+                       "If not set here, the tool falls back to ITMS_URL and ITMS_API_KEY environment variables.",
+                TextWrapping = TextWrapping.Wrap,
+                Foreground = Res("TextMuted"),
+                Margin = new Thickness(0, 0, 0, 16)
+            });
+
+            var urlLabel = new TextBlock { Text = "ITMS Server URL (e.g. https://itms.bbtech.com.my or http://localhost:8000)", FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 4) };
+            var urlBox = new TextBox { Text = S.Settings.ItmsBaseUrl ?? "", Margin = new Thickness(0, 0, 0, 12), Padding = new Thickness(6, 4, 6, 4), FontSize = 13 };
+
+            var keyLabel = new TextBlock { Text = "ITMS API Key", FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 4) };
+            var keyBox = new PasswordBox { Password = S.Settings.ItmsApiKey ?? "", Margin = new Thickness(0, 0, 0, 16), Padding = new Thickness(6, 4, 6, 4), FontSize = 13 };
+
+            var statusText = new TextBlock
+            {
+                Text = S.IsItmsConfigured ? "Status: Configured (" + S.EffectiveItmsUrl + ")" : "Status: Not configured",
+                Foreground = S.IsItmsConfigured ? Res("PassBrush") : Res("NeutralBrush"),
+                FontWeight = FontWeights.SemiBold,
+                Margin = new Thickness(0, 0, 0, 16)
+            };
+
+            var saveBtn = new Button { Content = "Save ITMS Configuration", Style = St("PrimaryButton"), HorizontalAlignment = HorizontalAlignment.Left };
+            saveBtn.Click += (s, e) =>
+            {
+                S.SetItmsConfig(urlBox.Text, keyBox.Password);
+                statusText.Text = S.IsItmsConfigured ? "Status: Configured (" + S.EffectiveItmsUrl + ")" : "Status: Not configured";
+                statusText.Foreground = S.IsItmsConfigured ? Res("PassBrush") : Res("NeutralBrush");
+                MessageBox.Show("ITMS settings saved successfully to encrypted USB storage.", "Settings", MessageBoxButton.OK, MessageBoxImage.Information);
+            };
+
+            sp.Children.Add(urlLabel);
+            sp.Children.Add(urlBox);
+            sp.Children.Add(keyLabel);
+            sp.Children.Add(keyBox);
+            sp.Children.Add(statusText);
+            sp.Children.Add(saveBtn);
+
+            return new ScrollViewer { Content = sp, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
         }
     }
 }
