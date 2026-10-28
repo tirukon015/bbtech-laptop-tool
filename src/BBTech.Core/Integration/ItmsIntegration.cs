@@ -43,7 +43,7 @@ namespace BBTech.Core.Integration
             Task.FromResult(new ItmsSubmitResult
             {
                 Success = false,
-                Message = "ITMS integration is not configured. Enter the Server URL and API key in Settings."
+                Message = "ITMS integration is not configured yet."
             });
     }
 
@@ -114,8 +114,8 @@ namespace BBTech.Core.Integration
                 using (var client = _customHandler != null ? new HttpClient(_customHandler, false) : new HttpClient())
                 {
                     client.Timeout = TimeSpan.FromSeconds(15);
-                    client.DefaultRequestHeaders.Add("User-Agent", "BBTech-LaptopTool/" + (detection.ToolVersion ?? "1.0.0"));
-                    client.DefaultRequestHeaders.Add("x-itms-api-key", apiKey);
+                    client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", "BBTech-LaptopTool/" + (string.IsNullOrEmpty(detection.ToolVersion) ? "1.0.0" : detection.ToolVersion));
+                    client.DefaultRequestHeaders.TryAddWithoutValidation("x-itms-api-key", apiKey);
 
                     var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
 
