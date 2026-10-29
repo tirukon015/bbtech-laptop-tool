@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
 using System.Threading;
@@ -6,6 +7,7 @@ using System.Threading.Tasks;
 using BBTech.Core.Integration;
 using BBTech.Core.Models;
 using BBTech.Core.Settings;
+using BBTech.Core.Testing;
 using Xunit;
 
 namespace BBTech.Core.Tests
