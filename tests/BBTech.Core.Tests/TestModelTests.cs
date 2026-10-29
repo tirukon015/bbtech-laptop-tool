@@ -186,34 +186,28 @@ namespace BBTech.Core.Tests
         }
 
         [Fact]
-        public async Task The_shipped_itms_client_is_not_configured_and_sends_nothing()
+        public async Task The_shipped_itms_connector_is_disabled_and_sends_nothing()
         {
-            IItmsClient client = new NotConfiguredItmsClient();
-            Assert.False(client.IsConfigured);
-            var r = await client.SubmitNewDeviceAsync(new DetectionResult());
-            Assert.False(r.Success);
-            Assert.Equal("ITMS integration is not configured yet.", r.Message);
+            IItmsConnector connector = new DisabledItmsConnector();
+            Assert.False(connector.IsEnabled);
+            var detection = new DetectionResult();
+            detection.System.SerialNumber = "SERIAL-EXAMPLE";
+            var r = await connector.SendDeviceAsync(new ItmsSubmission(ItmsSubmission.NewRequestId(), connector.PrepareDevice(detection)));
+            Assert.Equal(ItmsSendOutcome.NotEnabled, r.Outcome);
+            Assert.Null(r.Receipt);
         }
 
         [Fact]
-        public async Task The_shipped_sync_service_leaves_records_local_only()
-        {
-            ISyncService sync = new LocalOnlySyncService();
-            var record = new SyncRecord { SyncId = "s1", SyncStatus = SyncStatus.LocalOnly };
-            Assert.False(sync.IsEnabled);
-            Assert.Same(record, await sync.SyncInspectionAsync(new DeviceRecord(), new InspectionView(), record));
-            Assert.Equal("LOCAL_ONLY", record.SyncStatus);
-        }
-
-        [Fact]
-        public void Itms_payload_contains_only_the_eight_fields_in_order()
+        public void Itms_payload_contains_only_the_agreed_fields_in_order()
         {
             var r = new DetectionResult { Brand = "Dell", Model = "Latitude", ModelNumber = "5420", Cpu = "i5", Generation = "11th Gen", Ram = "16 GB", Storage = "256 GB SSD", BatteryHealth = "91%" };
             r.System.SerialNumber = "SERIAL-EXAMPLE";
-            string json = ItmsPayload.Build(r);
+            r.System.SystemUuid = "4C4C4544-0000-1111-2222-333333333333";
+            r.System.OperatingSystem = "Windows 11 Pro";
+            string json = ItmsDevicePayload.From(r).ToJson();
             var keys = System.Text.RegularExpressions.Regex.Matches(json, "\"([a-z_]+)\":").Cast<System.Text.RegularExpressions.Match>().Select(m => m.Groups[1].Value);
-            Assert.Equal(new[] { "brand", "model", "model_number", "cpu", "generation", "ram", "storage", "battery_health" }, keys);
-            Assert.DoesNotContain("SERIAL-EXAMPLE", json);
+            Assert.Equal(new[] { "serial_number", "system_uuid", "board_serial", "hardware_fingerprint", "brand", "model", "model_number", "cpu", "generation", "ram", "storage", "battery_health" }, keys);
+            Assert.DoesNotContain("Windows", json);
         }
 
         [Fact]

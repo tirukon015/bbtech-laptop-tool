@@ -73,7 +73,7 @@ In REQUIRED mode, a missing or failed required test therefore always prevents PA
 | Each result | Appended to the encrypted journal and flushed to disk immediately |
 | Selection change | Mode and selected tests are updated on the open inspection immediately |
 | **Start over** | The open inspection is closed as **ABANDONED** (kept in history), and a new session starts |
-| **COMPLETE INSPECTION** | A confirmation shows the overall result, test mode, operator and any tests not completed. On confirm: final selection, results and overall are saved, a LOCAL_ONLY sync record is added, and the inspection becomes **immutable** |
+| **COMPLETE INSPECTION** | A confirmation shows the overall result, test mode, operator and any tests not completed. On confirm: final selection, results and overall are saved, a sync record in state `LOCAL` is added, and the inspection becomes **immutable** |
 | Next session | A new inspection (#N+1); earlier ones are never overwritten |
 
 ## 6. Recovery after interruption

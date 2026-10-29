@@ -95,16 +95,19 @@ namespace BBTech.Core.Storage
         [DataMember] public DateTime? CompletedAt { get; set; }
     }
 
-    public static class SyncStatus
+    public static class SyncEntity
     {
-        public const string LocalOnly = "LOCAL_ONLY";
-        public const string SyncPending = "SYNC_PENDING";
-        public const string Syncing = "SYNCING";
-        public const string Synced = "SYNCED";
-        public const string SyncFailed = "SYNC_FAILED";
+        /// <summary>A physical laptop sent to ITMS (the primary future operation: one laptop → one payload).</summary>
+        public const string Device = "device";
+        /// <summary>A completed QC inspection (future upload of QC history).</summary>
+        public const string Inspection = "inspection";
     }
 
-    /// <summary>Future ITMS synchronisation bookkeeping (no network code exists yet).</summary>
+    /// <summary>
+    /// FUTURE_SYNC_RECORD: ITMS transmission bookkeeping for one entity. States are defined in
+    /// Integration.TransmissionState (LOCAL, READY_TO_SEND, SENDING, SENT, ITMS_RECEIVED, FAILED).
+    /// No network code exists yet; records stay LOCAL.
+    /// </summary>
     [DataContract]
     public sealed class SyncRecord
     {
@@ -115,7 +118,14 @@ namespace BBTech.Core.Storage
         [DataMember] public int AttemptCount { get; set; }
         [DataMember] public DateTime? LastAttemptAt { get; set; }
         [DataMember] public string LastError { get; set; }
+        /// <summary>The ITMS receipt reference; set only when ITMS confirmed receipt (ITMS_RECEIVED).</summary>
         [DataMember] public string RemoteId { get; set; }
+        /// <summary>
+        /// UUID of the current send operation (idempotency key). Created when the entity is marked
+        /// READY_TO_SEND and reused for every retry of that send.
+        /// </summary>
+        [DataMember] public string RequestId { get; set; }
+        [DataMember] public DateTime? UpdatedAt { get; set; }
     }
 
     /// <summary>Which managed Wi-Fi network version was provisioned on this laptop (no password).</summary>
@@ -140,6 +150,8 @@ namespace BBTech.Core.Storage
         public const string KindWifi = "wifi";
 
         [DataMember] public string Kind { get; set; }
+        /// <summary>Schema version the entry was written with (0 = written before versioning, i.e. version 1).</summary>
+        [DataMember] public int SchemaVersion { get; set; }
         [DataMember] public DateTime At { get; set; }
         [DataMember] public DeviceRecord Device { get; set; }
         [DataMember] public InspectionRecord Inspection { get; set; }

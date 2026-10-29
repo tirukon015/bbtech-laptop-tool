@@ -14,7 +14,7 @@ The tool is **portable**. Nothing is installed on the laptop being inspected: no
 
 1. **Copy the EXE:** copy `BBTech Laptop Tool.exe` (from `dist\release\` on the build PC, see [BUILD.md](BUILD.md)) to the USB, in the root or any folder.
 2. **Share the settings:** copy `BBTech Data\config\` from an already configured BBTech USB. It holds the encrypted operators, the admin PIN hash and the managed Wi-Fi networks.
-   - **First USB:** create these in the app instead: Home → **Settings** → create the admin PIN → add operators and Wi-Fi networks. See [OPERATOR-MANAGEMENT.md](OPERATOR-MANAGEMENT.md) and [WIFI-MANAGER.md](WIFI-MANAGER.md).
+   - **First USB:** create these in the app instead: Home → **Settings** → create the admin PIN → add operators and Wi-Fi networks. See [OPERATOR-MANAGEMENT.md](OPERATOR-MANAGEMENT.md) and [WIFI.md](WIFI.md).
 3. **No history to copy:** QC history is **not** copied between USBs. It lives on each laptop.
 
 ```
@@ -53,6 +53,6 @@ The EXE is **not code-signed**, so Windows SmartScreen may warn on first run ("M
 
 | Role | Steps |
 |---|---|
-| QC | TEST → pick your name once → run the tests → **COMPLETE INSPECTION** ([TEST-QC.md](TEST-QC.md)) |
+| QC | TEST → pick your name once → run the tests → **COMPLETE INSPECTION** ([TEST.md](TEST.md)) |
 | E-commerce | DETECT on any BBTech USB → specifications and QC history ([DETECT.md](DETECT.md)) |
 | Any staff | Wi-Fi → **Provision BBTech Wi-Fi**, once per laptop |

@@ -91,7 +91,7 @@ sequenceDiagram
 1. `TestView` loads the selected operator from the USB settings and calls `InspectionManager.InitializeAsync`. That runs detection, opens or creates the store, and matches the device, which can lead to resume or conflict decisions.
 2. The first recorded result starts an inspection: operator snapshot, test mode, selected tests.
 3. Every result calls `QcRepository.SaveResult`, which appends to the journal and flushes it to disk.
-4. **COMPLETE INSPECTION** records the final selection and results, sets the overall result, appends the completion and a LOCAL_ONLY `SyncRecord`. The inspection is then immutable.
+4. **COMPLETE INSPECTION** records the final selection and results, sets the overall result, appends the completion and a `SyncRecord` in state `LOCAL`. The inspection is then immutable.
 
 ### Wi-Fi provisioning (IMPLEMENTED)
 
@@ -117,5 +117,6 @@ There are no registry settings, environment variables or external config service
 
 ## 7. Future (PLANNED, not implemented)
 
-- **ITMS sync:** `ISyncService` / `IItmsClient` implementations; see [ITMS-INTEGRATION.md](ITMS-INTEGRATION.md).
+- **Live ITMS connection:** the architecture is IMPLEMENTED (`ItmsDevicePayload`, `ItmsSubmission` with request id, `IItmsConnector`, `TransmissionState`, `ItmsTransmissionService`). The shipped `DisabledItmsConnector` makes no network calls. A real connector is PLANNED once the ITMS endpoint and authentication are final; see [ITMS-INTEGRATION.md](ITMS-INTEGRATION.md). The flow is one physical laptop → one device payload → one send; batch processing belongs to ITMS.
+- **Schema versioning** (IMPLEMENTED): journal entries carry a schema version; older entries are upgraded in memory, newer ones make the store read-only; see [DATA-MODEL.md](DATA-MODEL.md) §4.
 - **Remote or cloud storage:** not planned for the local workflow.

@@ -85,6 +85,7 @@ namespace BBTech.LaptopTool.UI.Views
             JsonButton.IsEnabled = on;
             CsvButton.IsEnabled = on;
             CopyButton.IsEnabled = on;
+            ItmsButton.IsEnabled = on;
         }
 
         private void Render(DetectionResult r)
@@ -252,6 +253,12 @@ namespace BBTech.LaptopTool.UI.Views
                 Notice.Visibility = Visibility.Visible;
             }
             catch (Exception ex) { AppLog.Warn("Clipboard copy failed", ex); }
+        }
+
+        private void Itms_Click(object sender, RoutedEventArgs e)
+        {
+            if (_result == null) return;
+            new ItmsSendWindow(_result) { Owner = Window.GetWindow(this) }.ShowDialog();
         }
 
         private void OpenExports_Click(object sender, RoutedEventArgs e) => ProcessRunner.OpenShell(AppPaths.Ensure(AppPaths.ExportsDir));

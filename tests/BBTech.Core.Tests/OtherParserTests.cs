@@ -217,8 +217,13 @@ namespace BBTech.Core.Tests
         [Fact]
         public void Itms_payload_has_exact_keys_and_values()
         {
-            string json = Integration.ItmsPayload.Build(Sample());
-            string expected = "{\n  \"brand\": \"Dell\",\n  \"model\": \"Latitude\",\n  \"model_number\": \"5420\",\n  \"cpu\": \"i5\",\n" +
+            var r = Sample();
+            r.System.SerialNumber = "ABC12345";
+            var payload = Integration.ItmsDevicePayload.From(r);
+            string json = payload.ToJson();
+            string expected = "{\n  \"serial_number\": \"ABC12345\",\n  \"system_uuid\": null,\n  \"board_serial\": null,\n" +
+                              "  \"hardware_fingerprint\": \"" + payload.HardwareFingerprint + "\",\n" +
+                              "  \"brand\": \"Dell\",\n  \"model\": \"Latitude\",\n  \"model_number\": \"5420\",\n  \"cpu\": \"i5\",\n" +
                               "  \"generation\": \"11th Gen\",\n  \"ram\": \"16 GB\",\n  \"storage\": \"512 GB SSD\",\n  \"battery_health\": \"87%\"\n}";
             Assert.Equal(expected, json);
         }

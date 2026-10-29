@@ -8,6 +8,7 @@ All statements on this page were verified against `src/BBTech.Core/Storage`, `sr
 |---|---|---|
 | QC history (devices, inspections, results, sync bookkeeping, Wi-Fi provisioning state) | `C:\ProgramData\BBTech\LaptopTool\qc.journal` | TEST (first use); Wi-Fi provisioning |
 | Wrapped data key | `C:\ProgramData\BBTech\LaptopTool\qc.key` (+ `qc.key.bak`) | Same |
+| Schema backup (one-time copy of a journal with older entries) | `C:\ProgramData\BBTech\LaptopTool\qc.journal.schema-v<N>.bak` | First open after a schema upgrade |
 | Operators, current operator, admin PIN hash, managed Wi-Fi networks | USB: `BBTech Data\config\settings.dat` (+ `.bak`) | Settings / operator selection |
 | Exported reports | USB: `BBTech Data\reports\`, `BBTech Data\exports\` | Only when Export is clicked |
 | Log | USB: `BBTech Data\logs\app.log` (rotated at 2 MB to `app.1.log`) | Always |
@@ -23,6 +24,7 @@ erDiagram
     DEVICE ||--o{ INSPECTION : has
     INSPECTION ||--o{ TEST_RESULT : contains
     INSPECTION ||--o| SYNC_RECORD : "future ITMS"
+    DEVICE ||--o| SYNC_RECORD : "ITMS transmission"
     OPERATOR ||..o{ INSPECTION : "snapshot (name, role)"
 ```
 
@@ -31,7 +33,7 @@ erDiagram
 | **DeviceRecord** | DeviceId, SerialNumber, SystemUuid, BoardSerial, SerialHash, UuidHash, BoardSerialHash, HardwareFingerprint, Manufacturer, Model, ModelNumber, Specs (Cpu, Generation, Ram, Storage, BatteryHealth), IdentityNote, CreatedAt, UpdatedAt |
 | **InspectionRecord** | InspectionId, DeviceId, Number (1, 2, 3… per device), OperatorId, OperatorNameSnapshot, OperatorRoleSnapshot, Status (IN_PROGRESS / COMPLETED / ABANDONED), OverallStatus (PASS / FAIL / INCOMPLETE), AppVersion, Specs snapshot, TestMode (Required / AllTests), SelectedTests, StartedAt, CompletedAt, CreatedAt, UpdatedAt |
 | **TestResultRecord** | TestResultId, InspectionId, TestId, TestName, Status (NOT TESTED / TESTING / PASS / FAIL / SKIPPED), Required (= selected), Comment, Details, StartedAt, CompletedAt |
-| **SyncRecord** | SyncId, EntityType, EntityId, SyncStatus (LOCAL_ONLY / SYNC_PENDING / SYNCING / SYNCED / SYNC_FAILED), AttemptCount, LastAttemptAt, LastError, RemoteId |
+| **SyncRecord** | SyncId, EntityType (device / inspection), EntityId, SyncStatus (LOCAL / READY_TO_SEND / SENDING / SENT / ITMS_RECEIVED / FAILED), RequestId, AttemptCount, LastAttemptAt, LastError, RemoteId (ITMS receipt), UpdatedAt |
 | **WifiProvisionRecord** | Ssid, SettingsFingerprint (keyed HMAC, no password), AllUsers, ProvisionedAt |
 | **OperatorRecord** (USB settings, not in the laptop store) | OperatorId, Name, Role, Active, CreatedAt, UpdatedAt |
 
@@ -72,6 +74,6 @@ Summary (details in [SECURITY.md](SECURITY.md)): a random 64-byte data key encry
 
 ## 6. Backup, migration and versioning
 
-- **Versioning:** the journal header (`BBQCJ001`), envelope version byte (`0x01`), key-file model `Version = 1` and settings magic (`BBTS0001`) allow future format changes.
-- **Migration:** new optional fields (e.g. `TestMode`, `SelectedTests`) are added as optional data members; older records read with these fields empty and display as "legacy". No migration tool exists yet (**not implemented**; none has been needed).
+- **Versioning:** every journal entry carries a schema version (currently 2). The journal header (`BBQCJ001`), envelope version byte (`0x01`), key-file model `Version = 1` and settings magic (`BBTS0001`) allow future format changes.
+- **Migration:** older entries are upgraded in memory while the journal is replayed; the file is never rewritten. Before new data is appended to a journal with older entries, a one-time copy `qc.journal.schema-v<N>.bak` is made. A journal with entries from a newer version opens read-only. Details: [DATA-MODEL.md](DATA-MODEL.md) §4.
 - **Backup:** there is no automatic backup of the laptop store (**not implemented**). A Windows reset or reinstall that deletes `C:\ProgramData\BBTech\LaptopTool` erases the history, and a local-only design cannot recover it. Future ITMS sync is the intended off-laptop copy.

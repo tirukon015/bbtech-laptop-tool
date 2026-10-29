@@ -27,15 +27,15 @@ BBTech refurbishes laptops. Two teams use this tool:
 | Area | What it does | Details |
 |---|---|---|
 | **DETECT** | Brand, Model, Model Number, CPU family, CPU generation, RAM, Storage, Battery Health. Then automatic lookup of the laptop's QC history. | [docs/DETECT.md](docs/DETECT.md) |
-| **TEST / QC** | "Tested By" operator, **REQUIRED** mode (Display, Sound, Keyboard, Battery) or **ALL TESTS** mode, every result saved immediately, Complete Inspection, crash recovery | [docs/TEST-QC.md](docs/TEST-QC.md) |
+| **TEST / QC** | "Tested By" operator, **REQUIRED** mode (Display, Sound, Keyboard, Battery) or **ALL TESTS** mode, every result saved immediately, Complete Inspection, crash recovery | [docs/TEST.md](docs/TEST.md) |
 | **Device identity** | Matches the physical laptop by BIOS serial, system UUID and motherboard serial. Never by model alone. Conflicts are flagged. | [docs/DEVICE-IDENTITY.md](docs/DEVICE-IDENTITY.md) |
 | **Inspection history** | Append-only, encrypted, stored on the laptop in `C:\ProgramData\BBTech\LaptopTool\`. Completed inspections are immutable. | [docs/DATA-STORAGE.md](docs/DATA-STORAGE.md) |
 | **Operators** | Admin-managed operator list; operator selected once per USB session; name/role snapshot stored with each inspection | [docs/OPERATOR-MANAGEMENT.md](docs/OPERATOR-MANAGEMENT.md) |
-| **Wi-Fi** | Installs managed BBTech networks as native Windows **auto-connect** profiles (verified from Windows) | [docs/WIFI-MANAGER.md](docs/WIFI-MANAGER.md) |
+| **Wi-Fi** | Installs managed BBTech networks as native Windows **auto-connect** profiles (verified from Windows) | [docs/WIFI.md](docs/WIFI.md) |
 | **Reports** | CSV / JSON exports, only on explicit request, named `{Brand}_{Model}_{ModelNumber}_{Serial}_{YYYYMMDD}_{STATUS}` | [docs/REPORTS.md](docs/REPORTS.md) |
 | **Security** | AES-256-CBC + HMAC-SHA256, Windows DPAPI + hardware recovery locks, admin PIN (PBKDF2) | [docs/SECURITY.md](docs/SECURITY.md) |
 
-**Not implemented:** ITMS integration (architecture prepared only, no network code); see [docs/ITMS-INTEGRATION.md](docs/ITMS-INTEGRATION.md).
+**Not enabled yet:** the live ITMS connection. The integration architecture, the one-laptop payload contract (with request id) and the transmission states are in place, but there is no ITMS URL, no authentication and no network code; see [docs/ITMS-INTEGRATION.md](docs/ITMS-INTEGRATION.md).
 
 ## System requirements
 
@@ -61,11 +61,11 @@ BBTech refurbishes laptops. Two teams use this tool:
 | Building | [docs/BUILD.md](docs/BUILD.md) |
 | Testing and results | [docs/TESTING.md](docs/TESTING.md) |
 | Development guide | [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) |
-| DETECT · TEST/QC · Device identity | [docs/DETECT.md](docs/DETECT.md) · [docs/TEST-QC.md](docs/TEST-QC.md) · [docs/DEVICE-IDENTITY.md](docs/DEVICE-IDENTITY.md) |
-| Data storage · Security | [docs/DATA-STORAGE.md](docs/DATA-STORAGE.md) · [docs/SECURITY.md](docs/SECURITY.md) |
-| Operators · Wi-Fi · Reports | [docs/OPERATOR-MANAGEMENT.md](docs/OPERATOR-MANAGEMENT.md) · [docs/WIFI-MANAGER.md](docs/WIFI-MANAGER.md) · [docs/REPORTS.md](docs/REPORTS.md) |
+| DETECT · TEST/QC · Device identity | [docs/DETECT.md](docs/DETECT.md) · [docs/TEST.md](docs/TEST.md) · [docs/DEVICE-IDENTITY.md](docs/DEVICE-IDENTITY.md) |
+| Data model · Data storage · Security | [docs/DATA-MODEL.md](docs/DATA-MODEL.md) · [docs/DATA-STORAGE.md](docs/DATA-STORAGE.md) · [docs/SECURITY.md](docs/SECURITY.md) |
+| Operators · Wi-Fi · Reports | [docs/OPERATOR-MANAGEMENT.md](docs/OPERATOR-MANAGEMENT.md) · [docs/WIFI.md](docs/WIFI.md) · [docs/REPORTS.md](docs/REPORTS.md) |
 | Troubleshooting · Performance | [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) · [docs/PERFORMANCE.md](docs/PERFORMANCE.md) |
-| Release process · ITMS (planned) | [docs/RELEASE.md](docs/RELEASE.md) · [docs/ITMS-INTEGRATION.md](docs/ITMS-INTEGRATION.md) |
+| Release process · ITMS integration (architecture) | [docs/RELEASE.md](docs/RELEASE.md) · [docs/ITMS-INTEGRATION.md](docs/ITMS-INTEGRATION.md) |
 | Development log | [docs/development/](docs/development/) |
 | Authorship and development evidence | [AUTHORS.md](AUTHORS.md) · [CONTRIBUTORS.md](CONTRIBUTORS.md) · [docs/PROJECT-OWNERSHIP.md](docs/PROJECT-OWNERSHIP.md) |
 | Security policy | [SECURITY.md](SECURITY.md) |
@@ -74,7 +74,7 @@ BBTech refurbishes laptops. Two teams use this tool:
 
 - **Stack:** C# / WPF, .NET Framework 4.7.2 (`net472`). Built with the .NET SDK 8. Tests use xUnit.
 - **Build:** `powershell -ExecutionPolicy Bypass -File build\build.ps1` produces `dist\release\BBTech Laptop Tool.exe`. See [docs/BUILD.md](docs/BUILD.md).
-- **Tests:** 587 automated test cases (358 test methods), all passing on 2026-10-05. GitHub Actions runs them and builds the app on every push to `main`. See [docs/TESTING.md](docs/TESTING.md).
+- **Tests:** 685 automated test cases (432 test methods), all passing on 2026-10-05. GitHub Actions runs them and builds the app on every push to `main`. See [docs/TESTING.md](docs/TESTING.md).
 - **Repository:** private GitHub repository `tirukon015/bbtech-laptop-tool`.
 - **Third-party tools:** BatteryInfoView, Hard Disk Sentinel and Free PC Audit are embedded from the BBTech toolkit. `Activation.bat` from that toolkit is excluded and never used.
 

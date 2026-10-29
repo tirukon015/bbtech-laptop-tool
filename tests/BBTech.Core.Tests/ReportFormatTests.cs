@@ -198,5 +198,26 @@ namespace BBTech.Core.Tests
             var t = new DateTimeOffset(2026, 10, 5, 14, 30, 0, TimeSpan.FromHours(6));
             Assert.Equal("\"2026-10-05T14:30:00+06:00\"", JsonWriter.Serialize(t));
         }
+
+        private static List<TestItem> SelectedAndUnselected() => new List<TestItem>
+        {
+            new TestItem(HardwareTest.Display, "") { State = TestState.Pass },
+            new TestItem(HardwareTest.Speaker, "") { State = TestState.Pass },
+            new TestItem(HardwareTest.Camera, "", required: false),
+        };
+
+        [Fact]
+        public void Csv_report_lists_exactly_the_selected_tests()
+        {
+            string csv = TestReportExporter.ToCsv(SelectedAndUnselected(), new DetectionResult(), When);
+            Assert.Contains("\r\nSelected Tests,Display; Sound\r\n", csv);
+        }
+
+        [Fact]
+        public void Json_report_lists_exactly_the_selected_tests()
+        {
+            string json = TestReportExporter.ToJson(SelectedAndUnselected(), new DetectionResult(), "1.0", When);
+            Assert.Contains("\"selected_tests\": [\n    \"Display\",\n    \"Sound\"\n  ]", json);
+        }
     }
 }

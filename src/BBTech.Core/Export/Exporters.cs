@@ -137,6 +137,9 @@ namespace BBTech.Core.Export
         private static string Overall(List<TestItem> list, ReportMeta meta) =>
             !string.IsNullOrEmpty(meta?.OverallStatus) ? meta.OverallStatus : TestText.Label(OverallResultCalculator.Calculate(list));
 
+        /// <summary>The tests selected for the inspection (only these count toward the overall result).</summary>
+        private static List<string> SelectedNames(List<TestItem> list) => list.Where(i => i.Required).Select(i => i.Name).ToList();
+
         private static string Stamp(DateTime? t) => t?.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture) ?? "";
 
         public static string ToJson(IEnumerable<TestItem> items, DetectionResult device, string toolVersion, DateTime when, ReportMeta meta = null)
@@ -163,6 +166,7 @@ namespace BBTech.Core.Export
                 root.Add("completed_at", Stamp(meta.CompletedAt));
             }
             root.Add("overall_result", Overall(list, meta));
+            root.Add("selected_tests", SelectedNames(list));
             root.Add("device", deviceObj);
             root.Add("tests", list.Select(i => new JsonObject
             {
@@ -212,6 +216,7 @@ namespace BBTech.Core.Export
             Row("Storage", d.Storage);
             Row("Battery Health", d.BatteryHealth);
             Row("Overall Result", Overall(list, meta));
+            Row("Selected Tests", string.Join("; ", SelectedNames(list)));
             sb.Append("\r\n");
 
             sb.Append("Test,Status,Comment\r\n");

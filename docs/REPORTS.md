@@ -50,6 +50,7 @@ RAM,16 GB
 Storage,512 GB SSD
 Battery Health,87%
 Overall Result,PASS
+Selected Tests,Display; Sound; Keyboard; Battery
 
 Test,Status,Comment
 Display,PASS,
@@ -64,13 +65,13 @@ Battery,PASS,Health 87%, ...
 
 ### JSON contents
 
-The same data: `inspection_date`, `inspection_time`, `inspection_id`, `inspection_number`, `inspection_status`, `tested_by`, `role`, `test_mode`, `started_at`, `completed_at`, `overall_result`, `device{brand, model, model_number, cpu, generation, ram, storage, battery_health, serial_number, system_uuid}`, `tests[{test, status, required, comment, completed_at}]`, `tool`.
+The same data: `inspection_date`, `inspection_time`, `inspection_id`, `inspection_number`, `inspection_status`, `tested_by`, `role`, `test_mode`, `started_at`, `completed_at`, `overall_result`, `selected_tests[]`, `device{brand, model, model_number, cpu, generation, ram, storage, battery_health, serial_number, system_uuid}`, `tests[{test, status, required, comment, completed_at}]`, `tool`.
 
 ## 2. Detection export (DETECT)
 
 **Export JSON / Export CSV / Copy** for the detection result:
 - **File name:** `detect_<yyyyMMdd_HHmmss>_<Brand>_<Model>_<ModelNumber>.json|csv` in `BBTech Data\exports\`.
-- **JSON** starts with the eight ITMS fields, in this order: `brand, model, model_number, cpu, generation, ram, storage, battery_health`. It then has `storage_devices` and `details` (serial number, product code, firmware values, CPU details, RAM modules, battery capacities, warnings, time and tool version).
+- **JSON** starts with the eight detected fields, in this order: `brand, model, model_number, cpu, generation, ram, storage, battery_health`. It then has `storage_devices` and `details` (serial number, product code, firmware values, CPU details, RAM modules, battery capacities, warnings, time and tool version).
 - **CSV:** the eight fields plus `serial_number` and `detected_at`.
 
 ## 3. Format guarantees

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using BBTech.Core.Identity;
+using BBTech.Core.Integration;
 using BBTech.Core.Security;
 
 namespace BBTech.Core.Storage
@@ -48,6 +49,15 @@ namespace BBTech.Core.Storage
 
         public string Folder { get; }
 
+        /// <summary>
+        /// True when the history was written by a newer version of the tool: it can be shown, but
+        /// nothing is written (an older version must not change data it does not fully understand).
+        /// </summary>
+        public bool IsReadOnly { get; private set; }
+
+        /// <summary>Name of the one-time backup made before the first write over an older schema version.</summary>
+        public const string BackupPrefix = "qc.journal.schema-v";
+
         private QcRepository(string folder, EncryptedJournal journal, Func<DateTime> clock)
         {
             Folder = folder;
@@ -72,17 +82,47 @@ namespace BBTech.Core.Storage
             var journal = new EncryptedJournal(journalPath, new EnvelopeCrypto(unlock.Key));
             var repo = new QcRepository(folder, journal, clock);
             var records = journal.ReadAll(out var stats);
+            int oldest = QcSchema.Current, newest = 0;
             foreach (var r in records)
             {
                 JournalEntry e;
                 try { e = Json.FromBytes<JournalEntry>(r); }
                 catch { stats.Corrupted++; continue; }
-                repo.Apply(e);
+                if (e == null) { stats.Corrupted++; continue; }
+                int v = QcSchema.VersionOf(e);
+                oldest = Math.Min(oldest, v);
+                newest = Math.Max(newest, v);
+                repo.Apply(QcSchema.Upgrade(e));
             }
 
             string msg = unlock.Message;
+            if (newest > QcSchema.Current)
+            {
+                repo.IsReadOnly = true;
+                msg = (msg + " This QC history was saved by a newer version of BBTech Laptop Tool. It is shown, but this version will not change it.").Trim();
+            }
+            else if (oldest < QcSchema.Current)
+            {
+                BackupOlderSchema(journalPath, oldest);
+            }
             if (stats.Corrupted > 0) msg = (msg + " " + stats.Corrupted + " damaged history record(s) could not be read and were skipped.").Trim();
             return new QcOpenResult { Repository = repo, KeyState = unlock.State, Stats = stats, Message = msg };
+        }
+
+        /// <summary>
+        /// Keeps a copy of a journal that contains entries of an older schema version before anything is
+        /// appended in the new version. Upgrades never rewrite the file, so this is an extra safety net.
+        /// Best effort: a failed backup is not a reason to stop QC work.
+        /// </summary>
+        private static void BackupOlderSchema(string journalPath, int oldestVersion)
+        {
+            try
+            {
+                string backup = Path.Combine(Path.GetDirectoryName(journalPath), BackupPrefix + oldestVersion + ".bak");
+                if (!File.Exists(backup)) File.Copy(journalPath, backup);
+            }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
         }
 
         // ---- Replay (rebuilds the in-memory view; enforces immutability of completed inspections) ----
@@ -114,6 +154,8 @@ namespace BBTech.Core.Storage
 
         private void Write(JournalEntry e)
         {
+            if (IsReadOnly) throw new InvalidOperationException("This QC history was saved by a newer version of BBTech Laptop Tool and cannot be changed by this version.");
+            e.SchemaVersion = QcSchema.Current;
             e.At = _clock();
             _journal.Append(Json.ToBytes(e)); // persisted (flushed) before the in-memory view changes
             Apply(e);
@@ -279,7 +321,7 @@ namespace BBTech.Core.Storage
                 Write(new JournalEntry
                 {
                     Kind = JournalEntry.KindSync,
-                    Sync = new SyncRecord { SyncId = Guid.NewGuid().ToString("N"), EntityType = "inspection", EntityId = inspectionId, SyncStatus = SyncStatus.LocalOnly },
+                    Sync = NewSyncRecord(SyncEntity.Inspection, inspectionId, now),
                 });
                 return insp;
             }
@@ -323,6 +365,60 @@ namespace BBTech.Core.Storage
         }
 
         public List<SyncRecord> SyncRecords { get { lock (_sync) return _sync2.Values.ToList(); } }
+
+        // ---- ITMS transmission state (bookkeeping only; no network code exists) ----
+
+        /// <summary>The transmission record of an entity, or null when none exists yet.</summary>
+        public SyncRecord GetSyncRecord(string entityType, string entityId)
+        {
+            if (entityType == null || entityId == null) return null;
+            lock (_sync) return FindSync(entityType, entityId);
+        }
+
+        /// <summary>The transmission record of a device; created in state LOCAL on first use.</summary>
+        public SyncRecord GetOrCreateDeviceSync(string deviceId)
+        {
+            lock (_sync)
+            {
+                if (deviceId == null || !_devices.ContainsKey(deviceId)) throw new InvalidOperationException("Unknown device.");
+                var existing = FindSync(SyncEntity.Device, deviceId);
+                if (existing != null) return existing;
+                var r = NewSyncRecord(SyncEntity.Device, deviceId, _clock());
+                Write(new JournalEntry { Kind = JournalEntry.KindSync, Sync = r });
+                return r;
+            }
+        }
+
+        /// <summary>
+        /// Moves a transmission record to a new state (persisted immediately). Only the transitions of
+        /// <see cref="TransmissionState"/> are allowed; ITMS_RECEIVED needs the ITMS receipt.
+        /// Marking an entity READY_TO_SEND from LOCAL creates the request id of the send operation.
+        /// </summary>
+        public SyncRecord TransitionSync(string syncId, string to, string error = null, string receipt = null)
+        {
+            lock (_sync)
+            {
+                if (syncId == null || !_sync2.TryGetValue(syncId, out var current)) throw new InvalidOperationException("Unknown transmission record.");
+                // A new send operation gets a new request id; retries keep the existing one.
+                string requestId = current.SyncStatus == TransmissionState.Local && to == TransmissionState.ReadyToSend
+                    ? Integration.ItmsSubmission.NewRequestId() : null;
+                var next = TransmissionState.Transition(current, to, _clock(), error, receipt, requestId);
+                Write(new JournalEntry { Kind = JournalEntry.KindSync, Sync = next });
+                return next;
+            }
+        }
+
+        private SyncRecord FindSync(string entityType, string entityId) =>
+            _sync2.Values.FirstOrDefault(r => r.EntityType == entityType && r.EntityId == entityId);
+
+        private static SyncRecord NewSyncRecord(string entityType, string entityId, DateTime now) => new SyncRecord
+        {
+            SyncId = Guid.NewGuid().ToString("N"),
+            EntityType = entityType,
+            EntityId = entityId,
+            SyncStatus = TransmissionState.Local,
+            UpdatedAt = now,
+        };
 
         // ---- Wi-Fi provisioning state of this laptop (no passwords) ----
 

@@ -50,6 +50,8 @@ namespace BBTech.LaptopTool.Services
             var open = await QcStoreService.OpenAsync(Identity);
             if (!open.Ok) { StoreMessage = open.Message; return InspectionReadiness.StoreUnavailable; }
             StoreMessage = open.Message;
+            // History saved by a newer version of the tool: shown in DETECT, but never changed by this version.
+            if (open.Repository.IsReadOnly) return InspectionReadiness.StoreUnavailable;
 
             return await Task.Run(() =>
             {

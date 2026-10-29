@@ -61,7 +61,7 @@ History is never chosen by model, and another laptop's records are never shown.
 ## 4. Exports
 
 - **Export JSON / CSV / Copy** for the detection result: see [REPORTS.md](REPORTS.md).
-- **Send to ITMS** is visible but disabled (**not implemented**).
+- **Send to ITMS** opens a window showing exactly what will be sent for this laptop and its ITMS status. The live ITMS connection is not set up yet, so the window's send button stays disabled ([ITMS-INTEGRATION.md](ITMS-INTEGRATION.md)).
 
 ## 5. Display and export formats
 

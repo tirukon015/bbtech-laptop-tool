@@ -6,7 +6,7 @@
 dotnet test tests\BBTech.Core.Tests -c Release
 ```
 
-**Result on 2026-10-05: 587 test cases, 587 passed, 0 failed** (xUnit, `net472`; 358 test methods, expanded by `[Theory]` data). On 2026-10-04 the suite had 224 cases.
+**Result on 2026-10-05: 685 test cases, 685 passed, 0 failed** (xUnit, `net472`; 432 test methods, expanded by `[Theory]` data). Earlier the same day the suite had 587 cases; on 2026-10-04 it had 224.
 
 GitHub Actions (`.github/workflows/ci.yml`) runs the same tests and builds the app on `windows-latest` for every push to `main` and every pull request. The CI build has no embedded third-party tools, because `third_party/` is not in the repository.
 
@@ -21,7 +21,9 @@ GitHub Actions (`.github/workflows/ci.yml`) runs the same tests and builds the a
 | `ReportTests.cs`, `ReportFormatTests.cs`, `CsvExportTests.cs`, `HistoryReportTests.cs` | 14 + 20 + 5 + 4 | File naming, JSON writer, CSV/JSON contents, formula neutralisation, locale independence, history rows |
 | `SettingsAndWifiTests.cs`, `SettingsStoreTests.cs`, `OperatorRulesTests.cs`, `WifiSettingsTests.cs` | 22 + 17 + 6 + 1 | Encrypted USB settings, tamper detection, backup copy, PIN, operators, managed networks |
 | `WlanProfileXmlTests.cs`, `WifiProvisionerTests.cs` | 14 + 22 | WLAN profile XML, validation, provisioning outcomes, verification, adoption, Connect Now, native API failures |
-| `TestPlanTests.cs`, `TestCatalogTests.cs`, `TestModelTests.cs`, `TestMediaCheckTests.cs` | 15 + 4 + 20 + 8 | REQUIRED / ALL TESTS modes, catalog, overall result, test items, ITMS extension points, speaker media |
+| `TestPlanTests.cs`, `TestCatalogTests.cs`, `TestModelTests.cs`, `TestMediaCheckTests.cs` | 15 + 4 + 19 + 8 | REQUIRED / ALL TESTS modes, catalog, overall result, test items, disabled ITMS connector, speaker media |
+| `ItmsIntegrationTests.cs` | 63 | ITMS device payload (keys, order, null for unknown, no ITMS ids, identity and fingerprint rules), submission with request id, batch payload, disabled connector, transmission state machine, idempotent retry, laptop resolution, the one-button send flow, per-laptop transmission flow with a scripted test transport (no network) |
+| `QcSchemaTests.cs` | 10 | Schema version on new entries, in-memory upgrade of legacy entries, one-time backup, read-only mode for newer data |
 
 **Not covered by unit tests:** the WPF UI, WMI, the audio/camera/Bluetooth/Wi-Fi hardware APIs and DPAPI on real systems. These were tested manually (section 2). On 2026-10-05 the Release build (with embedded tools, 50.8 MB) was also launched once to confirm the main window opens.
 
