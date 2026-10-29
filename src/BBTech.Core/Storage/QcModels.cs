@@ -95,6 +95,14 @@ namespace BBTech.Core.Storage
         [DataMember] public DateTime? CompletedAt { get; set; }
     }
 
+    public static class SyncEntity
+    {
+        /// <summary>A physical laptop sent to ITMS (the primary future operation: one laptop → one payload).</summary>
+        public const string Device = "device";
+        /// <summary>A completed QC inspection (future upload of QC history).</summary>
+        public const string Inspection = "inspection";
+    }
+
     public static class SyncStatus
     {
         public const string LocalOnly = "LOCAL_ONLY";
@@ -116,6 +124,8 @@ namespace BBTech.Core.Storage
         [DataMember] public DateTime? LastAttemptAt { get; set; }
         [DataMember] public string LastError { get; set; }
         [DataMember] public string RemoteId { get; set; }
+        [DataMember] public string RequestId { get; set; }
+        [DataMember] public DateTime? UpdatedAt { get; set; }
     }
 
     /// <summary>Which managed Wi-Fi network version was provisioned on this laptop (no password).</summary>
@@ -140,6 +150,7 @@ namespace BBTech.Core.Storage
         public const string KindWifi = "wifi";
 
         [DataMember] public string Kind { get; set; }
+        [DataMember] public int SchemaVersion { get; set; }
         [DataMember] public DateTime At { get; set; }
         [DataMember] public DeviceRecord Device { get; set; }
         [DataMember] public InspectionRecord Inspection { get; set; }

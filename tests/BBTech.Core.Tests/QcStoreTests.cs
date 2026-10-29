@@ -56,7 +56,7 @@ namespace BBTech.Core.Tests
             Assert.Equal("PASS", history[0].Inspection.OverallStatus);
             Assert.Equal(2, history[0].Results.Count);
             Assert.Equal(InspectionStatus.Completed, history[0].Inspection.Status);
-            Assert.Single(again.SyncRecords, s => s.SyncStatus == SyncStatus.LocalOnly);
+            Assert.Single(again.SyncRecords, s => s.SyncStatus == BBTech.Core.Integration.TransmissionState.Local);
         }
 
         [Fact]
