@@ -87,6 +87,7 @@ namespace BBTech.LaptopTool.UI.Views
             CsvButton.IsEnabled = on;
             CopyButton.IsEnabled = on;
             ItmsButton.IsEnabled = on;
+            QrButton.IsEnabled = on;
         }
 
         private void Render(DetectionResult r)
@@ -219,6 +220,12 @@ namespace BBTech.LaptopTool.UI.Views
         {
             if (_result == null || _busy) return;
             new ItmsSendWindow(_result) { Owner = Window.GetWindow(this) }.ShowDialog();
+        }
+
+        private void QrCode_Click(object sender, RoutedEventArgs e)
+        {
+            if (_result == null || _busy) return;
+            new QrCodeWindow(_result) { Owner = Window.GetWindow(this) }.ShowDialog();
         }
 
         private void Save(string ext, string content)

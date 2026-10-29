@@ -28,6 +28,8 @@
                         <Button x:Name="CopyButton" Style="{StaticResource BaseButton}" Margin="0,0,8,8" Click="Copy_Click" Content="Copy" ToolTip="Copy the ITMS fields to the clipboard" />
                         <Button x:Name="CsvButton" Style="{StaticResource BaseButton}" Margin="0,0,8,8" Click="Csv_Click" Content="Export CSV" />
                         <Button x:Name="JsonButton" Style="{StaticResource PrimaryButton}" Margin="0,0,8,8" Click="Json_Click" Content="Export JSON" />
+                        <Button x:Name="QrButton" Style="{StaticResource BaseButton}" Content="QR Code" VerticalAlignment="Top" IsEnabled="False"
+                                ToolTipService.ShowOnDisabled="True" ToolTip="Display an offline QR code containing this laptop's inspection data" Click="QrCode_Click" Margin="0,0,8,8" />
                         <Button x:Name="ItmsButton" Style="{StaticResource BaseButton}" Content="Send to ITMS" VerticalAlignment="Top" IsEnabled="False"
                                 ToolTipService.ShowOnDisabled="True" ToolTip="Submit this detected laptop to the ITMS review queue" Click="Itms_Click" Margin="0,0,0,0" />
                     </WrapPanel>
