@@ -35,9 +35,10 @@
 +---------------------------------------+
 |          ITMS Review Queue            |
 |   Authorized staff review inspection  |
-|   - Approve -> create in main_device  |
-|   - Link    -> attach to existing     |
-|   - Reject  -> record reason          |
+|   - Approve -> create in main_device (RM250 default cost)
+|   - Update  -> apply verified upgrades (RAM/SSD), preserve Barcode SKU, recalculate Group SKU
+|   - Link    -> attach inspection to existing device without modifying specs
+|   - Reject  -> record explicit rejection reason
 +---------------------------------------+
 ```
 
@@ -52,7 +53,7 @@
 | `/api/devices/requests` | `POST` | Laptop Tool API Key (`x-itms-api-key`) OR Approved User Session | Submit inspection to review queue |
 | `/api/devices/requests` | `GET` | Approved ITMS User Session | List staged requests (paginated) |
 | `/api/devices/requests/[id]` | `GET` | Approved ITMS User Session | Get inspection details & duplicate matches |
-| `/api/devices/requests/[id]/review` | `POST` | Approved ITMS User Session | Approve (new/link) or Reject inspection |
+| `/api/devices/requests/[id]/review` | `POST` | Approved ITMS User Session | Review decision: Approve New (`create_new`), Update Existing (`update_existing`), Link Existing (`use_existing`), or Reject (`reject`) |
 
 ### Credential Transmission
 - Header: `x-itms-api-key: <API_KEY>` or `Authorization: Bearer <API_KEY_OR_JWT>`
