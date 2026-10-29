@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Text;
@@ -8,6 +9,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using BBTech.Core.Export;
 using BBTech.Core.Models;
+using BBTech.Core.Testing;
 
 namespace BBTech.Core.Integration
 {
@@ -237,7 +239,14 @@ namespace BBTech.Core.Integration
         public static string Build(DetectionResult detection) => JsonWriter.Serialize(DetectionExporter.ToItmsObject(detection));
 
         /// <summary>Builds the full inspection payload complying with ITMS contract version 1.0.</summary>
-        public static string BuildInspectionPayload(DetectionResult detection, string requestId, string testedBy = null, string overallResult = "DETECTED")
+        public static string BuildInspectionPayload(
+            DetectionResult detection,
+            string requestId,
+            string testedBy = null,
+            string overallResult = "DETECTED",
+            IEnumerable<TestItem> testItems = null,
+            PhysicalConditionDetails condition = null,
+            AccessoryDetails accessories = null)
         {
             var d = detection ?? new DetectionResult();
             var deviceObj = DetectionExporter.ToItmsObject(d);
@@ -260,6 +269,205 @@ namespace BBTech.Core.Integration
 
             root.Add("device", deviceObj);
 
+            // 1. System Identity
+            root.Add("system_details", new JsonObject
+            {
+                { "manufacturer", d.System?.RawManufacturer ?? "" },
+                { "model", d.System?.RawModel ?? "" },
+                { "system_family", d.System?.SystemFamily ?? "" },
+                { "product_version", d.System?.ProductVersion ?? "" },
+                { "product_code", d.System?.ProductCode ?? "" },
+                { "system_sku", d.System?.SystemSku ?? "" },
+                { "serial_number", d.System?.SerialNumber ?? "" },
+                { "system_uuid", d.System?.SystemUuid ?? "" },
+                { "board_serial", d.System?.BoardSerial ?? "" },
+                { "bios_version", d.System?.BiosVersion ?? "" },
+                { "bios_release_date", d.System?.BiosReleaseDate ?? "" },
+                { "firmware_asset_tag", d.System?.FirmwareAssetTag ?? "" },
+                { "computer_name", d.System?.ComputerName ?? "" },
+                { "chassis_type", d.System?.ChassisType ?? "" },
+                { "is_portable", (object)d.System?.IsPortable },
+                { "os", d.System?.OperatingSystem ?? "" },
+            });
+
+            // 2. CPU Details
+            root.Add("cpu_details", new JsonObject
+            {
+                { "full_name", d.CpuDetails?.FullName ?? "" },
+                { "vendor", d.CpuDetails?.Vendor ?? "" },
+                { "model_code", d.CpuDetails?.ModelCode ?? "" },
+                { "cores", d.CpuDetails?.Cores ?? 0 },
+                { "threads", d.CpuDetails?.LogicalProcessors ?? 0 },
+                { "max_clock_mhz", d.CpuDetails?.MaxClockMhz ?? 0 },
+            });
+
+            // 3. Memory Details
+            var memObj = new JsonObject
+            {
+                { "total_bytes", d.Memory?.TotalBytes ?? 0 },
+                { "from_modules", d.Memory?.FromModules ?? false },
+            };
+            if (d.Memory?.Modules != null)
+            {
+                memObj.Add("modules", d.Memory.Modules.Select(m => new JsonObject
+                {
+                    { "capacity_bytes", m.CapacityBytes },
+                    { "speed_mhz", m.SpeedMhz },
+                    { "type", m.Type },
+                    { "slot", m.Slot },
+                    { "manufacturer", m.Manufacturer },
+                    { "part_number", m.PartNumber },
+                }).ToList());
+            }
+            root.Add("memory_details", memObj);
+
+            // 4. Storage Devices
+            if (d.StorageDevices != null)
+            {
+                root.Add("storage_devices", d.StorageDevices.Select(s => new JsonObject
+                {
+                    { "model", s.Model },
+                    { "capacity_bytes", s.CapacityBytes },
+                    { "capacity_label", s.CapacityLabel },
+                    { "media_type", s.MediaType },
+                    { "bus_type", s.BusType },
+                    { "serial_number", s.SerialNumber },
+                    { "partitions_summary", s.PartitionsSummary },
+                    { "windows_health", s.WindowsHealth },
+                    { "is_external", s.IsExternal },
+                    { "device_id", s.DeviceId },
+                    { "wear_percent", (object)s.WearPercentUsed },
+                    { "power_on_hours", (object)s.PowerOnHours },
+                    { "temperature_c", (object)s.TemperatureC },
+                    { "health_percent", (object)s.HealthPercent },
+                    { "performance_percent", (object)s.PerformancePercent },
+                    { "power_on_time", s.PowerOnTime },
+                }).ToList());
+            }
+
+            // 5. Battery Details
+            root.Add("battery_details", new JsonObject
+            {
+                { "present", d.Battery?.Present ?? false },
+                { "battery_count", d.Battery?.BatteryCount ?? 0 },
+                { "name", d.Battery?.Name ?? "" },
+                { "manufacturer", d.Battery?.Manufacturer ?? "" },
+                { "chemistry", d.Battery?.Chemistry ?? "" },
+                { "power_state", d.Battery?.PowerState ?? "" },
+                { "design_capacity_mwh", (object)d.Battery?.DesignCapacityMWh },
+                { "full_charge_capacity_mwh", (object)d.Battery?.FullChargeCapacityMWh },
+                { "current_capacity_mwh", (object)d.Battery?.CurrentCapacityMWh },
+                { "charge_percent", (object)d.Battery?.ChargePercent },
+                { "cycle_count", (object)d.Battery?.CycleCount },
+                { "health_percent", (object)d.Battery?.HealthPercent },
+                { "ac_adapter_connected", (object)d.Battery?.AcAdapterConnected },
+                { "charging_status", d.Battery?.ChargingStatus ?? "" },
+                { "source", d.Battery?.Source ?? "" },
+            });
+
+            // 6. Graphics
+            if (d.Gpus != null)
+            {
+                root.Add("gpus", d.Gpus.Select(g => new JsonObject
+                {
+                    { "name", g.Name },
+                    { "manufacturer", g.Manufacturer },
+                    { "dedicated_vram_bytes", (object)g.DedicatedVramBytes },
+                    { "dedicated_vram_label", g.DedicatedVramLabel },
+                    { "driver_version", g.DriverVersion },
+                }).ToList());
+            }
+
+            // 7. Display
+            root.Add("display", new JsonObject
+            {
+                { "display_count", d.Display?.DisplayCount ?? 1 },
+                { "resolution", d.Display?.Resolution ?? "" },
+                { "refresh_rate_hz", (object)d.Display?.RefreshRateHz },
+                { "physical_size_inches", (object)d.Display?.PhysicalSizeInches },
+                { "panel_model", d.Display?.PanelModel ?? "" },
+                { "touchscreen", (object)d.Display?.TouchscreenSupported },
+                { "pen", (object)d.Display?.PenSupported },
+            });
+
+            // 8. Peripherals & Firmware Security
+            root.Add("peripherals", new JsonObject
+            {
+                { "webcam", d.Peripherals?.WebcamName ?? "" },
+                { "microphone", d.Peripherals?.MicrophoneName ?? "" },
+                { "speaker", d.Peripherals?.SpeakerName ?? "" },
+                { "wifi_adapter", d.Peripherals?.WifiAdapter ?? "" },
+                { "bluetooth_adapter", d.Peripherals?.BluetoothAdapter ?? "" },
+                { "ethernet_adapter", d.Peripherals?.EthernetAdapter ?? "" },
+                { "fingerprint_reader", d.Peripherals?.FingerprintReader ?? "" },
+                { "tpm_present", (object)d.Peripherals?.TpmPresent },
+                { "tpm_version", d.Peripherals?.TpmVersion ?? "" },
+                { "secure_boot_enabled", (object)d.Peripherals?.SecureBootEnabled },
+            });
+
+            // 9. Physical Condition
+            var cond = condition ?? d.Condition ?? new PhysicalConditionDetails();
+            root.Add("condition", new JsonObject
+            {
+                { "grade", cond.Grade ?? "" },
+                { "screen", cond.ScreenCondition ?? "" },
+                { "lid_cover", cond.LidCover ?? "" },
+                { "palm_rest", cond.PalmRest ?? "" },
+                { "keyboard", cond.KeyboardCondition ?? "" },
+                { "bottom_cover", cond.BottomCover ?? "" },
+                { "hinges", cond.Hinges ?? "" },
+                { "missing_screws", cond.MissingScrews ?? "" },
+                { "rubber_feet", cond.RubberFeet ?? "" },
+                { "port_damage", cond.PortDamage ?? "" },
+                { "missing_keys", cond.MissingKeys ?? "" },
+                { "notes", cond.Notes ?? "" },
+            });
+
+            // 10. Accessories
+            var acc = accessories ?? d.Accessories ?? new AccessoryDetails();
+            root.Add("accessories", new JsonObject
+            {
+                { "charger_included", (object)acc.ChargerIncluded },
+                { "charger_manufacturer", acc.ChargerManufacturer ?? "" },
+                { "charger_model", acc.ChargerModel ?? "" },
+                { "charger_wattage", (object)acc.ChargerWattage },
+                { "charger_voltage", (object)acc.ChargerVoltage },
+                { "charger_amperage", (object)acc.ChargerAmperage },
+                { "connector_type", acc.ConnectorType ?? "" },
+                { "bag_included", (object)acc.BagIncluded },
+                { "stylus_included", (object)acc.StylusIncluded },
+                { "dongle_included", (object)acc.DongleIncluded },
+                { "notes", acc.Notes ?? "" },
+            });
+
+            // 11. Individual QC Tests
+            if (testItems != null)
+            {
+                root.Add("tests", testItems.Select(t => new JsonObject
+                {
+                    { "test_id", t.Kind.ToString() },
+                    { "name", t.Name },
+                    { "status", t.StateLabel },
+                    { "required", t.Required },
+                    { "mandatory", t.Mandatory },
+                    { "notes", t.Notes ?? "" },
+                    { "completed_at", t.CompletedAt.HasValue ? t.CompletedAt.Value.ToString("yyyy-MM-ddTHH:mm:ss", CultureInfo.InvariantCulture) : null },
+                }).ToList());
+            }
+
+            // 12. Field Qualities
+            if (d.FieldQualities != null && d.FieldQualities.Count > 0)
+            {
+                root.Add("field_qualities", d.FieldQualities.Select(q => new JsonObject
+                {
+                    { "field", q.FieldName },
+                    { "status", q.Status },
+                    { "source", q.Source },
+                    { "reason", q.Reason },
+                }).ToList());
+            }
+
+            // 13. Backwards-compatible "details" block
             root.Add("details", new JsonObject
             {
                 { "os", d.System?.OperatingSystem ?? "" },

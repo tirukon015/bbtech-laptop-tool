@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -27,6 +27,10 @@ namespace BBTech.LaptopTool.Detect
                 Step(r, progress, "Reading memory...", () => MemoryProvider.Fill(r), "Memory information unavailable.");
                 Step(r, progress, "Reading storage drives...", () => StorageProvider.Fill(r), "Storage information unavailable.");
                 Step(r, progress, "Reading battery...", () => BatteryProvider.Fill(r), "Battery information is currently unavailable.");
+                Step(r, progress, "Reading graphics adapters...", () => GpuProvider.Fill(r), "Graphics adapter information unavailable.");
+                Step(r, progress, "Reading display...", () => DisplayProvider.Fill(r), "Display information unavailable.");
+                Step(r, progress, "Reading peripherals...", () => PeripheralProvider.Fill(r), "Peripheral device information unavailable.");
+                Step(r, progress, "Reading firmware & security...", () => FirmwareProvider.Fill(r), "Firmware security information unavailable.");
 
                 AppLog.Info("Detection finished: " + r.Brand + " | " + r.Model + " | " + r.ModelNumber + " | " + r.Cpu + " | " +
                             r.Generation + " | " + r.Ram + " | " + r.Storage + " | battery " + r.BatteryHealth +
@@ -81,17 +85,23 @@ namespace BBTech.LaptopTool.Detect
                 string serial = Wmi.Str(bios, "SerialNumber");
                 s.SerialNumber = BrandCatalog.IsPlaceholder(serial) ? "" : serial;
                 s.BiosVersion = Wmi.Str(bios, "SMBIOSBIOSVersion");
+                s.BiosReleaseDate = Wmi.Str(bios, "ReleaseDate");
             }
             // Stable identifiers for physical-device identity (placeholders are discarded).
             if (prod != null) s.SystemUuid = BBTech.Core.Identity.DeviceIdentity.CleanUuid(Wmi.Str(prod, "UUID")) ?? "";
             if (board != null) s.BoardSerial = BBTech.Core.Identity.DeviceIdentity.CleanSerial(Wmi.Str(board, "SerialNumber")) ?? "";
-            if (enc != null && Wmi.Raw(enc, "ChassisTypes") is ushort[] types && types.Length > 0)
+            if (enc != null)
             {
-                int t = types[0];
-                s.ChassisType = ChassisName(t);
-                s.IsPortable = PortableChassis.Contains(t);
+                s.FirmwareAssetTag = Wmi.Str(enc, "SMBIOSAssetTag");
+                if (Wmi.Raw(enc, "ChassisTypes") is ushort[] types && types.Length > 0)
+                {
+                    int t = types[0];
+                    s.ChassisType = ChassisName(t);
+                    s.IsPortable = PortableChassis.Contains(t);
+                }
             }
             if (os != null) s.OperatingSystem = (Wmi.Str(os, "Caption") + " " + Wmi.Str(os, "Version")).Trim();
+            s.ComputerName = Environment.MachineName;
 
             var parsed = ModelParser.Parse(s.RawManufacturer, s.RawModel, s.SystemFamily, s.ProductVersion);
             r.Brand = parsed.Brand;
@@ -144,7 +154,7 @@ namespace BBTech.LaptopTool.Detect
     {
         public static void Fill(DetectionResult r)
         {
-            var modules = Wmi.Query("SELECT Capacity, Speed, ConfiguredClockSpeed, SMBIOSMemoryType, MemoryType, DeviceLocator, Manufacturer FROM Win32_PhysicalMemory");
+            var modules = Wmi.Query("SELECT Capacity, Speed, ConfiguredClockSpeed, SMBIOSMemoryType, MemoryType, DeviceLocator, Manufacturer, PartNumber FROM Win32_PhysicalMemory");
             if (modules.Count == 0) modules = Wmi.Query("SELECT * FROM Win32_PhysicalMemory");
 
             foreach (var m in modules)
@@ -162,6 +172,7 @@ namespace BBTech.LaptopTool.Detect
                     Type = MemoryTypeName(type),
                     Slot = Wmi.Str(m, "DeviceLocator"),
                     Manufacturer = Wmi.Str(m, "Manufacturer"),
+                    PartNumber = Wmi.Str(m, "PartNumber"),
                 });
             }
 
@@ -342,6 +353,13 @@ namespace BBTech.LaptopTool.Detect
                 return;
             }
 
+            b.AcAdapterConnected = power.AcOnline;
+            b.ChargingStatus = power.Charging ? "Charging" : power.AcOnline == true ? "AC Connected" : "On Battery";
+            if (power.ChargePercent.HasValue && !b.ChargePercent.HasValue)
+            {
+                b.ChargePercent = power.ChargePercent.Value;
+            }
+
             r.Battery = b;
             r.BatteryHealth = BatteryHealth.Format(b.HealthPercent);
             if (b.HealthPercent == null) r.Warnings.Add("Battery found, but its health could not be determined.");
@@ -357,6 +375,128 @@ namespace BBTech.LaptopTool.Detect
             primary.HealthPercent = BatteryHealth.Compute(primary.DesignCapacityMWh, primary.FullChargeCapacityMWh) ?? fallback.HealthPercent;
             primary.Source += " + " + fallback.Source;
             return primary;
+        }
+    }
+
+    internal static class GpuProvider
+    {
+        public static void Fill(DetectionResult r)
+        {
+            var rows = Wmi.Query("SELECT Name, AdapterCompatibility, AdapterRAM, DriverVersion FROM Win32_VideoController");
+            foreach (var row in rows)
+            {
+                string name = Wmi.Str(row, "Name");
+                if (string.IsNullOrWhiteSpace(name)) continue;
+
+                long vram = Wmi.Long(row, "AdapterRAM");
+                string vramLabel = vram > 0 ? CapacityFormatter.FormatDrive(vram) : "";
+
+                r.Gpus.Add(new GpuDetails
+                {
+                    Name = name,
+                    Manufacturer = Wmi.Str(row, "AdapterCompatibility"),
+                    DedicatedVramBytes = vram > 0 ? (long?)vram : null,
+                    DedicatedVramLabel = vramLabel,
+                    DriverVersion = Wmi.Str(row, "DriverVersion"),
+                });
+            }
+        }
+    }
+
+    internal static class DisplayProvider
+    {
+        public static void Fill(DetectionResult r)
+        {
+            var vc = Wmi.Query("SELECT CurrentHorizontalResolution, CurrentVerticalResolution, CurrentRefreshRate FROM Win32_VideoController").FirstOrDefault();
+            if (vc != null)
+            {
+                int h = Wmi.Int(vc, "CurrentHorizontalResolution");
+                int v = Wmi.Int(vc, "CurrentVerticalResolution");
+                int rate = Wmi.Int(vc, "CurrentRefreshRate");
+
+                if (h > 0 && v > 0)
+                {
+                    r.Display.Resolution = h + " x " + v;
+                }
+                if (rate > 0)
+                {
+                    r.Display.RefreshRateHz = rate;
+                }
+            }
+
+            var desktopMonitors = Wmi.Query("SELECT MonitorType, ScreenHeight, ScreenWidth FROM Win32_DesktopMonitor");
+            if (desktopMonitors.Count > 0)
+            {
+                r.Display.DisplayCount = Math.Max(1, desktopMonitors.Count);
+            }
+        }
+    }
+
+    internal static class PeripheralProvider
+    {
+        public static void Fill(DetectionResult r)
+        {
+            try
+            {
+                var audio = Wmi.Query("SELECT Name, Manufacturer FROM Win32_SoundDevice").FirstOrDefault();
+                if (audio != null)
+                {
+                    r.Peripherals.SpeakerName = Wmi.Str(audio, "Name");
+                }
+            }
+            catch { }
+
+            try
+            {
+                var netAdapters = Wmi.Query("SELECT Name, AdapterType, NetConnectionID, PhysicalAdapter FROM Win32_NetworkAdapter");
+                foreach (var net in netAdapters)
+                {
+                    string name = Wmi.Str(net, "Name");
+                    string conn = Wmi.Str(net, "NetConnectionID");
+                    if (conn.IndexOf("Wi-Fi", StringComparison.OrdinalIgnoreCase) >= 0 || name.IndexOf("Wireless", StringComparison.OrdinalIgnoreCase) >= 0 || name.IndexOf("Wi-Fi", StringComparison.OrdinalIgnoreCase) >= 0 || name.IndexOf("802.11", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        if (string.IsNullOrEmpty(r.Peripherals.WifiAdapter)) r.Peripherals.WifiAdapter = name;
+                    }
+                    else if (conn.IndexOf("Bluetooth", StringComparison.OrdinalIgnoreCase) >= 0 || name.IndexOf("Bluetooth", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        if (string.IsNullOrEmpty(r.Peripherals.BluetoothAdapter)) r.Peripherals.BluetoothAdapter = name;
+                    }
+                    else if (conn.IndexOf("Ethernet", StringComparison.OrdinalIgnoreCase) >= 0 || name.IndexOf("Ethernet", StringComparison.OrdinalIgnoreCase) >= 0 || name.IndexOf("Gigabit", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        if (string.IsNullOrEmpty(r.Peripherals.EthernetAdapter)) r.Peripherals.EthernetAdapter = name;
+                    }
+                }
+            }
+            catch { }
+
+            try
+            {
+                var pnp = Wmi.Query("SELECT Name, Description FROM Win32_PnPEntity WHERE Service = 'WbioSrvc' OR Description LIKE '%Fingerprint%' OR Description LIKE '%Biometric%'");
+                if (pnp.Count > 0)
+                {
+                    r.Peripherals.FingerprintReader = Wmi.Str(pnp[0], "Name");
+                }
+            }
+            catch { }
+        }
+    }
+
+    internal static class FirmwareProvider
+    {
+        public static void Fill(DetectionResult r)
+        {
+            try
+            {
+                var tpm = Wmi.Query("SELECT IsActivated_InitialValue, IsEnabled_InitialValue, SpecVersion FROM Win32_Tpm", @"root\CIMV2\Security\MicrosoftTpm").FirstOrDefault();
+                if (tpm != null)
+                {
+                    r.Firmware.TpmReady = true;
+                    r.Firmware.TpmVersion = Wmi.Str(tpm, "SpecVersion");
+                    r.Peripherals.TpmPresent = true;
+                    r.Peripherals.TpmVersion = r.Firmware.TpmVersion;
+                }
+            }
+            catch { }
         }
     }
 }

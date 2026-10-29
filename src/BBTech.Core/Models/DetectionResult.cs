@@ -27,6 +27,13 @@ namespace BBTech.Core.Models
         public MemoryDetails Memory { get; set; } = new MemoryDetails();
         public List<StorageDevice> StorageDevices { get; set; } = new List<StorageDevice>();
         public BatteryDetails Battery { get; set; } = new BatteryDetails();
+        public List<GpuDetails> Gpus { get; set; } = new List<GpuDetails>();
+        public DisplayDetails Display { get; set; } = new DisplayDetails();
+        public PeripheralDetails Peripherals { get; set; } = new PeripheralDetails();
+        public FirmwareDetails Firmware { get; set; } = new FirmwareDetails();
+        public PhysicalConditionDetails Condition { get; set; } = new PhysicalConditionDetails();
+        public AccessoryDetails Accessories { get; set; } = new AccessoryDetails();
+        public List<FieldQualityInfo> FieldQualities { get; set; } = new List<FieldQualityInfo>();
 
         /// <summary>User-friendly notes about anything that could not be detected.</summary>
         public List<string> Warnings { get; set; } = new List<string>();
@@ -52,6 +59,9 @@ namespace BBTech.Core.Models
         /// <summary>Motherboard serial (Win32_BaseBoard.SerialNumber); "" when missing/placeholder.</summary>
         public string BoardSerial { get; set; } = "";
         public string BiosVersion { get; set; } = "";
+        public string BiosReleaseDate { get; set; } = "";
+        public string FirmwareAssetTag { get; set; } = "";
+        public string ComputerName { get; set; } = "";
         public string ChassisType { get; set; } = "";
         public bool? IsPortable { get; set; }
         public string OperatingSystem { get; set; } = "";
@@ -82,6 +92,7 @@ namespace BBTech.Core.Models
         public string Type { get; set; } = "";
         public string Slot { get; set; } = "";
         public string Manufacturer { get; set; } = "";
+        public string PartNumber { get; set; } = "";
     }
 
     public sealed class StorageDevice
@@ -94,6 +105,8 @@ namespace BBTech.Core.Models
         public string MediaType { get; set; } = "";
         /// <summary>"NVMe", "SATA", "USB", ...</summary>
         public string BusType { get; set; } = "";
+        public string SerialNumber { get; set; } = "";
+        public string PartitionsSummary { get; set; } = "";
         public string WindowsHealth { get; set; } = "";
         public bool IsExternal { get; set; }
 
@@ -138,5 +151,91 @@ namespace BBTech.Core.Models
         public double? HealthPercent { get; set; }
         /// <summary>Where the data came from (BatteryInfoView, WMI, ...).</summary>
         public string Source { get; set; } = "";
+        public bool? AcAdapterConnected { get; set; }
+        public string ChargingStatus { get; set; } = "";
+    }
+
+    public sealed class GpuDetails
+    {
+        public string Name { get; set; } = "";
+        public string Manufacturer { get; set; } = "";
+        public long? DedicatedVramBytes { get; set; }
+        public string DedicatedVramLabel { get; set; } = "";
+        public string DriverVersion { get; set; } = "";
+    }
+
+    public sealed class DisplayDetails
+    {
+        public int DisplayCount { get; set; } = 1;
+        public string Resolution { get; set; } = "";
+        public int? RefreshRateHz { get; set; }
+        public double? PhysicalSizeInches { get; set; }
+        public string PanelModel { get; set; } = "";
+        public bool? TouchscreenSupported { get; set; }
+        public bool? PenSupported { get; set; }
+    }
+
+    public sealed class PeripheralDetails
+    {
+        public string WebcamName { get; set; } = "";
+        public string MicrophoneName { get; set; } = "";
+        public string SpeakerName { get; set; } = "";
+        public string WifiAdapter { get; set; } = "";
+        public string BluetoothAdapter { get; set; } = "";
+        public string EthernetAdapter { get; set; } = "";
+        public string FingerprintReader { get; set; } = "";
+        public bool? TpmPresent { get; set; }
+        public string TpmVersion { get; set; } = "";
+        public bool? SecureBootEnabled { get; set; }
+    }
+
+    public sealed class FirmwareDetails
+    {
+        public string BiosVendor { get; set; } = "";
+        public string BiosVersion { get; set; } = "";
+        public string BiosReleaseDate { get; set; } = "";
+        public bool? SecureBoot { get; set; }
+        public bool? TpmReady { get; set; }
+        public string TpmVersion { get; set; } = "";
+    }
+
+    public sealed class PhysicalConditionDetails
+    {
+        public string Grade { get; set; } = ""; // e.g. "Grade A", "Grade B", "Grade C"
+        public string ScreenCondition { get; set; } = "";
+        public string LidCover { get; set; } = "";
+        public string PalmRest { get; set; } = "";
+        public string KeyboardCondition { get; set; } = "";
+        public string BottomCover { get; set; } = "";
+        public string Hinges { get; set; } = "";
+        public string MissingScrews { get; set; } = "";
+        public string RubberFeet { get; set; } = "";
+        public string PortDamage { get; set; } = "";
+        public string MissingKeys { get; set; } = "";
+        public string Notes { get; set; } = "";
+    }
+
+    public sealed class AccessoryDetails
+    {
+        public bool? ChargerIncluded { get; set; }
+        public string ChargerManufacturer { get; set; } = "";
+        public string ChargerModel { get; set; } = "";
+        public int? ChargerWattage { get; set; }
+        public double? ChargerVoltage { get; set; }
+        public double? ChargerAmperage { get; set; }
+        public string ConnectorType { get; set; } = ""; // e.g. "USB-C", "Slim Tip", "Barrel"
+        public bool? BagIncluded { get; set; }
+        public bool? StylusIncluded { get; set; }
+        public bool? DongleIncluded { get; set; }
+        public string Notes { get; set; } = "";
+    }
+
+    public sealed class FieldQualityInfo
+    {
+        public string FieldName { get; set; } = "";
+        /// <summary>"DETECTED", "UNAVAILABLE", "UNSUPPORTED", "ERROR", "MANUALLY_VERIFIED"</summary>
+        public string Status { get; set; } = "DETECTED";
+        public string Source { get; set; } = "";
+        public string Reason { get; set; } = "";
     }
 }
