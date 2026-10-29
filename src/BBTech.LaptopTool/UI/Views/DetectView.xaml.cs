@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -6,6 +6,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using BBTech.Core.Export;
+using BBTech.Core.Integration;
 using BBTech.Core.Models;
 using BBTech.Core.Parsing;
 using BBTech.LaptopTool.Detect;
@@ -85,6 +86,7 @@ namespace BBTech.LaptopTool.UI.Views
             JsonButton.IsEnabled = on;
             CsvButton.IsEnabled = on;
             CopyButton.IsEnabled = on;
+            ItmsButton.IsEnabled = on;
         }
 
         private void Render(DetectionResult r)
@@ -212,6 +214,60 @@ namespace BBTech.LaptopTool.UI.Views
 
         private void Json_Click(object sender, RoutedEventArgs e) => Save("json", DetectionExporter.ToJson(_result));
         private void Csv_Click(object sender, RoutedEventArgs e) => Save("csv", DetectionExporter.ToCsv(_result));
+
+        private async void Itms_Click(object sender, RoutedEventArgs e)
+        {
+            if (_result == null || _busy) return;
+
+            var store = SettingsService.Store;
+            var client = new HttpItmsClient(() => store.EffectiveItmsUrl, () => store.EffectiveItmsApiKey);
+
+            if (!client.IsConfigured)
+            {
+                MessageBox.Show(
+                    "ITMS integration is not configured.\n\nPlease open Settings -> ITMS Integration (or set ITMS_URL and ITMS_API_KEY environment variables) to configure the server destination.",
+                    "Send to ITMS",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+                return;
+            }
+
+            ItmsButton.IsEnabled = false;
+            var prevText = ItmsButton.Content;
+            ItmsButton.Content = "Sending...";
+            Notice.Visibility = Visibility.Collapsed;
+
+            try
+            {
+                var result = await client.SubmitNewDeviceAsync(_result);
+                if (result.Success)
+                {
+                    NoticeText.Text = result.Message;
+                    Notice.Background = (Brush)FindResource("PassSoft");
+                    NoticeText.Foreground = (Brush)FindResource("PassBrush");
+                    Notice.Visibility = Visibility.Visible;
+                    AppLog.Info("ITMS submission successful: " + result.Message + " (UUID: " + result.RequestId + ")");
+                }
+                else
+                {
+                    NoticeText.Text = "ITMS: " + result.Message;
+                    Notice.Background = (Brush)FindResource("FailSoft");
+                    NoticeText.Foreground = (Brush)FindResource("FailBrush");
+                    Notice.Visibility = Visibility.Visible;
+                    AppLog.Warn("ITMS submission failed: " + result.Message);
+                }
+            }
+            catch (Exception ex)
+            {
+                AppLog.Error("ITMS submission exception", ex);
+                MessageBox.Show("Failed to send inspection to ITMS: " + ex.Message, "ITMS Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+            finally
+            {
+                ItmsButton.Content = prevText;
+                ItmsButton.IsEnabled = true;
+            }
+        }
 
         private void Save(string ext, string content)
         {

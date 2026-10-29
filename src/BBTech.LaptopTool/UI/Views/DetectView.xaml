@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="BBTech.LaptopTool.UI.Views.DetectView"
+<UserControl x:Class="BBTech.LaptopTool.UI.Views.DetectView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <Grid>
@@ -29,7 +29,7 @@
                         <Button x:Name="CsvButton" Style="{StaticResource BaseButton}" Margin="0,0,8,8" Click="Csv_Click" Content="Export CSV" />
                         <Button x:Name="JsonButton" Style="{StaticResource PrimaryButton}" Margin="0,0,8,8" Click="Json_Click" Content="Export JSON" />
                         <Button x:Name="ItmsButton" Style="{StaticResource BaseButton}" Content="Send to ITMS" VerticalAlignment="Top" IsEnabled="False"
-                                ToolTipService.ShowOnDisabled="True" ToolTip="ITMS integration will be added in a later version." Margin="0,0,0,0" />
+                                ToolTipService.ShowOnDisabled="True" ToolTip="Submit this detected laptop to the ITMS review queue" Click="Itms_Click" Margin="0,0,0,0" />
                     </WrapPanel>
                 </Grid>
 

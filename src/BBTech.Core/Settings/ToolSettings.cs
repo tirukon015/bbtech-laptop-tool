@@ -47,6 +47,8 @@ namespace BBTech.Core.Settings
         [DataMember] public string AdminPinHash { get; set; }
         [DataMember] public int AdminPinIterations { get; set; }
         [DataMember] public List<WifiNetwork> WifiNetworks { get; set; } = new List<WifiNetwork>();
+        [DataMember] public string ItmsBaseUrl { get; set; }
+        [DataMember] public string ItmsApiKey { get; set; }
     }
 
     /// <summary>
@@ -224,6 +226,28 @@ namespace BBTech.Core.Settings
         public void RemoveWifi(string networkId)
         {
             Settings.WifiNetworks.RemoveAll(n => n.NetworkId == networkId);
+            Save();
+        }
+
+        // ---------------- ITMS Integration ----------------
+
+        public string EffectiveItmsUrl =>
+            !string.IsNullOrWhiteSpace(Settings.ItmsBaseUrl)
+                ? Settings.ItmsBaseUrl.TrimEnd('/')
+                : (Environment.GetEnvironmentVariable("ITMS_URL") ?? "").TrimEnd('/');
+
+        public string EffectiveItmsApiKey =>
+            !string.IsNullOrWhiteSpace(Settings.ItmsApiKey)
+                ? Settings.ItmsApiKey.Trim()
+                : (Environment.GetEnvironmentVariable("ITMS_API_KEY") ?? "").Trim();
+
+        public bool IsItmsConfigured =>
+            !string.IsNullOrWhiteSpace(EffectiveItmsUrl) && !string.IsNullOrWhiteSpace(EffectiveItmsApiKey);
+
+        public void SetItmsConfig(string url, string apiKey)
+        {
+            Settings.ItmsBaseUrl = (url ?? "").Trim().TrimEnd('/');
+            Settings.ItmsApiKey = (apiKey ?? "").Trim();
             Save();
         }
     }

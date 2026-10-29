@@ -35,7 +35,7 @@ BBTech refurbishes laptops. Two teams use this tool:
 | **Reports** | CSV / JSON exports, only on explicit request, named `{Brand}_{Model}_{ModelNumber}_{Serial}_{YYYYMMDD}_{STATUS}` | [docs/REPORTS.md](docs/REPORTS.md) |
 | **Security** | AES-256-CBC + HMAC-SHA256, Windows DPAPI + hardware recovery locks, admin PIN (PBKDF2) | [docs/SECURITY.md](docs/SECURITY.md) |
 
-**Not implemented:** ITMS integration (architecture prepared only, no network code); see [docs/ITMS-INTEGRATION.md](docs/ITMS-INTEGRATION.md).
+| **ITMS Integration** | Direct HTTPS submission to ITMS review queue with API key/bearer auth, automatic retry, hardware deduplication and offline fallback | [docs/ITMS-LAPTOP-TOOL-CONTRACT.md](docs/ITMS-LAPTOP-TOOL-CONTRACT.md) · [docs/ITMS-INTEGRATION.md](docs/ITMS-INTEGRATION.md) |
 
 ## System requirements
 

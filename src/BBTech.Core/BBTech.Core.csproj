@@ -14,6 +14,7 @@
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Security" />
     <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.Net.Http" />
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="BBTech.Core.Tests" />
