@@ -288,6 +288,7 @@ namespace BBTech.Core.Integration
                 { "chassis_type", d.System?.ChassisType ?? "" },
                 { "is_portable", (object)d.System?.IsPortable },
                 { "os", d.System?.OperatingSystem ?? "" },
+                { "operating_system", d.System?.OperatingSystem ?? "" },
             });
 
             // 2. CPU Details
