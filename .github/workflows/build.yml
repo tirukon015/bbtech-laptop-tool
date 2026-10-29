@@ -1,0 +1,36 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Run Tests
+        run: |
+          dotnet test tests/BBTech.Core.Tests -c Release
+
+      - name: Build Application
+        shell: pwsh
+        run: |
+          powershell -ExecutionPolicy Bypass -File build\build.ps1 -SkipTests
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: BBTech-Laptop-Tool-windows-x64
+          path: dist/release/*
