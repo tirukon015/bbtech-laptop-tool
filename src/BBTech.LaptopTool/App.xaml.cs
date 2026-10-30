@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
@@ -14,10 +14,29 @@ namespace BBTech.LaptopTool
         {
             AppPaths.Init();
             AppLog.Init(AppPaths.LogsDir);
+
+            string exePath = "";
+            string exeHash = "";
+            try
+            {
+                exePath = System.Reflection.Assembly.GetExecutingAssembly().Location;
+                if (System.IO.File.Exists(exePath))
+                {
+                    using (var sha = System.Security.Cryptography.SHA256.Create())
+                    using (var fs = System.IO.File.OpenRead(exePath))
+                    {
+                        exeHash = BitConverter.ToString(sha.ComputeHash(fs)).Replace("-", "");
+                    }
+                }
+            }
+            catch { }
+
             AppLog.Info("==== BBTech Laptop Tool " + AppPaths.Version + " started from " +
                         (AppPaths.IsRunningFromRemovableDrive ? "removable drive" : "fixed drive") +
                         (AppPaths.UsingFallbackStorage ? " (USB not writable, using local data folder)" : "") +
-                        " | " + OsName() + (Environment.Is64BitProcess ? " x64" : " x86"));
+                        " | Exe: " + exePath + " | SHA256: " + exeHash +
+                        " | " + OsName() + (Environment.Is64BitProcess ? " x64" : " x86") +
+                        (ElevationHelper.IsAdministrator ? " [Admin]" : " [Standard User]"));
 
             // Never crash with a raw error dialog: log and show a friendly message.
             DispatcherUnhandledException += OnUiException;
@@ -30,6 +49,37 @@ namespace BBTech.LaptopTool
             if (Environment.OSVersion.Version.Major < 10)
                 MessageBox.Show("BBTech Laptop Tool supports Windows 10 and Windows 11.\nSome features may not work on this version of Windows.",
                                 "BBTech Laptop Tool", MessageBoxButton.OK, MessageBoxImage.Information);
+
+            // Requirement 4: Force Administrator Privileges
+            if (!ElevationHelper.IsAdministrator)
+            {
+                bool bypass = false;
+                if (e.Args != null)
+                {
+                    foreach (var arg in e.Args)
+                    {
+                        if (string.Equals(arg, "--no-elevation-check", StringComparison.OrdinalIgnoreCase))
+                            bypass = true;
+                    }
+                }
+
+                if (!bypass)
+                {
+                    AppLog.Info("Application launched without administrator privileges. Requesting elevation via UAC...");
+                    bool restarted = ElevationHelper.RestartAsAdministrator(e.Args != null ? string.Join(" ", e.Args) : "");
+                    if (!restarted)
+                    {
+                        AppLog.Warn("User declined UAC elevation prompt or restart failed. Showing notice and exiting cleanly.");
+                        MessageBox.Show(
+                            "BBTech Laptop Tool requires Administrator privileges to detect hardware components, TPM status, and SSD SMART health.\n\nThe application will now close.",
+                            "Administrator Privileges Required",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Warning);
+                    }
+                    Shutdown();
+                    return;
+                }
+            }
 
             // Only the UI is loaded here: no scans, no hardware access, no tool extraction.
             new MainWindow().Show();

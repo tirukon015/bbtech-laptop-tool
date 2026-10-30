@@ -64,7 +64,8 @@ namespace BBTech.Core.Parsing
             "to be filled by o.e.m.", "to be filled by oem", "system manufacturer", "system product name",
             "system version", "default string", "o.e.m.", "oem", "not applicable", "not available", "n/a",
             "none", "invalid", "unknown", "x.x", "0", "123456789", "type1productconfigid", "chassis manufacture",
-            "base board product name", "sku", "default", "all series",
+            "base board product name", "sku", "default", "all series", "not specified", "unavailable",
+            "not detected", "-", "—",
         };
 
         private static readonly string[] CorporateSuffixes =

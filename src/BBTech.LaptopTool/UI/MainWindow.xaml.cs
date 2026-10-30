@@ -18,8 +18,25 @@ namespace BBTech.LaptopTool.UI
             UsbText.Text = AppPaths.IsRunningFromRemovableDrive
                 ? "Running from USB " + AppPaths.DriveLetter.TrimEnd('\\')
                 : "Running from " + AppPaths.DriveLetter.TrimEnd('\\');
+
+            if (ElevationHelper.IsAdministrator)
+            {
+                AdminBadge.Visibility = Visibility.Visible;
+                RunAdminButton.Visibility = Visibility.Collapsed;
+            }
+            else
+            {
+                AdminBadge.Visibility = Visibility.Collapsed;
+                RunAdminButton.Visibility = Visibility.Visible;
+            }
+
             SizeChanged += (s, e) => UsbChip.Visibility = ActualWidth < 960 ? Visibility.Collapsed : Visibility.Visible;
             ShowHome();
+        }
+
+        private void RunAdmin_Click(object sender, RoutedEventArgs e)
+        {
+            ElevationHelper.RestartAsAdministrator();
         }
 
         /// <summary>

@@ -9,6 +9,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using BBTech.Core.Export;
 using BBTech.Core.Models;
+using BBTech.Core.Parsing;
 using BBTech.Core.Testing;
 
 namespace BBTech.Core.Integration
@@ -246,13 +247,21 @@ namespace BBTech.Core.Integration
             string overallResult = "DETECTED",
             IEnumerable<TestItem> testItems = null,
             PhysicalConditionDetails condition = null,
-            AccessoryDetails accessories = null)
+            AccessoryDetails accessories = null,
+            bool indent = true)
         {
             var d = detection ?? new DetectionResult();
             var deviceObj = DetectionExporter.ToItmsObject(d);
             deviceObj.Add("serial_number", string.IsNullOrWhiteSpace(d.System?.SerialNumber) ? DetectionResult.Unknown : d.System.SerialNumber);
-            deviceObj.Add("system_uuid", d.System?.SystemUuid ?? "");
-            deviceObj.Add("board_serial", d.System?.BoardSerial ?? "");
+            if (!string.IsNullOrWhiteSpace(d.System?.SystemUuid))
+                deviceObj.Add("system_uuid", d.System.SystemUuid);
+            else if (indent)
+                deviceObj.Add("system_uuid", "");
+
+            if (!string.IsNullOrWhiteSpace(d.System?.BoardSerial))
+                deviceObj.Add("board_serial", d.System.BoardSerial);
+            else if (indent)
+                deviceObj.Add("board_serial", "");
 
             var root = new JsonObject
             {
@@ -270,26 +279,37 @@ namespace BBTech.Core.Integration
             root.Add("device", deviceObj);
 
             // 1. System Identity
-            root.Add("system_details", new JsonObject
+            var sysObj = new JsonObject();
+            void AddSys(string key, string val)
             {
-                { "manufacturer", d.System?.RawManufacturer ?? "" },
-                { "model", d.System?.RawModel ?? "" },
-                { "system_family", d.System?.SystemFamily ?? "" },
-                { "product_version", d.System?.ProductVersion ?? "" },
-                { "product_code", d.System?.ProductCode ?? "" },
-                { "system_sku", d.System?.SystemSku ?? "" },
-                { "serial_number", d.System?.SerialNumber ?? "" },
-                { "system_uuid", d.System?.SystemUuid ?? "" },
-                { "board_serial", d.System?.BoardSerial ?? "" },
-                { "bios_version", d.System?.BiosVersion ?? "" },
-                { "bios_release_date", d.System?.BiosReleaseDate ?? "" },
-                { "firmware_asset_tag", d.System?.FirmwareAssetTag ?? "" },
-                { "computer_name", d.System?.ComputerName ?? "" },
-                { "chassis_type", d.System?.ChassisType ?? "" },
-                { "is_portable", (object)d.System?.IsPortable },
-                { "os", d.System?.OperatingSystem ?? "" },
-                { "operating_system", d.System?.OperatingSystem ?? "" },
-            });
+                if (indent)
+                {
+                    sysObj.Add(key, val ?? "");
+                }
+                else if (!string.IsNullOrWhiteSpace(val) && !BrandCatalog.IsPlaceholder(val))
+                {
+                    sysObj.Add(key, val);
+                }
+            }
+            AddSys("manufacturer", d.System?.RawManufacturer);
+            AddSys("model", d.System?.RawModel);
+            AddSys("system_family", d.System?.SystemFamily);
+            AddSys("product_version", d.System?.ProductVersion);
+            AddSys("product_code", d.System?.ProductCode);
+            AddSys("system_sku", d.System?.SystemSku);
+            AddSys("serial_number", d.System?.SerialNumber);
+            AddSys("system_uuid", d.System?.SystemUuid);
+            AddSys("board_serial", d.System?.BoardSerial);
+            AddSys("bios_version", d.System?.BiosVersion);
+            AddSys("bios_release_date", d.System?.BiosReleaseDate);
+            AddSys("firmware_asset_tag", d.System?.FirmwareAssetTag);
+            AddSys("computer_name", d.System?.ComputerName);
+            AddSys("chassis_type", d.System?.ChassisType);
+            if (d.System?.IsPortable.HasValue == true) sysObj.Add("is_portable", d.System.IsPortable.Value);
+            else if (indent) sysObj.Add("is_portable", null);
+            AddSys("os", d.System?.OperatingSystem);
+            AddSys("operating_system", d.System?.OperatingSystem);
+            root.Add("system_details", sysObj);
 
             // 2. CPU Details
             root.Add("cpu_details", new JsonObject
@@ -325,24 +345,40 @@ namespace BBTech.Core.Integration
             // 4. Storage Devices
             if (d.StorageDevices != null)
             {
-                root.Add("storage_devices", d.StorageDevices.Select(s => new JsonObject
+                root.Add("storage_devices", d.StorageDevices.Select(s =>
                 {
-                    { "model", s.Model },
-                    { "capacity_bytes", s.CapacityBytes },
-                    { "capacity_label", s.CapacityLabel },
-                    { "media_type", s.MediaType },
-                    { "bus_type", s.BusType },
-                    { "serial_number", s.SerialNumber },
-                    { "partitions_summary", s.PartitionsSummary },
-                    { "windows_health", s.WindowsHealth },
-                    { "is_external", s.IsExternal },
-                    { "device_id", s.DeviceId },
-                    { "wear_percent", (object)s.WearPercentUsed },
-                    { "power_on_hours", (object)s.PowerOnHours },
-                    { "temperature_c", (object)s.TemperatureC },
-                    { "health_percent", (object)s.HealthPercent },
-                    { "performance_percent", (object)s.PerformancePercent },
-                    { "power_on_time", s.PowerOnTime },
+                    string diag = s.DiagnosticDetails;
+                    if (!indent && diag != null && diag.Length > 140)
+                    {
+                        diag = diag.Substring(0, 137) + "...";
+                    }
+
+                    var driveObj = new JsonObject
+                    {
+                        { "model", s.Model },
+                        { "capacity_bytes", s.CapacityBytes },
+                        { "capacity_label", s.CapacityLabel },
+                        { "media_type", s.MediaType },
+                        { "bus_type", s.BusType },
+                        { "serial_number", s.SerialNumber },
+                        { "partitions_summary", s.PartitionsSummary },
+                        { "windows_health", s.WindowsHealth },
+                        { "is_external", s.IsExternal },
+                        { "device_id", s.DeviceId },
+                        { "wear_percent", (object)s.WearPercentUsed },
+                        { "power_on_hours", (object)s.PowerOnHours },
+                        { "temperature_c", (object)s.TemperatureC },
+                        { "health_percent", (object)s.HealthPercent },
+                        { "performance_percent", (object)s.PerformancePercent },
+                        { "health_assessment", s.HealthAssessment },
+                        { "diagnostic_details", diag },
+                        { "health_source", s.HealthSource },
+                    };
+
+                    if (indent || !string.IsNullOrEmpty(s.PowerOnTime)) driveObj.Add("power_on_time", s.PowerOnTime);
+                    if (indent || !string.IsNullOrEmpty(s.Temperature)) driveObj.Add("temperature", s.Temperature);
+
+                    return driveObj;
                 }).ToList());
             }
 
@@ -392,54 +428,73 @@ namespace BBTech.Core.Integration
             });
 
             // 8. Peripherals & Firmware Security
-            root.Add("peripherals", new JsonObject
+            var periphObj = new JsonObject();
+            void AddPeriph(string key, object val)
             {
-                { "webcam", d.Peripherals?.WebcamName ?? "" },
-                { "microphone", d.Peripherals?.MicrophoneName ?? "" },
-                { "speaker", d.Peripherals?.SpeakerName ?? "" },
-                { "wifi_adapter", d.Peripherals?.WifiAdapter ?? "" },
-                { "bluetooth_adapter", d.Peripherals?.BluetoothAdapter ?? "" },
-                { "ethernet_adapter", d.Peripherals?.EthernetAdapter ?? "" },
-                { "fingerprint_reader", d.Peripherals?.FingerprintReader ?? "" },
-                { "tpm_present", (object)d.Peripherals?.TpmPresent },
-                { "tpm_version", d.Peripherals?.TpmVersion ?? "" },
-                { "secure_boot_enabled", (object)d.Peripherals?.SecureBootEnabled },
-            });
+                if (indent) periphObj.Add(key, val ?? "");
+                else if (val is string s && !string.IsNullOrWhiteSpace(s)) periphObj.Add(key, s);
+                else if (val != null && !(val is string)) periphObj.Add(key, val);
+            }
+            AddPeriph("webcam", d.Peripherals?.WebcamName);
+            AddPeriph("microphone", d.Peripherals?.MicrophoneName);
+            AddPeriph("speaker", d.Peripherals?.SpeakerName);
+            AddPeriph("wifi_adapter", d.Peripherals?.WifiAdapter);
+            AddPeriph("bluetooth_adapter", d.Peripherals?.BluetoothAdapter);
+            AddPeriph("ethernet_adapter", d.Peripherals?.EthernetAdapter);
+            AddPeriph("fingerprint_reader", d.Peripherals?.FingerprintReader);
+            AddPeriph("tpm_present", (object)d.Peripherals?.TpmPresent);
+            AddPeriph("tpm_version", d.Peripherals?.TpmVersion);
+            AddPeriph("secure_boot_enabled", (object)d.Peripherals?.SecureBootEnabled);
+            root.Add("peripherals", periphObj);
 
             // 9. Physical Condition
-            var cond = condition ?? d.Condition ?? new PhysicalConditionDetails();
-            root.Add("condition", new JsonObject
+            var cond = condition ?? d.Condition;
+            if (cond != null && cond.HasValues)
             {
-                { "grade", cond.Grade ?? "" },
-                { "screen", cond.ScreenCondition ?? "" },
-                { "lid_cover", cond.LidCover ?? "" },
-                { "palm_rest", cond.PalmRest ?? "" },
-                { "keyboard", cond.KeyboardCondition ?? "" },
-                { "bottom_cover", cond.BottomCover ?? "" },
-                { "hinges", cond.Hinges ?? "" },
-                { "missing_screws", cond.MissingScrews ?? "" },
-                { "rubber_feet", cond.RubberFeet ?? "" },
-                { "port_damage", cond.PortDamage ?? "" },
-                { "missing_keys", cond.MissingKeys ?? "" },
-                { "notes", cond.Notes ?? "" },
-            });
+                root.Add("condition", new JsonObject
+                {
+                    { "grade", cond.Grade ?? "" },
+                    { "screen", cond.ScreenCondition ?? "" },
+                    { "lid_cover", cond.LidCover ?? "" },
+                    { "palm_rest", cond.PalmRest ?? "" },
+                    { "keyboard", cond.KeyboardCondition ?? "" },
+                    { "bottom_cover", cond.BottomCover ?? "" },
+                    { "hinges", cond.Hinges ?? "" },
+                    { "missing_screws", cond.MissingScrews ?? "" },
+                    { "rubber_feet", cond.RubberFeet ?? "" },
+                    { "port_damage", cond.PortDamage ?? "" },
+                    { "missing_keys", cond.MissingKeys ?? "" },
+                    { "notes", cond.Notes ?? "" },
+                });
+            }
+            else if (indent)
+            {
+                root.Add("condition", new JsonObject());
+            }
 
             // 10. Accessories
-            var acc = accessories ?? d.Accessories ?? new AccessoryDetails();
-            root.Add("accessories", new JsonObject
+            var acc = accessories ?? d.Accessories;
+            if (acc != null && acc.HasValues)
             {
-                { "charger_included", (object)acc.ChargerIncluded },
-                { "charger_manufacturer", acc.ChargerManufacturer ?? "" },
-                { "charger_model", acc.ChargerModel ?? "" },
-                { "charger_wattage", (object)acc.ChargerWattage },
-                { "charger_voltage", (object)acc.ChargerVoltage },
-                { "charger_amperage", (object)acc.ChargerAmperage },
-                { "connector_type", acc.ConnectorType ?? "" },
-                { "bag_included", (object)acc.BagIncluded },
-                { "stylus_included", (object)acc.StylusIncluded },
-                { "dongle_included", (object)acc.DongleIncluded },
-                { "notes", acc.Notes ?? "" },
-            });
+                root.Add("accessories", new JsonObject
+                {
+                    { "charger_included", (object)acc.ChargerIncluded },
+                    { "charger_manufacturer", acc.ChargerManufacturer ?? "" },
+                    { "charger_model", acc.ChargerModel ?? "" },
+                    { "charger_wattage", (object)acc.ChargerWattage },
+                    { "charger_voltage", (object)acc.ChargerVoltage },
+                    { "charger_amperage", (object)acc.ChargerAmperage },
+                    { "connector_type", acc.ConnectorType ?? "" },
+                    { "bag_included", (object)acc.BagIncluded },
+                    { "stylus_included", (object)acc.StylusIncluded },
+                    { "dongle_included", (object)acc.DongleIncluded },
+                    { "notes", acc.Notes ?? "" },
+                });
+            }
+            else if (indent)
+            {
+                root.Add("accessories", new JsonObject());
+            }
 
             // 11. Individual QC Tests
             if (testItems != null)
@@ -468,16 +523,19 @@ namespace BBTech.Core.Integration
                 }).ToList());
             }
 
-            // 13. Backwards-compatible "details" block
-            root.Add("details", new JsonObject
+            // 13. Backwards-compatible "details" block (only if indent == true)
+            if (indent)
             {
-                { "os", d.System?.OperatingSystem ?? "" },
-                { "bios_version", d.System?.BiosVersion ?? "" },
-                { "product_code", d.System?.ProductCode ?? "" },
-                { "warnings", d.Warnings ?? new List<string>() }
-            });
+                root.Add("details", new JsonObject
+                {
+                    { "os", d.System?.OperatingSystem ?? "" },
+                    { "bios_version", d.System?.BiosVersion ?? "" },
+                    { "product_code", d.System?.ProductCode ?? "" },
+                    { "warnings", d.Warnings ?? new List<string>() }
+                });
+            }
 
-            return JsonWriter.Serialize(root);
+            return JsonWriter.Serialize(root, indent);
         }
     }
 }

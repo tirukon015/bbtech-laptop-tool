@@ -1,4 +1,5 @@
-﻿using BBTech.Core.Parsing;
+using BBTech.Core.Models;
+using BBTech.Core.Parsing;
 using Xunit;
 
 namespace BBTech.Core.Tests
@@ -15,6 +16,14 @@ namespace BBTech.Core.Tests
         // ---- Required examples (single "Brand Model Number" string) ----
 
         [Fact]
+        public void Dell_Latitude_7490_keeps_model_and_number_separate()
+        {
+            var r = ModelParser.ParseFullName("Dell Latitude 7490");
+            AssertParsed(r, "Dell", "Latitude", "7490");
+            Assert.NotEqual("Latitude 7490", r.Model);
+        }
+
+        [Fact]
         public void Dell_Latitude_5420_keeps_model_and_number_separate()
         {
             var r = ModelParser.ParseFullName("Dell Latitude 5420");
@@ -23,16 +32,52 @@ namespace BBTech.Core.Tests
         }
 
         [Fact]
+        public void Dell_Precision_5570() =>
+            AssertParsed(ModelParser.ParseFullName("Dell Precision 5570"), "Dell", "Precision", "5570");
+
+        [Fact]
+        public void Dell_XPS_13_9310() =>
+            AssertParsed(ModelParser.ParseFullName("Dell XPS 13 9310"), "Dell", "XPS", "13 9310");
+
+        [Fact]
+        public void Dell_Inspiron_15_3520() =>
+            AssertParsed(ModelParser.ParseFullName("Dell Inspiron 15 3520"), "Dell", "Inspiron", "15 3520");
+
+        [Fact]
+        public void Dell_Vostro_3510() =>
+            AssertParsed(ModelParser.ParseFullName("Dell Vostro 3510"), "Dell", "Vostro", "3510");
+
+        [Fact]
         public void HP_EliteBook_845_G11() =>
             AssertParsed(ModelParser.ParseFullName("HP EliteBook 845 G11"), "HP", "EliteBook", "845 G11");
 
         [Fact]
-        public void Lenovo_ThinkPad_T14() =>
-            AssertParsed(ModelParser.ParseFullName("Lenovo ThinkPad T14"), "Lenovo", "ThinkPad", "T14");
+        public void HP_ProBook_450_G9() =>
+            AssertParsed(ModelParser.ParseFullName("HP ProBook 450 G9"), "HP", "ProBook", "450 G9");
+
+        [Fact]
+        public void HP_ZBook_Firefly_14_G8() =>
+            AssertParsed(ModelParser.ParseFullName("HP ZBook Firefly 14 G8"), "HP", "ZBook Firefly", "14 G8");
+
+        [Fact]
+        public void HP_250_G8() =>
+            AssertParsed(ModelParser.ParseFullName("HP 250 G8"), "HP", "250", "G8");
 
         [Fact]
         public void Lenovo_ThinkPad_T14_Gen_2() =>
             AssertParsed(ModelParser.ParseFullName("Lenovo ThinkPad T14 Gen 2"), "Lenovo", "ThinkPad", "T14 Gen 2");
+
+        [Fact]
+        public void Lenovo_ThinkPad_X1_Carbon_Gen_9() =>
+            AssertParsed(ModelParser.ParseFullName("Lenovo ThinkPad X1 Carbon Gen 9"), "Lenovo", "ThinkPad", "X1 Carbon Gen 9");
+
+        [Fact]
+        public void Lenovo_ThinkPad_L15_Gen_3() =>
+            AssertParsed(ModelParser.ParseFullName("Lenovo ThinkPad L15 Gen 3"), "Lenovo", "ThinkPad", "L15 Gen 3");
+
+        [Fact]
+        public void Lenovo_IdeaPad_3_15ITL6() =>
+            AssertParsed(ModelParser.ParseFullName("Lenovo IdeaPad 3 15ITL6"), "Lenovo", "IdeaPad", "3 15ITL6");
 
         [Fact]
         public void Acer_Aspire_without_number_reports_unknown_number() =>
@@ -43,6 +88,10 @@ namespace BBTech.Core.Tests
         [Fact]
         public void Dell_firmware_values() =>
             AssertParsed(ModelParser.Parse("Dell Inc.", "Latitude 5420", "Latitude", "Not Specified"), "Dell", "Latitude", "5420");
+
+        [Fact]
+        public void Dell_Latitude_7490_firmware_values() =>
+            AssertParsed(ModelParser.Parse("Dell Inc.", "Latitude 7490", "Latitude", "Not Specified"), "Dell", "Latitude", "7490");
 
         [Fact]
         public void HP_firmware_name_with_marketing_noise() =>
@@ -141,6 +190,55 @@ namespace BBTech.Core.Tests
         [Fact]
         public void Missing_manufacturer_brand_taken_from_model() =>
             AssertParsed(ModelParser.Parse("", "Dell Latitude 7420"), "Dell", "Latitude", "7420");
+
+        // ---- BuildFullName tests ----
+
+        [Fact]
+        public void BuildFullName_StandardEnterpriseLaptops()
+        {
+            Assert.Equal("Dell Latitude 7490", ModelParser.BuildFullName("Dell", "Latitude", "7490"));
+            Assert.Equal("Lenovo ThinkPad T14 Gen 2i", ModelParser.BuildFullName("Lenovo", "ThinkPad", "T14 Gen 2i"));
+            Assert.Equal("HP EliteBook 845 G11", ModelParser.BuildFullName("HP", "EliteBook", "845 G11"));
+        }
+
+        [Fact]
+        public void BuildFullName_HandlesMissingOrPlaceholderComponents()
+        {
+            Assert.Equal("Dell Latitude", ModelParser.BuildFullName("Dell", "Latitude", null));
+            Assert.Equal("Dell Latitude", ModelParser.BuildFullName("Dell", "Latitude", "-"));
+            Assert.Equal("Dell Latitude", ModelParser.BuildFullName("Dell", "Latitude", "—"));
+            Assert.Equal("Dell Latitude", ModelParser.BuildFullName("Dell", "Latitude", "Unavailable"));
+            Assert.Equal("Dell Latitude", ModelParser.BuildFullName("Dell", "Latitude", "Unknown"));
+            Assert.Equal("Dell Latitude", ModelParser.BuildFullName("Dell", "Latitude", "Not detected"));
+            Assert.Equal("Dell", ModelParser.BuildFullName("Dell", "Unknown", "Unknown"));
+            Assert.Equal("", ModelParser.BuildFullName("Unknown", "Unknown", "Unknown"));
+        }
+
+        [Fact]
+        public void BuildFullName_PreventsDuplication()
+        {
+            // If model starts with brand, do not duplicate brand
+            Assert.Equal("Dell Latitude 7490", ModelParser.BuildFullName("Dell", "Dell Latitude", "7490"));
+            // If model number starts with model, do not duplicate model
+            Assert.Equal("Lenovo ThinkPad T14", ModelParser.BuildFullName("Lenovo", "ThinkPad", "ThinkPad T14"));
+            // If model already ends with model number
+            Assert.Equal("Dell Latitude 7490", ModelParser.BuildFullName("Dell", "Latitude 7490", "7490"));
+            // If model number already starts with brand
+            Assert.Equal("Dell Latitude 7490", ModelParser.BuildFullName("Dell", "Latitude", "Dell 7490"));
+        }
+
+        [Fact]
+        public void BuildFullName_FromDetectionResult()
+        {
+            Assert.Equal("", ModelParser.BuildFullName((DetectionResult)null));
+            var r = new DetectionResult
+            {
+                Brand = "Lenovo",
+                Model = "ThinkPad",
+                ModelNumber = "T14 Gen 2i"
+            };
+            Assert.Equal("Lenovo ThinkPad T14 Gen 2i", ModelParser.BuildFullName(r));
+        }
     }
 }
 

@@ -28,8 +28,10 @@
                         <Button x:Name="CopyButton" Style="{StaticResource BaseButton}" Margin="0,0,8,8" Click="Copy_Click" Content="Copy" ToolTip="Copy the ITMS fields to the clipboard" />
                         <Button x:Name="CsvButton" Style="{StaticResource BaseButton}" Margin="0,0,8,8" Click="Csv_Click" Content="Export CSV" />
                         <Button x:Name="JsonButton" Style="{StaticResource PrimaryButton}" Margin="0,0,8,8" Click="Json_Click" Content="Export JSON" />
-                        <Button x:Name="ItmsButton" Style="{StaticResource BaseButton}" Content="Send to ITMS" VerticalAlignment="Top" IsEnabled="False"
-                                ToolTipService.ShowOnDisabled="True" ToolTip="Submit this detected laptop to the ITMS review queue" Click="Itms_Click" Margin="0,0,0,0" />
+                        <Button x:Name="QrButton" Style="{StaticResource BaseButton}" Margin="0,0,8,8" Content="QR Code" IsEnabled="False"
+                                ToolTipService.ShowOnDisabled="True" ToolTip="Display an offline QR code containing this laptop's inspection data" Click="QrCode_Click" />
+                        <Button x:Name="ItmsButton" Style="{StaticResource BaseButton}" Margin="0,0,0,8" Content="Send to ITMS" IsEnabled="False"
+                                ToolTipService.ShowOnDisabled="True" ToolTip="Submit this detected laptop to the ITMS review queue" Click="Itms_Click" />
                     </WrapPanel>
                 </Grid>
 
@@ -41,8 +43,28 @@
                     </DockPanel>
                 </Border>
 
-                <!-- Primary ITMS fields -->
-                <UniformGrid x:Name="FieldGrid" Columns="4" Margin="-6,0" />
+                <!-- Full Laptop Name Card -->
+                <Border x:Name="FullNameBox" Visibility="Collapsed" Background="{StaticResource CardBackground}" BorderBrush="{StaticResource CardBorder}" BorderThickness="1" CornerRadius="10" Padding="18,12" Margin="0,0,0,14">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="FULL LAPTOP NAME" Style="{StaticResource FieldLabel}" Margin="0,0,0,3" />
+                            <TextBlock x:Name="FullNameValue" FontSize="22" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+                        <Button x:Name="CopyFullNameBtn" Grid.Column="1" Style="{StaticResource BaseButton}" VerticalAlignment="Center" Padding="14,8" MinHeight="36" Click="CopyFullName_Click" ToolTip="Copy full laptop name to clipboard">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock x:Name="CopyFullNameIcon" FontFamily="{StaticResource IconFont}" Text="&#xE8C8;" VerticalAlignment="Center" FontSize="13" />
+                                <TextBlock x:Name="CopyFullNameLabel" Text="Copy Name" Margin="6,0,0,0" VerticalAlignment="Center" FontSize="13" />
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+                </Border>
+
+                <!-- Primary ITMS fields (3x3 grid for the 9 core fields including Battery & SSD Health) -->
+                <UniformGrid x:Name="FieldGrid" Columns="3" Margin="-6,0" />
 
                 <!-- QC history found on THIS laptop (encrypted local store) -->
                 <Border x:Name="HistoryBox" Style="{StaticResource Card}" Margin="0,14,0,0" Visibility="Collapsed">
@@ -96,7 +118,7 @@
         </ScrollViewer>
 
         <!-- Progress overlay -->
-        <Border x:Name="Overlay" Background="#E6F2F4F8" Visibility="Collapsed">
+        <Border x:Name="Overlay" Background="#88F2F4F8" Visibility="Collapsed">
             <Border Style="{StaticResource Card}" HorizontalAlignment="Center" VerticalAlignment="Center" Width="420" Padding="28">
                 <StackPanel>
                     <TextBlock Text="Detecting laptop hardware" Style="{StaticResource H2}" />

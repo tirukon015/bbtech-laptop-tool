@@ -20,6 +20,7 @@ namespace BBTech.Core.Models
         public string Ram { get; set; } = Unknown;
         public string Storage { get; set; } = Unknown;
         public string BatteryHealth { get; set; } = Unknown;
+        public string SsdHealth { get; set; } = Unknown;
 
         // ---- Supporting detail ----
         public SystemDetails System { get; set; } = new SystemDetails();
@@ -35,8 +36,20 @@ namespace BBTech.Core.Models
         public AccessoryDetails Accessories { get; set; } = new AccessoryDetails();
         public List<FieldQualityInfo> FieldQualities { get; set; } = new List<FieldQualityInfo>();
 
+        private readonly object _warningsLock = new object();
+
         /// <summary>User-friendly notes about anything that could not be detected.</summary>
         public List<string> Warnings { get; set; } = new List<string>();
+
+        /// <summary>Thread-safe addition of a user-facing detection note/warning.</summary>
+        public void AddWarning(string warning)
+        {
+            if (string.IsNullOrWhiteSpace(warning)) return;
+            lock (_warningsLock)
+            {
+                Warnings.Add(warning);
+            }
+        }
 
         public DateTime DetectedAt { get; set; } = DateTime.Now;
         public string ToolVersion { get; set; } = "";
@@ -122,6 +135,12 @@ namespace BBTech.Core.Models
         public int? PerformancePercent { get; set; }
         public string PowerOnTime { get; set; } = "";
         public string Temperature { get; set; } = "";
+        /// <summary>Assessment: OPTIMAL, GOOD, WARNING, CRITICAL, UNKNOWN.</summary>
+        public string HealthAssessment { get; set; } = "";
+        /// <summary>Detailed diagnostic or SMART description from the SSD health engine.</summary>
+        public string DiagnosticDetails { get; set; } = "";
+        /// <summary>Engine provider (HD Sentinel Pro v6.30, Windows NVMe Diagnostics, etc.).</summary>
+        public string HealthSource { get; set; } = "";
 
         /// <summary>ITMS-style value, e.g. "512 GB SSD".</summary>
         public string DisplayValue
@@ -213,6 +232,20 @@ namespace BBTech.Core.Models
         public string PortDamage { get; set; } = "";
         public string MissingKeys { get; set; } = "";
         public string Notes { get; set; } = "";
+
+        public bool HasValues =>
+            !string.IsNullOrWhiteSpace(Grade) ||
+            !string.IsNullOrWhiteSpace(ScreenCondition) ||
+            !string.IsNullOrWhiteSpace(LidCover) ||
+            !string.IsNullOrWhiteSpace(PalmRest) ||
+            !string.IsNullOrWhiteSpace(KeyboardCondition) ||
+            !string.IsNullOrWhiteSpace(BottomCover) ||
+            !string.IsNullOrWhiteSpace(Hinges) ||
+            !string.IsNullOrWhiteSpace(MissingScrews) ||
+            !string.IsNullOrWhiteSpace(RubberFeet) ||
+            !string.IsNullOrWhiteSpace(PortDamage) ||
+            !string.IsNullOrWhiteSpace(MissingKeys) ||
+            !string.IsNullOrWhiteSpace(Notes);
     }
 
     public sealed class AccessoryDetails
@@ -228,6 +261,19 @@ namespace BBTech.Core.Models
         public bool? StylusIncluded { get; set; }
         public bool? DongleIncluded { get; set; }
         public string Notes { get; set; } = "";
+
+        public bool HasValues =>
+            ChargerIncluded.HasValue ||
+            !string.IsNullOrWhiteSpace(ChargerManufacturer) ||
+            !string.IsNullOrWhiteSpace(ChargerModel) ||
+            ChargerWattage.HasValue ||
+            ChargerVoltage.HasValue ||
+            ChargerAmperage.HasValue ||
+            !string.IsNullOrWhiteSpace(ConnectorType) ||
+            BagIncluded.HasValue ||
+            StylusIncluded.HasValue ||
+            DongleIncluded.HasValue ||
+            !string.IsNullOrWhiteSpace(Notes);
     }
 
     public sealed class FieldQualityInfo

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -7,6 +7,7 @@ using System.Windows.Controls;
 using System.Windows.Threading;
 using BBTech.Core.Models;
 using BBTech.Core.Parsing;
+using BBTech.Core.Storage;
 using BBTech.LaptopTool.Detect;
 using BBTech.LaptopTool.Services;
 using BBTech.LaptopTool.Test.Wireless;
@@ -227,23 +228,21 @@ namespace BBTech.LaptopTool.UI.Tests
               "; unplug " + (_sawUnplugged ? "OK" : "not done") + "; re-plug " + (_sawReplugged ? "OK" : "not done");
     }
 
-    /// <summary>Storage: Windows drive health, plus HD Sentinel health/performance report (admin).</summary>
+    /// <summary>Integrated SSD Health Detection: HD Sentinel Pro engine + Windows NVMe SMART reliability fallback.</summary>
     public sealed class StorageTestPanel : TestPanelBase
     {
-        private readonly StackPanel _drives = new StackPanel();
-        private readonly TextBlock _hdsStatus = new TextBlock { FontSize = 14, TextWrapping = TextWrapping.Wrap };
-        private readonly Button _hdsButton;
-        private DetectionResult _r = new DetectionResult();
-        private List<HdSentinelDisk> _hds;
-        private bool _counters;
+        private readonly StackPanel _drivesPanel = new StackPanel();
+        private readonly TextBlock _engineStatus = new TextBlock { FontSize = 13, Margin = new Thickness(0, 4, 0, 8), TextWrapping = TextWrapping.Wrap };
+        private readonly Button _rescanBtn;
+        private DetectionResult _detection = new DetectionResult();
+        private SsdHealthEngineResult _engineResult;
 
-        public override string Instructions => "Shows each drive's health as reported by Windows. Run the HD Sentinel check for health % and performance % (Windows will ask for administrator permission).";
+        public override string Instructions => "Integrated SSD & Storage health diagnostic. Automatically queries HD Sentinel Pro and Windows NVMe SMART reliability counters to determine drive health, performance, and endurance life.";
 
         public StorageTestPanel()
         {
-            _hdsButton = B("Run HD Sentinel health check", async (s, e) => await RunHdsAsync(), "PrimaryButton");
-            _hdsButton.IsEnabled = HdSentinelTool.IsAvailable;
-            if (!HdSentinelTool.IsAvailable) _hdsStatus.Text = "HD Sentinel is not available in this build; only Windows health is shown.";
+            _rescanBtn = B("Re-scan SSD Health", async (s, e) => await RunInspectionAsync(forceRefresh: true), "PrimaryButton");
+
             Content = new ScrollViewer
             {
                 VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
@@ -251,8 +250,11 @@ namespace BBTech.LaptopTool.UI.Tests
                 {
                     Children =
                     {
-                        Card("Drives", _drives),
-                        Card("HD Sentinel", Row(_hdsButton, B("Open HD Sentinel", (s, e) => UI.Views.DetectView.OpenTool((Button)s, HdSentinelTool.OpenGui))), _hdsStatus),
+                        Card("Physical Storage Health", _drivesPanel),
+                        Card("Diagnostic Engine",
+                            Row(_rescanBtn),
+                            _engineStatus,
+                            T("The integrated engine non-interactively queries HD Sentinel Pro and Windows NVMe SMART diagnostics without requiring manual technician interaction.", 12, false, "TextMuted"))
                     }
                 }
             };
@@ -261,90 +263,212 @@ namespace BBTech.LaptopTool.UI.Tests
         public override async void Attach(TestHostWindow host)
         {
             base.Attach(host);
-            _drives.Children.Add(T("Reading drives...", 14, false, "TextMuted"));
-            await Task.Run(() =>
-            {
-                try
-                {
-                    StorageProvider.Fill(_r);
-                    _counters = StorageProvider.ReadReliability(_r.StorageDevices); // Windows-native, no HD Sentinel needed
-                }
-                catch (Exception ex) { Logging.AppLog.Error("Storage test read failed", ex); }
-            });
-            Render();
+            await RunInspectionAsync(forceRefresh: false);
         }
 
-        private async Task RunHdsAsync()
+        private async Task RunInspectionAsync(bool forceRefresh)
         {
-            _hdsButton.IsEnabled = false;
-            _hdsStatus.Text = "Running HD Sentinel... accept the Windows permission prompt. This can take up to a minute.";
-            _hdsStatus.Foreground = Res("TextMuted");
-            var res = await Task.Run(() => HdSentinelTool.RunHealthReport());
-            _hdsButton.IsEnabled = true;
-            if (!res.Ok)
-            {
-                _hdsStatus.Text = res.Message;
-                _hdsStatus.Foreground = Res("FailBrush");
-                return;
-            }
-            _hds = res.Value;
-            _hdsStatus.Text = "HD Sentinel report read for " + _hds.Count + " drive(s).";
-            _hdsStatus.Foreground = Res("PassBrush");
+            _rescanBtn.IsEnabled = false;
+            _drivesPanel.Children.Clear();
+            _drivesPanel.Children.Add(T("Inspecting SSD health & SMART counters...", 14, false, "TextMuted"));
+            _engineStatus.Text = "Running SSD Health Detection Engine (HD Sentinel Pro + Windows SMART)...";
+            _engineStatus.Foreground = Res("TextMuted");
 
-            // Match HD Sentinel disks to Windows drives by model name; otherwise list separately.
-            foreach (var d in _r.StorageDevices)
-            {
-                var m = _hds.FirstOrDefault(h => h.Model.Length > 0 && (d.Model.IndexOf(h.Model, StringComparison.OrdinalIgnoreCase) >= 0 || h.Model.IndexOf(d.Model, StringComparison.OrdinalIgnoreCase) >= 0));
-                if (m == null) continue;
-                d.HealthPercent = m.HealthPercent;
-                d.PerformancePercent = m.PerformancePercent;
-                d.PowerOnTime = m.PowerOnTime;
-                d.Temperature = m.Temperature;
-            }
+            _engineResult = await SsdHealthEngine.InspectAsync(_detection, forceRefresh);
+            _rescanBtn.IsEnabled = true;
+
             Render();
         }
 
         private void Render()
         {
-            _drives.Children.Clear();
-            if (_r.StorageDevices.Count == 0) { _drives.Children.Add(T("No drives detected.", 15, true, "FailBrush")); Host?.SetSuggestion("No drives detected.", SuggestionKind.Bad); return; }
+            _drivesPanel.Children.Clear();
 
-            foreach (var d in _r.StorageDevices)
+            if (_engineResult == null || _engineResult.Disks == null || _engineResult.Disks.Count == 0)
             {
-                string title = (d.IsExternal ? "[External] " : "") + d.DisplayValue + "  ·  " + d.Model;
-                _drives.Children.Add(T(title, 15, true));
-                _drives.Children.Add(KeyValue(new[]
-                {
-                    KV("Interface", d.BusType),
-                    KV("Windows health", d.WindowsHealth),
-                    KV("Wear used (Windows)", d.WearPercentUsed != null ? d.WearPercentUsed + "%" : (_counters ? "Not reported" : "")),
-                    KV("Power-on hours (Windows)", d.PowerOnHours?.ToString("N0")),
-                    KV("Temperature (Windows)", d.TemperatureC != null ? d.TemperatureC + " °C" : ""),
-                    KV("HD Sentinel health", d.HealthPercent?.ToString() + (d.HealthPercent != null ? "%" : "")),
-                    KV("HD Sentinel performance", d.PerformancePercent?.ToString() + (d.PerformancePercent != null ? "%" : "")),
-                    KV("Power-on time", d.PowerOnTime),
-                    KV("Temperature", d.Temperature),
-                }));
-                _drives.Children.Add(new Border { Height = 10 });
-            }
-            if (_hds != null)
-            {
-                foreach (var h in _hds.Where(h => !_r.StorageDevices.Any(d => d.HealthPercent == h.HealthPercent && d.Model.IndexOf(h.Model, StringComparison.OrdinalIgnoreCase) >= 0)))
-                    _drives.Children.Add(T("HD Sentinel: " + h.Model + " - health " + h.HealthPercent + "%, performance " + h.PerformancePercent + "%", 13, false, "TextMuted"));
+                _drivesPanel.Children.Add(T("No physical solid-state or hard drives detected.", 15, true, "FailBrush"));
+                _engineStatus.Text = _engineResult != null ? _engineResult.SummaryMessage : "Detection failed to report any physical drives.";
+                _engineStatus.Foreground = Res("FailBrush");
+                Host?.SetSuggestion("No drives detected.", SuggestionKind.Bad);
+                return;
             }
 
-            var internalDrives = _r.StorageDevices.Where(d => !d.IsExternal).ToList();
-            if (!_counters)
-                _drives.Children.Add(T("Detailed wear / power-on counters are not available from Windows here (they usually need administrator rights). Windows health above is still valid; HD Sentinel is optional.", 12, false, "TextMuted"));
-            bool bad = internalDrives.Any(d => d.WindowsHealth == "Unhealthy" || d.WindowsHealth == "Warning" || (d.HealthPercent != null && d.HealthPercent < 50) ||
-                                               (d.WearPercentUsed != null && d.WearPercentUsed >= 90));
-            if (bad) Host?.SetSuggestion("A drive reports a health problem.", SuggestionKind.Bad);
-            else if (internalDrives.Any(d => d.HealthPercent != null)) Host?.SetSuggestion("Drive health looks good.", SuggestionKind.Good);
-            else Host?.SetSuggestion("Windows reports the drives as " + string.Join("/", internalDrives.Select(d => d.WindowsHealth).Distinct()) + ". Run HD Sentinel for health %.", SuggestionKind.Info);
+            _engineStatus.Text = string.Format("Engine: {0}  ·  {1} physical drive(s) analyzed. {2}",
+                _engineResult.ProviderUsed,
+                _engineResult.Disks.Count,
+                _engineResult.SummaryMessage);
+            _engineStatus.Foreground = Res(_engineResult.AnyBadDrives ? "FailBrush" : _engineResult.AnyWarningDrives ? "WarnBrush" : "PassBrush");
+
+            foreach (var disk in _engineResult.Disks)
+            {
+                _drivesPanel.Children.Add(CreateDriveCard(disk));
+            }
+
+            if (_engineResult.AnyBadDrives)
+            {
+                Host?.SetSuggestion("Critical SSD health problem detected. Hardware replacement recommended.", SuggestionKind.Bad);
+            }
+            else if (_engineResult.AnyWarningDrives)
+            {
+                Host?.SetSuggestion("SSD health warning detected. Review SMART wear and performance.", SuggestionKind.Bad);
+            }
+            else if (_engineResult.AllHealthy)
+            {
+                Host?.SetSuggestion(string.Format("All {0} drive(s) healthy. Optimal SSD performance and SMART health verified.",
+                    _engineResult.Disks.Count(d => !d.IsExternal)), SuggestionKind.Good);
+            }
+            else
+            {
+                Host?.SetSuggestion("Drive inspection complete. Review diagnostic metrics.", SuggestionKind.Info);
+            }
         }
 
-        public override string Notes => string.Join("; ", _r.StorageDevices.Where(d => !d.IsExternal).Select(d =>
-            d.DisplayValue + " Windows " + d.WindowsHealth + (d.HealthPercent != null ? ", HDS health " + d.HealthPercent + "%" : "") + (d.PerformancePercent != null ? ", perf " + d.PerformancePercent + "%" : "")));
+        private UIElement CreateDriveCard(PhysicalSsdHealthResult disk)
+        {
+            var card = new StackPanel();
+
+            // 1. Header row with Model, capacity, and status badge
+            var headerGrid = new Grid { Margin = new Thickness(0, 0, 0, 10) };
+            headerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            headerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            var title = T(disk.DisplayTitle, 15, true, "TextPrimary");
+            Grid.SetColumn(title, 0);
+            headerGrid.Children.Add(title);
+
+            string statusBrushKey = "NeutralBrush";
+            string statusBgKey = "NeutralSoft";
+            switch (disk.Status)
+            {
+                case SsdHealthStatus.Optimal:
+                case SsdHealthStatus.Good:
+                    statusBrushKey = "PassBrush";
+                    statusBgKey = "PassSoft";
+                    break;
+                case SsdHealthStatus.Warning:
+                    statusBrushKey = "WarnBrush";
+                    statusBgKey = "WarnSoft";
+                    break;
+                case SsdHealthStatus.Critical:
+                case SsdHealthStatus.Failed:
+                    statusBrushKey = "FailBrush";
+                    statusBgKey = "FailSoft";
+                    break;
+            }
+
+            var badge = new Border
+            {
+                Background = Res(statusBgKey),
+                BorderBrush = Res(statusBrushKey),
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(4),
+                Padding = new Thickness(10, 3, 10, 3),
+                Child = new TextBlock
+                {
+                    Text = disk.StatusLabel,
+                    FontSize = 13,
+                    FontWeight = FontWeights.SemiBold,
+                    Foreground = Res(statusBrushKey)
+                }
+            };
+            Grid.SetColumn(badge, 1);
+            headerGrid.Children.Add(badge);
+            card.Children.Add(headerGrid);
+
+            // 2. Health & Performance highlight row
+            var metricRow = new WrapPanel { Margin = new Thickness(0, 0, 0, 10) };
+            if (disk.HealthPercent.HasValue)
+            {
+                var healthPill = new Border
+                {
+                    Background = Res(statusBgKey),
+                    CornerRadius = new CornerRadius(4),
+                    Padding = new Thickness(8, 4, 8, 4),
+                    Margin = new Thickness(0, 0, 8, 4),
+                    Child = new TextBlock
+                    {
+                        Text = "Health: " + disk.HealthPercent.Value + "%",
+                        FontSize = 14,
+                        FontWeight = FontWeights.Bold,
+                        Foreground = Res(statusBrushKey)
+                    }
+                };
+                metricRow.Children.Add(healthPill);
+            }
+            if (disk.PerformancePercent.HasValue)
+            {
+                var perfPill = new Border
+                {
+                    Background = Res("NeutralSoft"),
+                    CornerRadius = new CornerRadius(4),
+                    Padding = new Thickness(8, 4, 8, 4),
+                    Margin = new Thickness(0, 0, 8, 4),
+                    Child = new TextBlock
+                    {
+                        Text = "Performance: " + disk.PerformancePercent.Value + "%",
+                        FontSize = 14,
+                        FontWeight = FontWeights.Bold,
+                        Foreground = Res("TextPrimary")
+                    }
+                };
+                metricRow.Children.Add(perfPill);
+            }
+            if (metricRow.Children.Count > 0)
+            {
+                card.Children.Add(metricRow);
+            }
+
+            // 3. KeyValue details grid
+            card.Children.Add(KeyValue(new[]
+            {
+                KV("Serial Number", disk.SerialNumber),
+                KV("Interface / Bus", disk.BusType),
+                KV("Capacity", disk.CapacityLabel),
+                KV("Temperature", !string.IsNullOrEmpty(disk.Temperature) ? disk.Temperature : (disk.TemperatureC != null ? disk.TemperatureC + " °C" : "")),
+                KV("Power-on Time", !string.IsNullOrEmpty(disk.PowerOnTime) ? disk.PowerOnTime : (disk.PowerOnHours != null ? disk.PowerOnHours.Value.ToString("N0") + " hours" : "")),
+                KV("NVMe Wear Used", disk.WearPercentUsed != null ? disk.WearPercentUsed + "%" : ""),
+                KV("Data Source", disk.DataSource),
+            }));
+
+            // 4. Diagnostic details from SMART / HD Sentinel
+            if (!string.IsNullOrWhiteSpace(disk.DiagnosticDetails))
+            {
+                var notesBorder = new Border
+                {
+                    Background = Res("NeutralSoft"),
+                    CornerRadius = new CornerRadius(4),
+                    Padding = new Thickness(10, 8, 10, 8),
+                    Margin = new Thickness(0, 8, 0, 0),
+                    Child = T(disk.DiagnosticDetails, 12, false, "TextMuted")
+                };
+                card.Children.Add(notesBorder);
+            }
+
+            return new Border
+            {
+                Style = (Style)Application.Current.FindResource("Card"),
+                Child = card,
+                Margin = new Thickness(0, 0, 0, 12)
+            };
+        }
+
+        public override string Notes
+        {
+            get
+            {
+                if (_engineResult == null || _engineResult.Disks == null || _engineResult.Disks.Count == 0)
+                    return "No drives detected";
+
+                return string.Join("; ", _engineResult.Disks.Where(d => !d.IsExternal).Select(d =>
+                    string.Format("{0} [{1}] Health:{2} Perf:{3}{4} ({5})",
+                        d.Model,
+                        d.StatusLabel,
+                        d.HealthPercent.HasValue ? d.HealthPercent.Value + "%" : "N/A",
+                        d.PerformancePercent.HasValue ? d.PerformancePercent.Value + "%" : "N/A",
+                        d.WearPercentUsed.HasValue ? string.Format(", Wear:{0}%", d.WearPercentUsed.Value) : "",
+                        d.DataSource)));
+            }
+        }
     }
 }
 

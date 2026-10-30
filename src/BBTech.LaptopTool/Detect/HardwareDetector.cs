@@ -15,39 +15,65 @@ namespace BBTech.LaptopTool.Detect
     /// </summary>
     public static class HardwareDetector
     {
-        public static Task<DetectionResult> DetectAsync(IProgress<string> progress)
+        public static async Task<DetectionResult> DetectAsync(IProgress<string> progress)
         {
-            return Task.Run(() =>
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            var r = new DetectionResult { ToolVersion = AppPaths.Version, DetectedAt = DateTime.Now };
+            AppLog.Info("Detection started");
+            progress?.Report("Scanning hardware specifications...");
+
+            int completedStages = 0;
+            const int totalStages = 9;
+
+            Action<string, Action, string> runStep = (name, action, failureMsg) =>
             {
-                var r = new DetectionResult { ToolVersion = AppPaths.Version, DetectedAt = DateTime.Now };
-                AppLog.Info("Detection started");
+                var stepSw = System.Diagnostics.Stopwatch.StartNew();
+                try
+                {
+                    action();
+                    stepSw.Stop();
+                    AppLog.Info(string.Format("[Timing] {0} completed in {1} ms", name, stepSw.ElapsedMilliseconds));
+                }
+                catch (Exception ex)
+                {
+                    stepSw.Stop();
+                    AppLog.Error(string.Format("Detection step failed ({0}) after {1} ms", name, stepSw.ElapsedMilliseconds), ex);
+                    r.AddWarning(failureMsg);
+                }
+                finally
+                {
+                    int done = System.Threading.Interlocked.Increment(ref completedStages);
+                    progress?.Report(string.Format("Detecting hardware ({0}/{1})...", done, totalStages));
+                }
+            };
 
-                Step(r, progress, "Reading system information...", () => SystemInfoProvider.Fill(r), "System model information unavailable.");
-                Step(r, progress, "Reading processor...", () => CpuProvider.Fill(r), "Processor information unavailable.");
-                Step(r, progress, "Reading memory...", () => MemoryProvider.Fill(r), "Memory information unavailable.");
-                Step(r, progress, "Reading storage drives...", () => StorageProvider.Fill(r), "Storage information unavailable.");
-                Step(r, progress, "Reading battery...", () => BatteryProvider.Fill(r), "Battery information is currently unavailable.");
-                Step(r, progress, "Reading graphics adapters...", () => GpuProvider.Fill(r), "Graphics adapter information unavailable.");
-                Step(r, progress, "Reading display...", () => DisplayProvider.Fill(r), "Display information unavailable.");
-                Step(r, progress, "Reading peripherals...", () => PeripheralProvider.Fill(r), "Peripheral device information unavailable.");
-                Step(r, progress, "Reading firmware & security...", () => FirmwareProvider.Fill(r), "Firmware security information unavailable.");
+            // Execute all independent hardware probes concurrently
+            var tSystem = Task.Run(() => runStep("System", () => SystemInfoProvider.Fill(r), "System model information unavailable."));
+            var tCpu = Task.Run(() => runStep("CPU", () => CpuProvider.Fill(r), "Processor information unavailable."));
+            var tMemory = Task.Run(() => runStep("Memory", () => MemoryProvider.Fill(r), "Memory information unavailable."));
+            var tStorage = Task.Run(() => runStep("Storage", () => StorageProvider.Fill(r), "Storage information unavailable."));
+            var tBattery = Task.Run(() => runStep("Battery", () => BatteryProvider.Fill(r), "Battery information is currently unavailable."));
+            var tGpu = Task.Run(() => runStep("GPU", () => GpuProvider.Fill(r), "Graphics adapter information unavailable."));
+            var tDisplay = Task.Run(() => runStep("Display", () => DisplayProvider.Fill(r), "Display information unavailable."));
+            var tPeripherals = Task.Run(() => runStep("Peripherals", () => PeripheralProvider.Fill(r), "Peripheral device information unavailable."));
+            var tFirmware = Task.Run(() => runStep("Firmware", () => FirmwareProvider.Fill(r), "Firmware security information unavailable."));
 
-                AppLog.Info("Detection finished: " + r.Brand + " | " + r.Model + " | " + r.ModelNumber + " | " + r.Cpu + " | " +
-                            r.Generation + " | " + r.Ram + " | " + r.Storage + " | battery " + r.BatteryHealth +
-                            (r.Warnings.Count > 0 ? " | warnings: " + r.Warnings.Count : ""));
-                return r;
+            var tStorageWithSsd = tStorage.ContinueWith(_ =>
+            {
+                runStep("SSD health", () =>
+                {
+                    try { SsdHealthEngine.InspectAsync(r).GetAwaiter().GetResult(); }
+                    catch (Exception ex) { AppLog.Warn("Automatic SSD health inspection encountered an issue", ex); }
+                }, "SSD health diagnosis unavailable.");
             });
-        }
 
-        private static void Step(DetectionResult r, IProgress<string> progress, string label, Action action, string failureMessage)
-        {
-            progress?.Report(label);
-            try { action(); }
-            catch (Exception ex)
-            {
-                AppLog.Error("Detection step failed: " + label, ex);
-                r.Warnings.Add(failureMessage);
-            }
+            await Task.WhenAll(tSystem, tCpu, tMemory, tStorageWithSsd, tBattery, tGpu, tDisplay, tPeripherals, tFirmware).ConfigureAwait(false);
+
+            sw.Stop();
+            AppLog.Info(string.Format("Detection finished in {0} ms: {1} | {2} | {3} | {4} | {5} | {6} | {7} | battery {8} | ssd {9}{10}",
+                sw.ElapsedMilliseconds, r.Brand, r.Model, r.ModelNumber, r.Cpu, r.Generation, r.Ram, r.Storage, r.BatteryHealth, r.SsdHealth,
+                r.Warnings.Count > 0 ? " | warnings: " + r.Warnings.Count : ""));
+            return r;
         }
     }
 
@@ -106,12 +132,12 @@ namespace BBTech.LaptopTool.Detect
             var parsed = ModelParser.Parse(s.RawManufacturer, s.RawModel, s.SystemFamily, s.ProductVersion);
             r.Brand = parsed.Brand;
             r.Model = parsed.Model;
-            r.ModelNumber = parsed.ModelNumber;
+            r.ModelNumber = parsed.ModelNumber == DetectionResult.Unknown ? "" : (parsed.ModelNumber ?? "");
             s.ProductCode = parsed.ProductCode;
 
-            if (r.Brand == DetectionResult.Unknown) r.Warnings.Add("Laptop manufacturer could not be identified.");
-            if (r.Model == DetectionResult.Unknown) r.Warnings.Add("Laptop model name could not be identified from firmware.");
-            if (s.IsPortable == false) r.Warnings.Add("This computer reports a desktop chassis (" + s.ChassisType + ").");
+            if (r.Brand == DetectionResult.Unknown) r.AddWarning("Laptop manufacturer could not be identified.");
+            if (r.Model == DetectionResult.Unknown) r.AddWarning("Laptop model name could not be identified from firmware.");
+            if (s.IsPortable == false) r.AddWarning("This computer reports a desktop chassis (" + s.ChassisType + ").");
         }
 
         private static string ChassisName(int t)
@@ -132,7 +158,7 @@ namespace BBTech.LaptopTool.Detect
         public static void Fill(DetectionResult r)
         {
             var cpu = Wmi.Query("SELECT Name, NumberOfCores, NumberOfLogicalProcessors, MaxClockSpeed FROM Win32_Processor").FirstOrDefault();
-            if (cpu == null) { r.Warnings.Add("Processor information unavailable."); return; }
+            if (cpu == null) { r.AddWarning("Processor information unavailable."); return; }
 
             string name = Wmi.Str(cpu, "Name");
             var p = CpuParser.Parse(name);
@@ -145,7 +171,7 @@ namespace BBTech.LaptopTool.Detect
             r.CpuDetails.LogicalProcessors = Wmi.Int(cpu, "NumberOfLogicalProcessors");
             r.CpuDetails.MaxClockMhz = Wmi.Int(cpu, "MaxClockSpeed");
 
-            if (r.Cpu == DetectionResult.Unknown) r.Warnings.Add("Processor family not recognised (see details).");
+            if (r.Cpu == DetectionResult.Unknown) r.AddWarning("Processor family not recognised (see details).");
             AppLog.Info("CPU raw: " + name);
         }
     }
@@ -190,7 +216,7 @@ namespace BBTech.LaptopTool.Detect
             long visible = cs == null ? 0 : Wmi.Long(cs, "TotalPhysicalMemory");
             r.Memory.TotalBytes = visible;
             r.Ram = CapacityFormatter.FormatRamFromVisible(visible);
-            if (visible <= 0) r.Warnings.Add("Memory size could not be read.");
+            if (visible <= 0) r.AddWarning("Memory size could not be read.");
         }
 
         private static string MemoryTypeName(int t)
@@ -240,7 +266,7 @@ namespace BBTech.LaptopTool.Detect
             // Order: internal first, then by size.
             r.StorageDevices = r.StorageDevices.OrderBy(d => d.IsExternal).ThenByDescending(d => d.CapacityBytes).ToList();
             r.Storage = CapacityFormatter.StorageSummary(r.StorageDevices);
-            if (r.Storage == DetectionResult.Unknown) r.Warnings.Add("No internal storage drive was detected.");
+            if (r.Storage == DetectionResult.Unknown) r.AddWarning("No internal storage drive was detected.");
             foreach (var d in r.StorageDevices) AppLog.Info("Drive: " + d.DisplayValue + " bus=" + d.BusType + " external=" + d.IsExternal + " health=" + d.WindowsHealth);
         }
 
@@ -329,6 +355,14 @@ namespace BBTech.LaptopTool.Detect
         public static void Fill(DetectionResult r)
         {
             var power = PowerStatus.Read();
+            if (power.NoSystemBattery)
+            {
+                r.Battery = new BatteryDetails { Present = false };
+                r.BatteryHealth = DetectionResult.Unknown;
+                r.AddWarning("No battery detected (desktop PC, or battery removed/disconnected).");
+                return;
+            }
+
             BatteryDetails b = null;
             var notes = new List<string>();
 
@@ -347,9 +381,7 @@ namespace BBTech.LaptopTool.Detect
             {
                 r.Battery = b ?? new BatteryDetails();
                 r.BatteryHealth = DetectionResult.Unknown;
-                r.Warnings.Add(power.NoSystemBattery
-                    ? "No battery detected (desktop PC, or battery removed/disconnected)."
-                    : "Battery information is currently unavailable.");
+                r.AddWarning("Battery information is currently unavailable.");
                 return;
             }
 
@@ -362,7 +394,7 @@ namespace BBTech.LaptopTool.Detect
 
             r.Battery = b;
             r.BatteryHealth = BatteryHealth.Format(b.HealthPercent);
-            if (b.HealthPercent == null) r.Warnings.Add("Battery found, but its health could not be determined.");
+            if (b.HealthPercent == null) r.AddWarning("Battery found, but its health could not be determined.");
         }
 
         private static BatteryDetails Merge(BatteryDetails primary, BatteryDetails fallback)
@@ -487,7 +519,11 @@ namespace BBTech.LaptopTool.Detect
         {
             try
             {
-                var tpm = Wmi.Query("SELECT IsActivated_InitialValue, IsEnabled_InitialValue, SpecVersion FROM Win32_Tpm", @"root\CIMV2\Security\MicrosoftTpm").FirstOrDefault();
+                // root\CIMV2\Security\MicrosoftTpm is restricted to Windows Administrators.
+                // Standard user tokens trigger a 5+ second DCOM RPC authentication retry that always returns Access Denied.
+                if (!ElevationHelper.IsAdministrator) return;
+
+                var tpm = Wmi.Query("SELECT IsActivated_InitialValue, IsEnabled_InitialValue, SpecVersion FROM Win32_Tpm", @"root\CIMV2\Security\MicrosoftTpm", timeoutSeconds: 2).FirstOrDefault();
                 if (tpm != null)
                 {
                     r.Firmware.TpmReady = true;

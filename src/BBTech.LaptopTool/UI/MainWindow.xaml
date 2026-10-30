@@ -33,12 +33,31 @@
                     <TextBlock Text="BBTech Laptop Tool" Foreground="White" FontSize="18" FontWeight="SemiBold" Margin="12,0,0,0" VerticalAlignment="Center" TextWrapping="NoWrap" />
                     <TextBlock x:Name="SectionTitle" Foreground="#A9D8FF" FontSize="18" Margin="10,0,0,0" VerticalAlignment="Center" TextWrapping="NoWrap" />
                 </StackPanel>
-                <Border x:Name="UsbChip" Grid.Column="2" CornerRadius="12" Background="#26FFFFFF" Padding="12,5" VerticalAlignment="Center">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock FontFamily="{StaticResource IconFont}" Text="&#xE88E;" Foreground="#CFE8FF" VerticalAlignment="Center" />
-                        <TextBlock x:Name="UsbText" Foreground="White" FontSize="12" Margin="8,0,0,0" VerticalAlignment="Center" TextWrapping="NoWrap" />
-                    </StackPanel>
-                </Border>
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border x:Name="AdminBadge" CornerRadius="12" Background="#3316A34A" BorderBrush="#8016A34A" BorderThickness="1"
+                            Padding="10,4" Margin="0,0,10,0" ToolTip="Running with Administrator privileges (Full hardware diagnostics enabled)"
+                            Visibility="Collapsed">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock FontFamily="{StaticResource IconFont}" Text="&#xE7EF;" Foreground="#86EFAC" VerticalAlignment="Center" FontSize="12" />
+                            <TextBlock Text="Administrator" Foreground="White" FontSize="12" FontWeight="SemiBold" Margin="6,0,0,0" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Border>
+                    <Button x:Name="RunAdminButton" Style="{StaticResource BaseButton}" Background="#D97706" BorderBrush="#B45309"
+                            Foreground="White" Padding="10,4" MinHeight="30" Margin="0,0,10,0" Click="RunAdmin_Click"
+                            ToolTip="Click to restart with Administrator privileges for full hardware and SSD SMART diagnostic access"
+                            Visibility="Collapsed">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock FontFamily="{StaticResource IconFont}" Text="&#xE7EF;" Foreground="White" VerticalAlignment="Center" FontSize="12" />
+                            <TextBlock Text="Run as Administrator" Foreground="White" FontSize="12" FontWeight="SemiBold" Margin="6,0,0,0" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                    <Border x:Name="UsbChip" CornerRadius="12" Background="#26FFFFFF" Padding="12,5" VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock FontFamily="{StaticResource IconFont}" Text="&#xE88E;" Foreground="#CFE8FF" VerticalAlignment="Center" />
+                            <TextBlock x:Name="UsbText" Foreground="White" FontSize="12" Margin="8,0,0,0" VerticalAlignment="Center" TextWrapping="NoWrap" />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
             </Grid>
         </Border>
 

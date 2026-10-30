@@ -8,14 +8,14 @@ namespace BBTech.LaptopTool.Services
     /// <summary>Read-only WMI queries that never throw.</summary>
     public static class Wmi
     {
-        public static List<ManagementBaseObject> Query(string wql, string scope = @"root\cimv2")
+        public static List<ManagementBaseObject> Query(string wql, string scope = @"root\cimv2", int timeoutSeconds = 5)
         {
             var list = new List<ManagementBaseObject>();
             try
             {
                 using (var searcher = new ManagementObjectSearcher(new ManagementScope(scope), new ObjectQuery(wql)))
                 {
-                    searcher.Options.Timeout = TimeSpan.FromSeconds(20);
+                    searcher.Options.Timeout = TimeSpan.FromSeconds(Math.Max(1, timeoutSeconds));
                     foreach (ManagementBaseObject o in searcher.Get()) list.Add(o);
                 }
             }

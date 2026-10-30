@@ -13,11 +13,15 @@ namespace BBTech.Core.Export
         /// <summary>The eight ITMS fields, in the agreed order and with the agreed key names.</summary>
         public static JsonObject ToItmsObject(DetectionResult r)
         {
+            string modelNumber = (!string.IsNullOrWhiteSpace(r.ModelNumber) && r.ModelNumber != DetectionResult.Unknown)
+                ? r.ModelNumber.Trim()
+                : "";
+
             return new JsonObject
             {
                 { "brand", r.Brand },
                 { "model", r.Model },
-                { "model_number", r.ModelNumber },
+                { "model_number", modelNumber },
                 { "cpu", r.Cpu },
                 { "generation", r.Generation },
                 { "ram", r.Ram },

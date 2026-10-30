@@ -233,14 +233,78 @@ namespace BBTech.Core.Parsing
             return BrandCatalog.IsPlaceholder(s) ? "" : s;
         }
 
+        private static readonly string[] KnownMultiWordFamilies =
+        {
+            "Surface Laptop", "Surface Pro", "Surface Book", "Surface Go", "Surface Studio",
+            "MacBook Pro", "MacBook Air",
+            "TUF Gaming", "ROG Strix", "ROG Zephyrus", "ROG Flow",
+            "Galaxy Book", "MateBook D", "MateBook X", "MateBook E",
+            "ZBook Firefly", "ZBook Studio", "ZBook Power", "ZBook Fury"
+        };
+
+        private static readonly string[] KnownSingleWordFamilies =
+        {
+            "Latitude", "Precision", "XPS", "Inspiron", "Vostro", "Alienware", "OptiPlex",
+            "EliteBook", "ProBook", "ZBook", "Pavilion", "Envy", "Omen", "Victus", "Spectre", "Dragonfly",
+            "ThinkPad", "ThinkBook", "IdeaPad", "Yoga", "Legion", "LOQ",
+            "VivoBook", "ZenBook", "ExpertBook",
+            "Aspire", "Swift", "Spin", "Nitro", "Predator", "TravelMate", "Extensa",
+            "Modern", "Prestige", "Stealth", "Raider", "Creator", "Katana", "Sword", "Cyborg", "Summit",
+            "Portege", "Tecra", "Satellite", "LifeBook", "Gram", "MateBook"
+        };
+
         /// <summary>
-        /// Leading alphabetic words = product line; remainder = model number.
-        /// "Latitude 5420" -> ("Latitude", "5420"); "ZBook Firefly 14 G8" -> ("ZBook Firefly", "14 G8");
-        /// "G15 5520" -> ("G15", "5520"); "Aspire" -> ("Aspire", "").
+        /// Splits a cleaned laptop product name into (Model / Family) and (Model Number).
+        /// Enterprise models (Dell Latitude, HP EliteBook/ProBook/ZBook, Lenovo ThinkPad)
+        /// are separated accurately, e.g. "Latitude 7490" -> ("Latitude", "7490").
         /// </summary>
         public static void Split(string name, out string line, out string number)
         {
-            var tokens = name.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                line = "";
+                number = "";
+                return;
+            }
+
+            string trimmed = name.Trim();
+
+            // 1. Check known multi-word families first
+            foreach (var fam in KnownMultiWordFamilies)
+            {
+                if (trimmed.Equals(fam, StringComparison.OrdinalIgnoreCase))
+                {
+                    line = fam;
+                    number = "";
+                    return;
+                }
+                if (trimmed.StartsWith(fam + " ", StringComparison.OrdinalIgnoreCase))
+                {
+                    line = fam;
+                    number = trimmed.Substring(fam.Length).Trim();
+                    return;
+                }
+            }
+
+            // 2. Check known single-word families
+            foreach (var fam in KnownSingleWordFamilies)
+            {
+                if (trimmed.Equals(fam, StringComparison.OrdinalIgnoreCase))
+                {
+                    line = fam;
+                    number = "";
+                    return;
+                }
+                if (trimmed.StartsWith(fam + " ", StringComparison.OrdinalIgnoreCase))
+                {
+                    line = fam;
+                    number = trimmed.Substring(fam.Length).Trim();
+                    return;
+                }
+            }
+
+            // 3. Fallback to generic splitting:
+            var tokens = trimmed.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
             int i = 0;
             while (i < tokens.Length && IsAlphaWord(tokens[i])) i++;
 
@@ -250,6 +314,13 @@ namespace BBTech.Core.Parsing
                 line = tokens.Length > 0 ? tokens[0] : "";
                 number = string.Join(" ", tokens.Skip(1));
             }
+            else if (i == tokens.Length)
+            {
+                // All tokens are purely alphabetic: cannot cleanly split into family + number.
+                // Fallback rule: Put full string into Model, leave Model Number empty.
+                line = trimmed;
+                number = "";
+            }
             else
             {
                 line = string.Join(" ", tokens.Take(i));
@@ -258,5 +329,83 @@ namespace BBTech.Core.Parsing
         }
 
         private static bool IsAlphaWord(string t) => t.All(ch => char.IsLetter(ch) || ch == '-' || ch == '+' || ch == '\'');
+
+        /// <summary>
+        /// Generates the canonical Full Laptop Name dynamically using:
+        ///   Brand + Model + Model Number
+        /// Rules:
+        ///   - Does not include CPU, RAM, storage, or battery.
+        ///   - Does not duplicate brand or model.
+        ///   - Does not include unnecessary separators.
+        ///   - Never invents missing model information.
+        ///   - If a component is genuinely unavailable, constructs the name from available verified components.
+        /// </summary>
+        public static string BuildFullName(string brand, string model, string modelNumber)
+        {
+            bool IsValid(string s) =>
+                !string.IsNullOrWhiteSpace(s) &&
+                !string.Equals(s, DetectionResult.Unknown, StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(s, "Not detected", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(s, "Unavailable", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(s, "-", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(s, "—", StringComparison.OrdinalIgnoreCase) &&
+                !BrandCatalog.IsPlaceholder(s);
+
+            string b = IsValid(brand) ? brand.Trim() : "";
+            string m = IsValid(model) ? model.Trim() : "";
+            string mn = IsValid(modelNumber) ? modelNumber.Trim() : "";
+
+            var parts = new List<string>();
+
+            if (!string.IsNullOrEmpty(b))
+            {
+                parts.Add(b);
+            }
+
+            if (!string.IsNullOrEmpty(m))
+            {
+                // If model already starts with the brand name (e.g. "Dell Latitude"), strip duplicate brand
+                if (parts.Count > 0 && m.StartsWith(b + " ", StringComparison.OrdinalIgnoreCase))
+                {
+                    m = m.Substring(b.Length).Trim();
+                }
+
+                if (!string.IsNullOrEmpty(m) && !string.Equals(m, b, StringComparison.OrdinalIgnoreCase))
+                {
+                    parts.Add(m);
+                }
+            }
+
+            if (!string.IsNullOrEmpty(mn))
+            {
+                // If modelNumber already starts with model name (e.g. "ThinkPad T14"), strip duplicate model
+                if (!string.IsNullOrEmpty(m) && mn.StartsWith(m + " ", StringComparison.OrdinalIgnoreCase))
+                {
+                    mn = mn.Substring(m.Length).Trim();
+                }
+                else if (parts.Count > 0 && mn.StartsWith(parts[0] + " ", StringComparison.OrdinalIgnoreCase))
+                {
+                    mn = mn.Substring(parts[0].Length).Trim();
+                }
+
+                // If Model already ends with this exact modelNumber (e.g. Model was "Latitude 7490" and mn was "7490"), avoid appending
+                bool alreadyInModel = !string.IsNullOrEmpty(m) &&
+                    (m.Equals(mn, StringComparison.OrdinalIgnoreCase) || m.EndsWith(" " + mn, StringComparison.OrdinalIgnoreCase));
+
+                if (!alreadyInModel && !string.IsNullOrEmpty(mn) &&
+                    !string.Equals(mn, b, StringComparison.OrdinalIgnoreCase))
+                {
+                    parts.Add(mn);
+                }
+            }
+
+            return string.Join(" ", parts).Trim();
+        }
+
+        public static string BuildFullName(DetectionResult r)
+        {
+            if (r == null) return "";
+            return BuildFullName(r.Brand, r.Model, r.ModelNumber);
+        }
     }
 }
