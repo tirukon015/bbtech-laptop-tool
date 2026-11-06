@@ -88,40 +88,27 @@ $bin = Join-Path $root 'src\BBTech.LaptopTool\bin\Release\net472'
 $rel = Join-Path $root 'dist\release'
 $targetExe = Join-Path $rel 'BBTech Laptop Tool.exe'
 $builtExe = Join-Path $bin 'BBTech Laptop Tool.exe'
+$distRootExe = Join-Path $root 'dist\BBTech Laptop Tool.exe'
 
+if (-not (Test-Path $rel)) { New-Item -ItemType Directory -Force $rel | Out-Null }
 try {
-    if (-not (Test-Path $rel)) { New-Item -ItemType Directory -Force $rel | Out-Null }
     if (Test-Path $targetExe) { Remove-Item -LiteralPath $targetExe -Force -ErrorAction Stop }
     Copy-Item $builtExe $targetExe -Force -ErrorAction Stop
 } catch {
-    Write-Warning "Could not overwrite '$targetExe' because it is currently running. Outputting to '$rel\BBTech Laptop Tool (New).exe'."
-    Copy-Item $builtExe (Join-Path $rel 'BBTech Laptop Tool (New).exe') -Force
-    $targetExe = Join-Path $rel 'BBTech Laptop Tool (New).exe'
+    Write-Warning "Could not update '$targetExe' because it is running. Close the running tool window to update release."
 }
 
-# Also update dist\BBTech Laptop Tool.exe directly if not locked
-$distRootExe = Join-Path $root 'dist\BBTech Laptop Tool.exe'
+# Synchronize single distribution copy in dist\
 try {
     Copy-Item $builtExe $distRootExe -Force -ErrorAction Stop
     Write-Host "   Synchronized $distRootExe" -ForegroundColor Gray
 } catch {
-    Write-Warning "Cannot update '$distRootExe' while the previous application instance is still running. Please close the running BBTech Laptop Tool application."
+    Write-Warning "Could not update '$distRootExe'. Please close any running instance of BBTech Laptop Tool."
 }
 
-# Also update TrackerApp binary
-$trackerAppExe = Join-Path $root '..\H001_TrackerApp\BBTech Laptop Tool (New).exe'
-try {
-    if (Test-Path (Split-Path $trackerAppExe)) {
-        Copy-Item $builtExe $trackerAppExe -Force
-        Write-Host "   Synchronized $trackerAppExe" -ForegroundColor Gray
-    }
-} catch {
-    Write-Warning "Could not update '$trackerAppExe': $($_.Exception.Message)"
-}
-
-$exe = Get-Item $targetExe
+$exe = if (Test-Path $targetExe) { Get-Item $targetExe } else { Get-Item $distRootExe }
 $hash = (Get-FileHash $exe.FullName -Algorithm SHA256).Hash
-Set-Content (Join-Path $root 'dist\release.sha256.txt') "$hash  $($exe.Name)"
+Set-Content (Join-Path $root 'dist\release.sha256.txt') "$hash  BBTech Laptop Tool.exe"
 Write-Host ("== Done: {0}  ({1:N1} MB)" -f $exe.FullName, ($exe.Length / 1MB)) -ForegroundColor Green
 Write-Host "   SHA-256: $hash" -ForegroundColor Green
 Write-Host "   Copy this one file to the USB drive."

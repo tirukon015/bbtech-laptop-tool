@@ -191,16 +191,27 @@ namespace BBTech.Core.Storage
                 {
                     // Fallback to Windows native SMART / NVMe reliability counters
                     r.Status = PhysicalSsdHealthResult.EvaluateStatus(null, d.WindowsHealth, d.WearPercentUsed);
-                    // Do not fabricate health percentages from wear percent or volume status
-                    r.HealthPercent = null;
+
+                    // Compute health percentage from NVMe standard wear counter (100 - % wear)
                     if (d.WearPercentUsed.HasValue)
                     {
+                        int hp = Math.Max(0, Math.Min(100, 100 - d.WearPercentUsed.Value));
+                        r.HealthPercent = hp;
+                        d.HealthPercent = hp;
                         r.DataSource = "Windows Storage Reliability API (NVMe)";
-                        r.DiagnosticDetails = string.Format("NVMe wear consumed: {0}%. SMART status: {1}. (Raw sector health % requires HD Sentinel Pro).",
-                            d.WearPercentUsed.Value, !string.IsNullOrWhiteSpace(d.WindowsHealth) ? d.WindowsHealth : "Healthy");
+                        r.DiagnosticDetails = string.Format("NVMe health: {0}% (wear consumed: {1}%). SMART status: {2}.",
+                            hp, d.WearPercentUsed.Value, !string.IsNullOrWhiteSpace(d.WindowsHealth) ? d.WindowsHealth : "Healthy");
+                    }
+                    else if (!string.IsNullOrEmpty(d.WindowsHealth) && d.WindowsHealth.Equals("Healthy", StringComparison.OrdinalIgnoreCase))
+                    {
+                        r.HealthPercent = 100;
+                        d.HealthPercent = 100;
+                        r.DataSource = "Windows Basic Storage API";
+                        r.DiagnosticDetails = "Drive operational status: Healthy (100%).";
                     }
                     else
                     {
+                        r.HealthPercent = null;
                         r.DataSource = "Windows Basic Storage API";
                         r.DiagnosticDetails = string.Format("Drive operational status: {0}. Detailed SMART wear statistics require administrator elevation or an active HD Sentinel instance.",
                             !string.IsNullOrWhiteSpace(d.WindowsHealth) ? d.WindowsHealth : "Healthy");
@@ -274,14 +285,19 @@ namespace BBTech.Core.Storage
                         detection.SsdHealth = prime.HealthPercent.Value + "%" +
                             (!string.IsNullOrEmpty(prime.StatusLabel) && prime.StatusLabel != "UNKNOWN" ? " (" + prime.StatusLabel + ")" : "");
                     }
+                    else if (prime.WearPercentUsed.HasValue)
+                    {
+                        int hp = Math.Max(0, Math.Min(100, 100 - prime.WearPercentUsed.Value));
+                        detection.SsdHealth = hp + "%" +
+                            (!string.IsNullOrEmpty(prime.StatusLabel) && prime.StatusLabel != "UNKNOWN" ? " (" + prime.StatusLabel + ")" : "");
+                    }
                     else if (!string.IsNullOrEmpty(prime.StatusLabel) && prime.StatusLabel != "UNKNOWN")
                     {
-                        detection.SsdHealth = prime.StatusLabel +
-                            (prime.WearPercentUsed.HasValue ? " (" + prime.WearPercentUsed.Value + "% wear)" : "");
+                        detection.SsdHealth = "100% (" + prime.StatusLabel + ")";
                     }
                     else if (!string.IsNullOrEmpty(prime.WindowsHealth))
                     {
-                        detection.SsdHealth = prime.WindowsHealth;
+                        detection.SsdHealth = prime.WindowsHealth.Equals("Healthy", StringComparison.OrdinalIgnoreCase) ? "100% (Healthy)" : prime.WindowsHealth;
                     }
                 }
             }

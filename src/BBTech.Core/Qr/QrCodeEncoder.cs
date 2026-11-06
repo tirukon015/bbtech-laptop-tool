@@ -26,9 +26,10 @@ namespace BBTech.Core.Qr
         public bool[,] Modules { get; }
         public int DataBytes { get; }
         public int MaxCapacityBytes { get; }
-        public string EncodingMode => "Byte (8-bit)";
+        private readonly bool _useUtf8Eci;
+        public string EncodingMode => _useUtf8Eci ? "UTF-8 (ECI 000026)" : "Byte (8-bit)";
 
-        public QrCodeEncoder(int version, EccLevel ecc, bool[,] modules, int dataBytes = 0, int maxCap = 0)
+        public QrCodeEncoder(int version, EccLevel ecc, bool[,] modules, int dataBytes = 0, int maxCap = 0, bool useUtf8Eci = false)
         {
             Version = version;
             ErrorCorrection = ecc;
@@ -36,22 +37,35 @@ namespace BBTech.Core.Qr
             Modules = modules;
             DataBytes = dataBytes;
             MaxCapacityBytes = maxCap;
+            _useUtf8Eci = useUtf8Eci;
         }
 
         public static QrCodeEncoder EncodeText(string text, EccLevel ecc = EccLevel.M)
         {
             if (text == null) throw new ArgumentNullException(nameof(text));
             byte[] data = Encoding.UTF8.GetBytes(text);
-            return EncodeBinary(data, ecc);
+            return EncodeBinary(data, ecc, useUtf8Eci: false);
+        }
+
+        public static QrCodeEncoder EncodeUtf8(string text, EccLevel ecc = EccLevel.M)
+        {
+            if (text == null) throw new ArgumentNullException(nameof(text));
+            byte[] data = Encoding.UTF8.GetBytes(text);
+            return EncodeBinary(data, ecc, useUtf8Eci: true);
         }
 
         public static QrCodeEncoder EncodeBinary(byte[] data, EccLevel ecc = EccLevel.M)
+        {
+            return EncodeBinary(data, ecc, useUtf8Eci: false);
+        }
+
+        public static QrCodeEncoder EncodeBinary(byte[] data, EccLevel ecc, bool useUtf8Eci)
         {
             if (data == null) throw new ArgumentNullException(nameof(data));
 
             // 1. Determine minimum version
             EccLevel effectiveEcc = ecc;
-            int version = FindSmallestVersion(data.Length, effectiveEcc);
+            int version = FindSmallestVersion(data.Length, effectiveEcc, useUtf8Eci);
 
             // Adaptive ECC fallback: If requested ECC exceeds Version 40 capacity, fall back to lower ECC levels down to L
             if (version < 1 || version > 40)
@@ -59,7 +73,7 @@ namespace BBTech.Core.Qr
                 for (int e = (int)ecc - 1; e >= 0; e--)
                 {
                     var fallbackEcc = (EccLevel)e;
-                    int v = FindSmallestVersion(data.Length, fallbackEcc);
+                    int v = FindSmallestVersion(data.Length, fallbackEcc, useUtf8Eci);
                     if (v >= 1 && v <= 40)
                     {
                         version = v;
@@ -69,16 +83,17 @@ namespace BBTech.Core.Qr
                 }
             }
 
+            int overhead = GetOverheadBytes(40, useUtf8Eci);
             if (version < 1 || version > 40)
             {
-                int maxCapL = GetDataCapacity(40, EccLevel.L) - 3;
-                throw new InvalidOperationException($"Payload size ({data.Length} bytes) exceeds QR code capacity (maximum {maxCapL} bytes supported in Version 40 Byte Mode at ECC Level L).");
+                int maxCapL = GetDataCapacity(40, EccLevel.L) - overhead;
+                throw new InvalidOperationException($"Payload size ({data.Length} bytes) exceeds QR code capacity (maximum {maxCapL} bytes supported in Version 40 {(useUtf8Eci ? "UTF-8" : "Byte")} Mode at ECC Level L).");
             }
 
-            int selectedCap = GetDataCapacity(version, effectiveEcc) - (version < 10 ? 2 : 3);
+            int selectedCap = GetDataCapacity(version, effectiveEcc) - GetOverheadBytes(version, useUtf8Eci);
 
-            // 2. Encode bitstream (Byte Mode: 0100 + char count indicator + data + terminator + padding)
-            byte[] codewords = GenerateCodewords(data, version, effectiveEcc);
+            // 2. Encode bitstream (with optional ECI UTF-8 header + Byte Mode 0100 + char count + data + terminator + padding)
+            byte[] codewords = GenerateCodewords(data, version, effectiveEcc, useUtf8Eci);
 
             // 3. Construct matrix with function patterns
             int size = 17 + 4 * version;
@@ -111,7 +126,7 @@ namespace BBTech.Core.Qr
                 }
             }
 
-            return new QrCodeEncoder(version, effectiveEcc, bestMatrix, data.Length, selectedCap);
+            return new QrCodeEncoder(version, effectiveEcc, bestMatrix, data.Length, selectedCap, useUtf8Eci);
         }
 
         #region BMP Generation
@@ -201,12 +216,21 @@ namespace BBTech.Core.Qr
 
         #region Bitstream & Codeword Generation
 
-        private static byte[] GenerateCodewords(byte[] data, int version, EccLevel ecc)
+        private static byte[] GenerateCodewords(byte[] data, int version, EccLevel ecc, bool useUtf8Eci)
         {
             int totalDataBytes = GetDataCapacity(version, ecc);
 
             // Bitstream accumulator
             List<byte> bits = new List<byte>();
+
+            if (useUtf8Eci)
+            {
+                // ISO/IEC 18004 ECI Mode for UTF-8:
+                // 1. ECI Mode Indicator: 0111 (4 bits)
+                AppendBits(bits, 7, 4);
+                // 2. ECI Assignment 26 (UTF-8): 8-bit codeword (00011010)
+                AppendBits(bits, 26, 8);
+            }
 
             // Mode indicator: 0100 for Byte Mode
             AppendBits(bits, 4, 4);
@@ -736,12 +760,26 @@ namespace BBTech.Core.Qr
             return poly;
         }
 
-        private static int FindSmallestVersion(int dataBytes, EccLevel ecc)
+        private static int GetOverheadBytes(int version, bool useUtf8Eci)
+        {
+            // ECI: 4 bits mode + 8 bits designator = 12 bits
+            // Byte mode: 4 bits indicator
+            // Char count: 8 bits (v1-9) or 16 bits (v10-40)
+            // Without ECI: v1-9 = 12 bits (2 bytes ceiling), v10-40 = 20 bits (3 bytes ceiling)
+            // With ECI:    v1-9 = 24 bits (3 bytes), v10-40 = 32 bits (4 bytes)
+            if (useUtf8Eci)
+            {
+                return (version < 10) ? 3 : 4;
+            }
+            return (version < 10) ? 2 : 3;
+        }
+
+        private static int FindSmallestVersion(int dataBytes, EccLevel ecc, bool useUtf8Eci = false)
         {
             for (int v = 1; v <= 40; v++)
             {
                 int cap = GetDataCapacity(v, ecc);
-                int overhead = (v < 10) ? 2 : 3; // 4 bit mode + 8/16 bit count
+                int overhead = GetOverheadBytes(v, useUtf8Eci);
                 if (dataBytes + overhead <= cap)
                 {
                     return v;

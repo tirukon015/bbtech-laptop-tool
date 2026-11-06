@@ -8,6 +8,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using BBTech.Core.Export;
+using BBTech.Core.Identity;
 using BBTech.Core.Models;
 using BBTech.Core.Parsing;
 using BBTech.Core.Testing;
@@ -238,6 +239,105 @@ namespace BBTech.Core.Integration
     {
         /// <summary>The JSON body agreed for ITMS (the eight primary fields).</summary>
         public static string Build(DetectionResult detection) => JsonWriter.Serialize(DetectionExporter.ToItmsObject(detection));
+
+        /// <summary>
+        /// Builds a compact, high-efficiency UTF-8 inspection payload designed specifically
+        /// for single-screen QR codes scannable by physical 2D barcode scanners and cameras.
+        /// Retains all essential ITMS Contract v1.0 fields while stripping verbose diagnostic dumps.
+        /// Typical size: 500-750 bytes (fits comfortably in QR Version 13-16).
+        /// </summary>
+        public static string BuildCompactInspectionPayload(
+            DetectionResult detection,
+            string requestId,
+            string testedBy = null,
+            string overallResult = "DETECTED")
+        {
+            var d = detection ?? new DetectionResult();
+
+            string brand = !string.IsNullOrWhiteSpace(d.Brand) ? d.Brand : "Unknown Brand";
+            string model = !string.IsNullOrWhiteSpace(d.Model) ? d.Model : "Unknown Model";
+            string serial = !string.IsNullOrWhiteSpace(d.System?.SerialNumber) ? d.System.SerialNumber : DetectionResult.Unknown;
+
+            // 1. Device object (Canonical ITMS Contract)
+            var dev = new JsonObject
+            {
+                { "brand", brand },
+                { "model", model },
+            };
+
+            if (!string.IsNullOrWhiteSpace(d.ModelNumber) && d.ModelNumber != DetectionResult.Unknown)
+                dev.Add("model_number", d.ModelNumber.Trim());
+
+            dev.Add("serial_number", serial);
+
+            if (!string.IsNullOrWhiteSpace(d.System?.SystemUuid))
+                dev.Add("system_uuid", d.System.SystemUuid);
+
+            if (!string.IsNullOrWhiteSpace(d.System?.BoardSerial))
+                dev.Add("board_serial", d.System.BoardSerial);
+
+            if (!string.IsNullOrWhiteSpace(d.Cpu))
+                dev.Add("cpu", d.Cpu);
+
+            if (!string.IsNullOrWhiteSpace(d.Generation))
+                dev.Add("generation", d.Generation);
+
+            if (!string.IsNullOrWhiteSpace(d.Ram))
+                dev.Add("ram", d.Ram);
+
+            if (!string.IsNullOrWhiteSpace(d.Storage))
+                dev.Add("storage", d.Storage);
+
+            if (!string.IsNullOrWhiteSpace(d.BatteryHealth))
+                dev.Add("battery_health", d.BatteryHealth);
+
+            // Extract SSD Health string for quick lookup in ITMS
+            var primeDisk = d.StorageDevices?.Count > 0 ? d.StorageDevices[0] : null;
+            string ssdHealthText = !string.IsNullOrWhiteSpace(d.SsdHealth)
+                ? d.SsdHealth
+                : (primeDisk != null && primeDisk.HealthPercent.HasValue
+                    ? $"{primeDisk.HealthPercent}% ({primeDisk.HealthAssessment ?? "OPTIMAL"})"
+                    : (primeDisk?.WearPercentUsed.HasValue == true
+                        ? $"{Math.Max(0, 100 - primeDisk.WearPercentUsed.Value)}% ({primeDisk.HealthAssessment ?? "OPTIMAL"})"
+                        : (!string.IsNullOrWhiteSpace(primeDisk?.HealthAssessment) ? $"100% ({primeDisk.HealthAssessment})" : null)));
+
+            if (!string.IsNullOrWhiteSpace(ssdHealthText))
+            {
+                dev.Add("ssd_health", ssdHealthText);
+            }
+
+            // 2. Root Payload
+            var root = new JsonObject
+            {
+                { "schema_version", "1.0" },
+                { "request_id", !string.IsNullOrEmpty(requestId) ? requestId : (d.SubmissionId ?? Guid.NewGuid().ToString("D")) },
+                { "source", "bbtech-qr-import" },
+                { "inspection_date", d.DetectedAt.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) },
+                { "overall_result", overallResult ?? "DETECTED" },
+            };
+
+            if (!string.IsNullOrWhiteSpace(testedBy))
+                root.Add("tested_by", testedBy);
+
+            root.Add("device", dev);
+
+            // 3. Primary Storage Device Summary
+            if (primeDisk != null)
+            {
+                var diskObj = new JsonObject
+                {
+                    { "model", primeDisk.Model ?? primeDisk.DisplayValue ?? "Internal SSD" },
+                    { "capacity_label", primeDisk.CapacityLabel ?? d.Storage ?? "" },
+                };
+                int? hp = primeDisk.HealthPercent ?? (primeDisk.WearPercentUsed.HasValue ? Math.Max(0, 100 - primeDisk.WearPercentUsed.Value) : (int?)null);
+                if (hp.HasValue) diskObj.Add("health_percent", hp.Value);
+                if (!string.IsNullOrWhiteSpace(primeDisk.HealthAssessment)) diskObj.Add("health_assessment", primeDisk.HealthAssessment);
+
+                root.Add("storage_devices", new List<object> { diskObj });
+            }
+
+            return JsonWriter.Serialize(root, indent: false);
+        }
 
         /// <summary>Builds the full inspection payload complying with ITMS contract version 1.0.</summary>
         public static string BuildInspectionPayload(

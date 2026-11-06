@@ -78,10 +78,13 @@ namespace BBTech.Core.Parsing
 
         private static int? Percent(string s)
         {
-            var m = Regex.Match(s ?? "", @"(\d{1,3})\s*%");
+            if (string.IsNullOrWhiteSpace(s)) return null;
+            // Matches "95 %", "95%", or plain number "95"
+            var m = Regex.Match(s.Trim(), @"^(\d{1,3})\s*%?$|(\d{1,3})\s*%");
             if (!m.Success) return null;
-            int v = int.Parse(m.Groups[1].Value);
-            return v >= 0 && v <= 100 ? v : (int?)null;
+            string val = !string.IsNullOrEmpty(m.Groups[1].Value) ? m.Groups[1].Value : m.Groups[2].Value;
+            if (int.TryParse(val, out int v) && v >= 0 && v <= 100) return v;
+            return null;
         }
     }
 }

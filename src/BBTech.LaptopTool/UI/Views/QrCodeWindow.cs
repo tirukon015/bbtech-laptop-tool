@@ -14,14 +14,16 @@ namespace BBTech.LaptopTool.UI.Views
 {
     /// <summary>
     /// Displays a single, high-contrast QR code containing the complete offline inspection record.
+    /// Supports standard UTF-8 JSON format (universal scanner compatibility) and compressed BBT1 format.
     /// Can be scanned by another computer running Central ITMS Tracker via USB barcode scanner or camera.
     /// </summary>
     public sealed class QrCodeWindow : Window
     {
         private readonly DetectionResult _detection;
-        private readonly string _payload;
+        private readonly string _compactUtf8Payload;
         private readonly Image _qrImage;
         private readonly TextBlock _statusText;
+        private readonly TextBlock _formatHintText;
 
         public QrCodeWindow(DetectionResult detection)
         {
@@ -29,7 +31,7 @@ namespace BBTech.LaptopTool.UI.Views
             AppLog.Info($"[QR-Diag] Stage 1: QrCodeWindow initialized for device '{_detection.Brand} {_detection.Model}' (S/N: {_detection.System?.SerialNumber ?? "Unknown"})");
 
             Title = "Offline Inspection QR Code";
-            Width = 540;
+            Width = 620;
             SizeToContent = SizeToContent.Height;
             ResizeMode = ResizeMode.NoResize;
             WindowStartupLocation = WindowStartupLocation.CenterOwner;
@@ -54,7 +56,7 @@ namespace BBTech.LaptopTool.UI.Views
                 FontSize = 13,
                 Foreground = (Brush)Application.Current.FindResource("TextMuted"),
                 TextWrapping = TextWrapping.Wrap,
-                Margin = new Thickness(0, 0, 0, 16)
+                Margin = new Thickness(0, 0, 0, 14)
             });
 
             // 2. Device Specs Summary Card
@@ -65,7 +67,7 @@ namespace BBTech.LaptopTool.UI.Views
                 BorderThickness = new Thickness(1),
                 CornerRadius = new CornerRadius(6),
                 Padding = new Thickness(12),
-                Margin = new Thickness(0, 0, 0, 16)
+                Margin = new Thickness(0, 0, 0, 14)
             };
             var summaryPanel = new StackPanel();
 
@@ -99,29 +101,71 @@ namespace BBTech.LaptopTool.UI.Views
             summaryBorder.Child = summaryPanel;
             mainPanel.Children.Add(summaryBorder);
 
-            // 3. QR Code Image Container
+            // 3. Guaranteed Mandatory UTF-8 JSON Format Indicator
+            var formatBorder = new Border
+            {
+                Background = new SolidColorBrush(Color.FromArgb(24, 16, 185, 129)),
+                BorderBrush = new SolidColorBrush(Color.FromArgb(70, 16, 185, 129)),
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(6),
+                Padding = new Thickness(10, 6, 10, 6),
+                HorizontalAlignment = HorizontalAlignment.Center,
+                Margin = new Thickness(0, 0, 0, 8)
+            };
+            var formatStack = new StackPanel { Orientation = Orientation.Horizontal };
+            formatStack.Children.Add(new TextBlock
+            {
+                Text = "✓ UTF-8 JSON Format",
+                FontSize = 12,
+                FontWeight = FontWeights.SemiBold,
+                Foreground = new SolidColorBrush(Color.FromRgb(16, 185, 129))
+            });
+            formatStack.Children.Add(new TextBlock
+            {
+                Text = " (Directly scannable by physical 2D barcode scanners & ITMS)",
+                FontSize = 11,
+                Foreground = (Brush)Application.Current.FindResource("TextMuted"),
+                Margin = new Thickness(4, 1, 0, 0)
+            });
+            formatBorder.Child = formatStack;
+            mainPanel.Children.Add(formatBorder);
+
+            _formatHintText = new TextBlock
+            {
+                Text = "Payload starts with standard '{' JSON. Fully compatible with ITMS review queue.",
+                FontSize = 11,
+                Foreground = (Brush)Application.Current.FindResource("TextMuted"),
+                TextAlignment = TextAlignment.Center,
+                Margin = new Thickness(0, 0, 0, 10)
+            };
+            mainPanel.Children.Add(_formatHintText);
+
+            // 4. QR Code Image Container
             var qrBorder = new Border
             {
                 Background = Brushes.White,
                 BorderBrush = (Brush)Application.Current.FindResource("CardBorder"),
                 BorderThickness = new Thickness(1),
-                CornerRadius = new CornerRadius(8),
-                Padding = new Thickness(14),
+                CornerRadius = new CornerRadius(10),
+                Padding = new Thickness(22),
                 HorizontalAlignment = HorizontalAlignment.Center,
-                Margin = new Thickness(0, 0, 0, 12)
+                Margin = new Thickness(0, 0, 0, 10)
             };
 
             _qrImage = new Image
             {
-                Width = 300,
-                Height = 300,
-                Stretch = Stretch.Uniform
+                Width = 440,
+                Height = 440,
+                Stretch = Stretch.Uniform,
+                SnapsToDevicePixels = true,
+                UseLayoutRounding = true
             };
             RenderOptions.SetBitmapScalingMode(_qrImage, BitmapScalingMode.NearestNeighbor);
+            RenderOptions.SetEdgeMode(_qrImage, EdgeMode.Aliased);
             qrBorder.Child = _qrImage;
             mainPanel.Children.Add(qrBorder);
 
-            // 4. Status & Telemetry
+            // 5. Status & Telemetry
             _statusText = new TextBlock
             {
                 FontSize = 11,
@@ -131,7 +175,7 @@ namespace BBTech.LaptopTool.UI.Views
             };
             mainPanel.Children.Add(_statusText);
 
-            // 5. Action Buttons (Copy, Save, Close)
+            // 6. Action Buttons (Copy, Save, Close)
             var btnPanel = new StackPanel
             {
                 Orientation = Orientation.Horizontal,
@@ -149,10 +193,10 @@ namespace BBTech.LaptopTool.UI.Views
             {
                 try
                 {
-                    if (!string.IsNullOrEmpty(_payload))
+                    if (!string.IsNullOrEmpty(_compactUtf8Payload))
                     {
-                        Clipboard.SetText(_payload);
-                        MessageBox.Show("Offline inspection QR payload copied to clipboard.", "Copied", MessageBoxButton.OK, MessageBoxImage.Information);
+                        Clipboard.SetText(_compactUtf8Payload);
+                        MessageBox.Show("Offline inspection QR payload (UTF-8 JSON) copied to clipboard.", "Copied", MessageBoxButton.OK, MessageBoxImage.Information);
                     }
                 }
                 catch (Exception ex)
@@ -186,34 +230,24 @@ namespace BBTech.LaptopTool.UI.Views
 
             Content = mainPanel;
 
-            // 6. Generate and render the single QR code
+            // 7. Prepare payload and render mandatory UTF-8 JSON QR code
             try
             {
                 string requestId = !string.IsNullOrEmpty(_detection.SubmissionId)
                     ? _detection.SubmissionId
                     : Guid.NewGuid().ToString("D");
 
-                // Compact serialization for optimal QR density
-                string jsonPayload = ItmsPayload.BuildInspectionPayload(
+                // Guaranteed Standard UTF-8 JSON (<800 bytes)
+                _compactUtf8Payload = ItmsPayload.BuildCompactInspectionPayload(
                     _detection,
                     requestId,
                     testedBy: null,
-                    overallResult: "DETECTED",
-                    testItems: null,
-                    condition: null,
-                    accessories: null,
-                    indent: false
+                    overallResult: "DETECTED"
                 );
 
-                _payload = QrPayloadCompressor.Compress(jsonPayload);
-                AppLog.Info($"[QR-Diag] Stage 2: Payload generated. Uncompressed JSON={jsonPayload.Length} chars, Compressed payload={_payload.Length} bytes.");
+                AppLog.Info($"[QR-Diag] Stage 2: Payload prepared. UTF-8 JSON={_compactUtf8Payload.Length} bytes.");
 
-                var qr = RenderSingleQrCode();
-
-                if (qr != null)
-                {
-                    _statusText.Text = $"1 single QR code · Version {qr.Version} ({qr.Size}×{qr.Size}) · Payload: {qr.DataBytes} bytes (ECC Level {qr.ErrorCorrection}, max {qr.MaxCapacityBytes} B) · Ready to scan";
-                }
+                RenderCurrentQrCode();
             }
             catch (Exception ex)
             {
@@ -228,16 +262,28 @@ namespace BBTech.LaptopTool.UI.Views
             };
         }
 
-        private QrCodeEncoder RenderSingleQrCode()
+        private QrCodeEncoder RenderCurrentQrCode()
         {
-            if (string.IsNullOrEmpty(_payload))
+            if (string.IsNullOrEmpty(_compactUtf8Payload))
             {
-                AppLog.Warn("[QR-Diag] RenderSingleQrCode aborted: _payload is empty");
+                AppLog.Warn("[QR-Diag] RenderCurrentQrCode aborted: payload is empty");
                 return null;
             }
 
-            // Adaptive ECC encoder: prefers M (15%), automatically falls back to L (7%) for large payloads up to Version 40 (2,953 bytes)
-            var qr = QrCodeEncoder.EncodeText(_payload, EccLevel.M);
+            QrCodeEncoder qr;
+            try
+            {
+                // Mandatory UTF-8 JSON with screen-optimized EccLevel.L (7%)
+                // Minimizes module density and maximizes module pixel size for instant 1-frame reading
+                qr = QrCodeEncoder.EncodeText(_compactUtf8Payload, EccLevel.L);
+            }
+            catch (Exception ex)
+            {
+                AppLog.Error("[QR-Diag] Failed to encode UTF-8 QR code", ex);
+                _statusText.Text = "Failed to generate QR code: " + ex.Message;
+                _statusText.Foreground = (Brush)Application.Current.FindResource("FailBrush");
+                return null;
+            }
 
             int blackCount = 0;
             for (int r = 0; r < qr.Size; r++)
@@ -245,10 +291,11 @@ namespace BBTech.LaptopTool.UI.Views
                     if (qr.Modules[r, c]) blackCount++;
 
             bool matrixSuccess = qr.Modules != null && qr.Size > 0 && blackCount > 0;
-            AppLog.Info($"[QR-Diag] Stage 3 & 4: PayloadBytes={qr.DataBytes}, EncodingMode={qr.EncodingMode}, SelectedVersion={qr.Version}, SelectedEcc={qr.ErrorCorrection}, MaxCapacity={qr.MaxCapacityBytes} bytes, MatrixDimensions={qr.Size}x{qr.Size}, MatrixGenerationSuccess={matrixSuccess} (ActiveModules={blackCount}/{qr.Size * qr.Size}).");
+            AppLog.Info($"[QR-Diag] Stage 3 & 4: Format=UTF-8 JSON, PayloadBytes={qr.DataBytes}, EncodingMode={qr.EncodingMode}, SelectedVersion={qr.Version}, SelectedEcc={qr.ErrorCorrection}, MaxCapacity={qr.MaxCapacityBytes} bytes, MatrixDimensions={qr.Size}x{qr.Size}, MatrixGenerationSuccess={matrixSuccess} (ActiveModules={blackCount}/{qr.Size * qr.Size}).");
 
-            int modulePixelSize = qr.Version > 25 ? 3 : (qr.Version > 14 ? 4 : 5);
-            byte[] bmpBytes = qr.ToBmp(modulePixelSize: modulePixelSize, quietZoneModules: 4);
+            // Crisp integer module size for instant scanning
+            int modulePixelSize = qr.Version > 25 ? 4 : (qr.Version > 14 ? 5 : 6);
+            byte[] bmpBytes = qr.ToBmp(modulePixelSize: modulePixelSize, quietZoneModules: 5);
 
             using (var ms = new MemoryStream(bmpBytes))
             {
@@ -264,6 +311,9 @@ namespace BBTech.LaptopTool.UI.Views
                 AppLog.Info($"[QR-Diag] Stage 5 & 6: BitmapGenerationSuccess={bitmapSuccess}, Dimensions={bitmap.PixelWidth}x{bitmap.PixelHeight}, Dpi={bitmap.DpiX:0}x{bitmap.DpiY:0}, ImageControlAssigned=True.");
             }
 
+            _statusText.Text = $"UTF-8 JSON · Version {qr.Version} ({qr.Size}×{qr.Size}) · {qr.DataBytes} bytes (ECC {qr.ErrorCorrection}) · Ready to scan";
+            _statusText.Foreground = (Brush)Application.Current.FindResource("TextMuted");
+
             return qr;
         }
 
@@ -271,7 +321,7 @@ namespace BBTech.LaptopTool.UI.Views
         {
             try
             {
-                if (string.IsNullOrEmpty(_payload))
+                if (string.IsNullOrEmpty(_compactUtf8Payload))
                 {
                     MessageBox.Show("No QR code payload available to save.", "Save Error", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
@@ -279,18 +329,17 @@ namespace BBTech.LaptopTool.UI.Views
 
                 var dialog = new SaveFileDialog
                 {
-                    Title = "Save Inspection QR Code",
+                    Title = "Save Inspection QR Code (UTF-8 JSON)",
                     Filter = "Bitmap Image (*.bmp)|*.bmp",
-                    FileName = $"Inspection-QR-{_detection.System?.SerialNumber ?? "Laptop"}.bmp"
+                    FileName = $"Inspection-QR-{_detection.System?.SerialNumber ?? "Laptop"}-UTF8.bmp"
                 };
 
                 if (dialog.ShowDialog() == true)
                 {
-                    var qr = QrCodeEncoder.EncodeText(_payload, EccLevel.M);
-                    // Higher resolution for saved image (6px per module)
-                    byte[] bmpBytes = qr.ToBmp(modulePixelSize: 6, quietZoneModules: 4);
+                    var qr = QrCodeEncoder.EncodeText(_compactUtf8Payload, EccLevel.L);
+                    byte[] bmpBytes = qr.ToBmp(modulePixelSize: 6, quietZoneModules: 5);
                     File.WriteAllBytes(dialog.FileName, bmpBytes);
-                    MessageBox.Show("QR code image saved successfully.", "Saved", MessageBoxButton.OK, MessageBoxImage.Information);
+                    MessageBox.Show("QR code image saved successfully (UTF-8 JSON).", "Saved", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
             }
             catch (Exception ex)

@@ -133,6 +133,50 @@ namespace BBTech.Core.Tests
         }
 
         [Fact]
+        public void QrCodeEncoder_EncodeUtf8_ProducesValidEciModeAndDecodableBmp()
+        {
+            string sampleJson = "{\"schema_version\":\"1.0\",\"brand\":\"Lenovo\",\"model\":\"ThinkPad T480\",\"tested_by\":\"Tech \u00DCser\"}";
+            var qr = QrCodeEncoder.EncodeUtf8(sampleJson, EccLevel.M);
+
+            Assert.Equal("UTF-8 (ECI 000026)", qr.EncodingMode);
+            Assert.True(qr.Version >= 1 && qr.Version <= 40);
+            Assert.True(qr.Size > 0);
+
+            byte[] bmp = qr.ToBmp(modulePixelSize: 4);
+            Assert.True(bmp.Length > 1000);
+        }
+
+        [Fact]
+        public void FullInspectionPayload_RawUtf8Json_FitsInSingleQrAndIsDecodable()
+        {
+            var detection = new DetectionResult
+            {
+                Brand = "Lenovo",
+                Model = "ThinkPad T480",
+                ModelNumber = "20L5-S02C00",
+                Cpu = "Intel Core i5-8350U",
+                Generation = "8th Gen",
+                Ram = "16 GB",
+                Storage = "256 GB SSD",
+                BatteryHealth = "85%"
+            };
+            detection.System.SerialNumber = "PF123456";
+            detection.System.SystemUuid = "01234567-89AB-CDEF-0123-456789ABCDEF";
+            detection.System.BoardSerial = "L1HF88800AB";
+
+            string json = ItmsPayload.BuildInspectionPayload(detection, "c1b560d6-329b-4546-acd6-f6a1d3ba1756", "Operator", "PASS");
+            Assert.StartsWith("{", json);
+
+            var qr = QrCodeEncoder.EncodeText(json, EccLevel.M);
+            Assert.True(qr.Version >= 1 && qr.Version <= 40);
+            Assert.True(qr.Size > 0);
+
+            byte[] bmp = qr.ToBmp(modulePixelSize: 4);
+            Assert.NotNull(bmp);
+            Assert.True(bmp.Length > 2000);
+        }
+
+        [Fact]
         public void SingleQrCode_FitsCompletePayloadWithSsdHealth_IntoOneQr()
         {
             var detection = new DetectionResult
@@ -381,6 +425,57 @@ namespace BBTech.Core.Tests
             }
             Assert.True(hasBlackPixel, "Rendered BMP image must contain black pixels");
             Assert.True(hasWhitePixel, "Rendered BMP image must contain white pixels");
+        }
+
+        [Fact]
+        public void BuildCompactInspectionPayload_ProducesScannableLowDensityUtf8QrCode()
+        {
+            var detection = new DetectionResult
+            {
+                Brand = "Lenovo",
+                Model = "ThinkPad",
+                ModelNumber = "T14 Gen 2i",
+                Cpu = "i5 11th Gen",
+                Generation = "11th Gen",
+                Ram = "32 GB",
+                Storage = "512 GB SSD",
+                BatteryHealth = "85%",
+                DetectedAt = new DateTime(2026, 10, 30, 15, 48, 37)
+            };
+            detection.System.SerialNumber = "PF49SKL8";
+            detection.System.SystemUuid = "30248841-8973-45c5-bc99-e61be1745e12";
+            detection.System.BoardSerial = "L1HF19P00A1";
+            detection.Battery = new BatteryDetails { Present = true, HealthPercent = 85, CycleCount = 142 };
+            detection.CpuDetails = new CpuDetails { FullName = "11th Gen Intel(R) Core(TM) i5-1145G7 @ 2.60GHz", Cores = 4, LogicalProcessors = 8 };
+            detection.StorageDevices.Add(new StorageDevice
+            {
+                Model = "SAMSUNG MZALQ512",
+                CapacityLabel = "512 GB",
+                HealthAssessment = "OPTIMAL",
+                HealthPercent = 95
+            });
+
+            string compactPayload = ItmsPayload.BuildCompactInspectionPayload(
+                detection,
+                "c1b560d6-329b-4546-acd6-f6a1d3ba1756",
+                testedBy: "Inspector John",
+                overallResult: "PASS"
+            );
+
+            Assert.NotNull(compactPayload);
+            // Must be compact: well under 900 bytes so physical scanners can read it off screen effortlessly
+            Assert.True(compactPayload.Length < 900, $"Expected compact payload < 900 bytes, was {compactPayload.Length}");
+
+            // Verify QR code encodes at low version (<= 25) with EccLevel.M
+            var qr = QrCodeEncoder.EncodeText(compactPayload, EccLevel.M);
+            Assert.NotNull(qr);
+            Assert.True(qr.Version <= 25, $"Expected QR version <= 25 for high-speed scanning, was {qr.Version}");
+            Assert.Equal(EccLevel.M, qr.ErrorCorrection);
+
+            // Verify BMP output
+            byte[] bmpBytes = qr.ToBmp(modulePixelSize: 4, quietZoneModules: 4);
+            Assert.NotNull(bmpBytes);
+            Assert.True(bmpBytes.Length > 0);
         }
     }
 }

@@ -122,15 +122,16 @@ namespace BBTech.Core.Tests
             var d = result.Disks[0];
 
             Assert.Equal("KIOXIA KBG40ZNV512G", d.Model);
-            // Native fallback does not fabricate a health percentage
-            Assert.Null(d.HealthPercent);
+            // Native fallback calculates health percentage from NVMe wear (100 - 4% wear = 96%)
+            Assert.Equal(96, d.HealthPercent);
             Assert.Equal(SsdHealthStatus.Good, d.Status);
             Assert.Equal("GOOD", d.StatusLabel);
             Assert.Equal("Windows Storage Reliability API (NVMe)", d.DataSource);
             Assert.Equal(4, d.WearPercentUsed);
             Assert.Equal(3120, d.PowerOnHours);
             Assert.Equal("41 °C", d.Temperature);
-            Assert.Contains("NVMe wear consumed: 4%", d.DiagnosticDetails);
+            Assert.Contains("NVMe health: 96%", d.DiagnosticDetails);
+            Assert.Contains("wear consumed: 4%", d.DiagnosticDetails);
             Assert.True(result.AllHealthy);
         }
 
