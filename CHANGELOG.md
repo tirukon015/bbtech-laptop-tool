@@ -2,9 +2,22 @@
 
 All notable changes to BBTech Laptop Tool. Dates are in YYYY-MM-DD format.
 
-## [1.0.0] — Unreleased (in development)
+## [1.2.0] — 2026-11-07
 
-Version 1.0.0 is planned for 2026-10-09 and is **not yet released or tagged**. Daily details: [DAY-01](docs/development/DAY-01.md) (2026-10-04), [DAY-02](docs/development/DAY-02.md) (2026-10-05).
+### Added & Optimized
+- **Mandatory UTF-8 JSON QR Format:** Single-standard uncompressed UTF-8 JSON QR code schema (`schema_version: "1.0"`) eliminating legacy compression friction with handheld and 2D hardware barcode scanners.
+- **Enhanced QR Screen Readability:** Switched to `EccLevel.L` (7% redundancy) to lower QR matrix version from Version 14 to Version 10/11, enlarging individual code modules on screen by ~35%.
+- **Crisp Pixel Rendering:** Enabled WPF `RenderOptions.SetEdgeMode(Aliased)` and `BitmapScalingMode.NearestNeighbor` across a 440×440px viewport to eliminate sub-pixel antialiasing and blur during screen scanning.
+- **SSD Health Engine & Percentage Scoring:** Fully integrated SSD wear percentages and health status parsing across NVMe, SATA, and eMMC drives.
+- **Hardware Elevation Helper:** Streamlined admin privilege elevation on startup to guarantee raw access to storage controllers and WMI diagnostics.
+
+## [1.1.0] — 2026-10-29
+
+### Added
+- **Direct ITMS Submission Dialog:** Native `HttpItmsConnector` with retry idempotency and offline queue fallback.
+- **QC Diagnostics Integration:** Comprehensive diagnostic test suites bundled into payload schema.
+
+## [1.0.0] — 2026-10-09
 
 ### 2026-10-05
 
