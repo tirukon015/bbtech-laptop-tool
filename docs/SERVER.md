@@ -55,7 +55,7 @@ Only the SHA-256 of each key is stored. A lost USB is disabled by setting `works
 | `test_results` | Every Hardware / Software / QC result. **Append-only**: a re-test is a new row; results are immutable (trigger); admin delete = tombstone (`deleted_at`) |
 | `software_results`, `qc_inspections` | Views over `test_results` |
 | `qc_decisions` | Final QC PASS/FAIL, **append-only** (trigger), latest per device = readiness |
-| `audit_logs` | Client + server events, **append-only** (trigger). Client entries carry `actor_verified`: true only when the named actor is an active user allowed on the sending workstation, the time is not in the future and the action is not server-only. Unverified entries are kept as evidence, not as proof of who acted. |
+| `audit_logs` | Client + server events, **append-only** (trigger). Client entries carry `actor_verified`: true only when the named actor is an active user explicitly registered on the sending workstation (none registered = none verified), the time lies between the user's creation and now, and the action is one the desktop tool writes (exact case). Confirmed entries store the server's user name. Unverified entries are kept as evidence, not as proof of who acted. |
 | `sync_batches`, `sync_records` | Every upload, its receipt and the outcome of every record |
 | `software_packages`, `installers` | Approved software and how it is installed (checksum **or** publisher required by a CHECK constraint; HTTPS only) |
 | `laptop_models`, `laptop_model_packages` | Models and the packages they require |

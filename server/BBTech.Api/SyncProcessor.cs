@@ -248,13 +248,19 @@ public sealed class SyncProcessor
         }
     }
 
-    /// <summary>Actions only the server performs (user/role/permission/package/workstation administration): a client
-    /// entry claiming one is kept, but never counted as verified.</summary>
+    /// <summary>Server-side administration actions: a client entry claiming one is kept, but never counted as verified.</summary>
     private static readonly HashSet<string> ServerOnlyAuditActions = new(StringComparer.Ordinal)
     {
         "USER_CREATED", "USER_DISABLED", "USER_ENABLED", "USER_CHANGED", "ROLE_CHANGED", "PERMISSION_CHANGED",
-        "SOFTWARE_PACKAGE_CHANGED", "WORKSTATION_CREATED", "RECORD_DELETED",
+        "SOFTWARE_PACKAGE_CHANGED", "WORKSTATION_CREATED", "RECORD_DELETED", "DELETED",
     };
+
+    /// <summary>Allow-list: the action names the desktop tool itself writes (BBTech.Core AuditActions), exact case,
+    /// minus server administration. Anything else from a client is kept but never verified.</summary>
+    private static readonly HashSet<string> ClientAuditActions = new(
+        typeof(BBTech.Core.Audit.AuditActions).GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
+            .Where(f => f.IsLiteral && f.FieldType == typeof(string)).Select(f => (string)f.GetRawConstantValue())
+            .Where(a => !ServerOnlyAuditActions.Contains(a)), StringComparer.Ordinal);
 
     private static async Task<bool> StoreAuditAsync(NpgsqlConnection conn, AuditRecordDto a, Guid workstationId, CancellationToken ct)
     {
@@ -262,17 +268,20 @@ public sealed class SyncProcessor
 
         // The client names the actor itself, so the server records whether it can confirm that claim. Nothing is dropped
         // (it stays evidence), but only confirmed entries count as proof of who did something.
-        bool verified;
-        await using (var cmd = new NpgsqlCommand(
-            @"SELECT EXISTS (SELECT 1 FROM users WHERE user_id = @u AND active AND deleted_at IS NULL)
-                 AND (NOT EXISTS (SELECT 1 FROM workstation_operators WHERE workstation_id = @w)
-                      OR EXISTS (SELECT 1 FROM workstation_operators WHERE workstation_id = @w AND user_id = @u))", conn))
+        // Fail closed: the actor must be an active user created before the entry, explicitly registered on this
+        // workstation (a workstation without registered operators cannot vouch for anyone), with a client action.
+        string confirmedName = null;
+        if (ClientAuditActions.Contains(a.Action) && a.Timestamp.ToUniversalTime() <= DateTime.UtcNow.AddDays(1))
         {
+            await using var cmd = new NpgsqlCommand(
+                @"SELECT u.name FROM users u JOIN workstation_operators o ON o.user_id = u.user_id AND o.workstation_id = @w
+                  WHERE u.user_id = @u AND u.active AND u.deleted_at IS NULL AND u.created_at <= @t + interval '1 day'", conn);
             cmd.Parameters.AddWithValue("u", a.ActorUserId ?? "");
             cmd.Parameters.AddWithValue("w", workstationId);
-            verified = (bool)(await cmd.ExecuteScalarAsync(ct))!;
+            cmd.Parameters.AddWithValue("t", a.Timestamp.ToUniversalTime());
+            confirmedName = await cmd.ExecuteScalarAsync(ct) as string;
         }
-        verified = verified && a.Timestamp.ToUniversalTime() <= DateTime.UtcNow.AddDays(1) && !ServerOnlyAuditActions.Contains(a.Action);
+        bool verified = confirmedName != null;
 
         await using (var cmd = new NpgsqlCommand(
             @"INSERT INTO audit_logs (audit_id, occurred_at, actor_user_id, actor_name, action, target, old_value, new_value, details,
@@ -284,7 +293,7 @@ public sealed class SyncProcessor
             cmd.Parameters.AddWithValue("id", a.AuditId);
             cmd.Parameters.AddWithValue("t", a.Timestamp.ToUniversalTime());
             cmd.Parameters.AddWithValue("u", a.ActorUserId ?? "");
-            cmd.Parameters.AddWithValue("n", a.ActorName ?? "");
+            cmd.Parameters.AddWithValue("n", confirmedName ?? a.ActorName ?? "");      // confirmed: the name the server knows
             cmd.Parameters.AddWithValue("a", a.Action);
             cmd.Parameters.AddWithValue("tg", a.Target ?? "");
             cmd.Parameters.AddWithValue("o", a.OldValue ?? "");

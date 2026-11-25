@@ -220,6 +220,9 @@ public sealed class LifecycleApiTests : IClassFixture<ApiFixture>, IDisposable
                 A("forged", "the-ceo", "QC_DECISION_CREATED", DateTime.UtcNow.AddMinutes(-5)),        // not a user
                 A("admin", "kamal", "ROLE_CHANGED", DateTime.UtcNow.AddMinutes(-5)),                  // server-only action
                 A("future", "kamal", "HARDWARE_TEST", DateTime.UtcNow.AddDays(30)),                    // impossible time
+                A("before", "kamal", "HARDWARE_TEST", new DateTime(2001, 1, 1, 0, 0, 0, DateTimeKind.Utc)),   // before the user existed
+                A("case", "kamal", "hardware_test", DateTime.UtcNow.AddMinutes(-5)),                  // not a known client action
+                A("named", "kamal", "HARDWARE_TEST", DateTime.UtcNow.AddMinutes(-4)),
             },
         };
         var resp = await _f.Client(_f.WorkstationKey).PostAsJsonAsync("/v1/sync/upload", batch, Json);
@@ -230,6 +233,9 @@ public sealed class LifecycleApiTests : IClassFixture<ApiFixture>, IDisposable
         Assert.False(await Verified("forged"));       // kept as evidence, but not proof of who did it
         Assert.False(await Verified("admin"));
         Assert.False(await Verified("future"));
+        Assert.False(await Verified("before"));
+        Assert.False(await Verified("case"));
+        Assert.Equal("Kamal", await _f.ScalarAsync<string>("SELECT actor_name FROM audit_logs WHERE audit_id = @id", ("id", "named-" + tag)));   // not the client's text
 
         var listed = await _f.Client(_f.AdminKey, "touhidul").GetStringAsync("/v1/admin/audit?limit=500");
         Assert.Contains("forged-" + tag, listed);
