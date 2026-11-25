@@ -27,6 +27,16 @@ namespace BBTech.Core.Integration
         public string Receipt { get; private set; }
         /// <summary>Staff-readable message. Never contains credentials or payload secrets.</summary>
         public string Message { get; private set; } = "";
+        /// <summary>HTTP status code returned by the server, if an HTTP response was received.</summary>
+        public int? HttpStatusCode { get; private set; }
+        /// <summary>Machine-readable error code returned by the server (e.g. SERVER_MISCONFIGURED, VALIDATION_ERROR).</summary>
+        public string ServerCode { get; private set; }
+        /// <summary>Whether the failure is considered transient and safe to retry with the same request ID.</summary>
+        public bool IsRetryable { get; private set; }
+        /// <summary>Safe diagnostic string captured during the request (no secrets).</summary>
+        public string DiagnosticSummary { get; private set; }
+        /// <summary>The traceability SHA-256 ITMS says it stored (null when ITMS does not report it).</summary>
+        public string EchoedTraceabilitySha256 { get; set; }
 
         private ItmsSendResult() { }
 
@@ -39,17 +49,40 @@ namespace BBTech.Core.Integration
         public static ItmsSendResult RequestSent(string message = "Sent to ITMS. Waiting for ITMS to confirm.") =>
             new ItmsSendResult { Outcome = ItmsSendOutcome.RequestSent, Message = message ?? "" };
 
-        public static ItmsSendResult Received(string receipt, string message = "ITMS received this laptop.")
+        public static ItmsSendResult Received(string receipt, string message = "ITMS received this laptop.", int? httpStatusCode = 200, string diagnosticSummary = null)
         {
             if (string.IsNullOrWhiteSpace(receipt)) throw new ArgumentException("A received result needs the ITMS receipt reference.", nameof(receipt));
-            return new ItmsSendResult { Outcome = ItmsSendOutcome.Received, Receipt = receipt.Trim(), Message = message ?? "" };
+            return new ItmsSendResult
+            {
+                Outcome = ItmsSendOutcome.Received,
+                Receipt = receipt.Trim(),
+                Message = message ?? "",
+                HttpStatusCode = httpStatusCode,
+                DiagnosticSummary = diagnosticSummary,
+            };
         }
 
-        public static ItmsSendResult Rejected(string message) =>
-            new ItmsSendResult { Outcome = ItmsSendOutcome.Rejected, Message = string.IsNullOrWhiteSpace(message) ? "ITMS refused this laptop's information." : message };
+        public static ItmsSendResult Rejected(string message, int? httpStatusCode = null, string serverCode = null, string diagnosticSummary = null) =>
+            new ItmsSendResult
+            {
+                Outcome = ItmsSendOutcome.Rejected,
+                Message = string.IsNullOrWhiteSpace(message) ? "ITMS refused this laptop's information." : message,
+                HttpStatusCode = httpStatusCode,
+                ServerCode = serverCode,
+                IsRetryable = false,
+                DiagnosticSummary = diagnosticSummary,
+            };
 
-        public static ItmsSendResult Failed(string message) =>
-            new ItmsSendResult { Outcome = ItmsSendOutcome.Failed, Message = string.IsNullOrWhiteSpace(message) ? "The laptop could not be sent to ITMS." : message };
+        public static ItmsSendResult Failed(string message, int? httpStatusCode = null, string serverCode = null, bool isRetryable = false, string diagnosticSummary = null) =>
+            new ItmsSendResult
+            {
+                Outcome = ItmsSendOutcome.Failed,
+                Message = string.IsNullOrWhiteSpace(message) ? "The laptop could not be sent to ITMS." : message,
+                HttpStatusCode = httpStatusCode,
+                ServerCode = serverCode,
+                IsRetryable = isRetryable,
+                DiagnosticSummary = diagnosticSummary,
+            };
     }
 
     /// <summary>

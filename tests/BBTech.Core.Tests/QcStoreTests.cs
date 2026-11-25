@@ -266,5 +266,52 @@ namespace BBTech.Core.Tests
             Assert.Equal(key, p.Unprotect(p.Protect(key)));
             Assert.Null(p.Unprotect(new byte[] { 1, 2, 3 }));
         }
+
+        [Fact]
+        public void Department_test_records_preserve_history_without_overwriting()
+        {
+            var repo = Open();
+            var dev = repo.RegisterDevice(LaptopA, Specs);
+
+            // Run #1 (Kamal, Hardware, Battery -> FAIL)
+            var t1 = repo.RecordTest(dev.DeviceId, "Battery", "Battery", "FAIL", "Kamal", "Hardware", "Wear 45%");
+            // Run #2 (Kamal, Hardware, Battery -> PASS after replacement)
+            var t2 = repo.RecordTest(dev.DeviceId, "Battery", "Battery", "PASS", "Kamal", "Hardware", "Replaced with OEM pack");
+
+            Assert.NotEqual(t1.TestResultId, t2.TestResultId);
+
+            // Latest result should be Run #2
+            var latest = repo.GetLatestTestResult(dev.DeviceId, "Battery", "Hardware");
+            Assert.NotNull(latest);
+            Assert.Equal("PASS", latest.Status);
+            Assert.Equal("Replaced with OEM pack", latest.Comment);
+            Assert.Equal("Kamal", latest.OperatorName);
+            Assert.Equal("Hardware", latest.Department);
+
+            // History contains both Run #2 and Run #1
+            var history = repo.GetTestHistory(dev.DeviceId, "Battery", "Hardware");
+            Assert.Equal(2, history.Count);
+            Assert.Equal("PASS", history[0].Status);
+            Assert.Equal("FAIL", history[1].Status);
+        }
+
+        [Fact]
+        public void Admin_delete_test_result_removes_record_from_active_history()
+        {
+            var repo = Open();
+            var dev = repo.RegisterDevice(LaptopA, Specs);
+
+            var t1 = repo.RecordTest(dev.DeviceId, "SSD", "SSD", "PASS", "Kamal", "Hardware", "Health 98%");
+            var t2 = repo.RecordTest(dev.DeviceId, "SSD", "SSD", "PASS", "Kamal", "Hardware", "Duplicate run");
+
+            Assert.Equal(2, repo.GetTestHistory(dev.DeviceId, "SSD", "Hardware").Count);
+
+            bool deleted = repo.DeleteTestResult(t2.TestResultId);
+            Assert.True(deleted);
+
+            var remaining = repo.GetTestHistory(dev.DeviceId, "SSD", "Hardware");
+            Assert.Single(remaining);
+            Assert.Equal(t1.TestResultId, remaining[0].TestResultId);
+        }
     }
 }

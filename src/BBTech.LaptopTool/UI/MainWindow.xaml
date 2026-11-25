@@ -1,66 +1,150 @@
 <Window x:Class="BBTech.LaptopTool.UI.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="BBTech Laptop Tool" MinWidth="760" MinHeight="430"
+        Title="BBTech Laptop Tool" MinWidth="900" MinHeight="600"
         WindowStartupLocation="CenterScreen" Background="{StaticResource AppBackground}"
         FontFamily="Segoe UI" Foreground="{StaticResource TextPrimary}" Icon="/Assets/bbtech.ico"
         UseLayoutRounding="True" SnapsToDevicePixels="True" TextOptions.TextFormattingMode="Display">
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="56" />
+            <RowDefinition Height="54" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <!-- Header (logo colours) -->
-        <Border Background="{StaticResource HeaderGradient}">
-            <Grid Margin="16,0">
+        <!-- Top Bar (Clean White, 1px border, Zero Gradients) -->
+        <Border Grid.Row="0" Background="{StaticResource HeaderBackground}" BorderBrush="{StaticResource CardBorder}" BorderThickness="0,0,0,1">
+            <Grid Margin="18,0">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
+
+                <!-- Left Branding -->
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <Button x:Name="BackButton" Style="{StaticResource BaseButton}" Background="#1FFFFFFF" BorderBrush="#40FFFFFF"
-                            Foreground="White" Padding="12,4" MinHeight="34" Margin="0,0,14,0" Click="Back_Click" Visibility="Collapsed"
-                            ToolTip="Back to start screen" AutomationProperties.Name="Home">
+                    <Button x:Name="BackButton" Style="{StaticResource BaseButton}" Background="Transparent" BorderBrush="{StaticResource CardBorder}"
+                            Foreground="{StaticResource TextPrimary}" Padding="10,5" MinHeight="30" Margin="0,0,12,0" Click="Back_Click" Visibility="Collapsed"
+                            ToolTip="Return to Start Screen" AutomationProperties.Name="Home">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock FontFamily="{StaticResource IconFont}" Text="&#xE72B;" Foreground="White" VerticalAlignment="Center" FontSize="13" />
-                            <TextBlock Text="Home" Foreground="White" Margin="8,0,0,0" VerticalAlignment="Center" />
+                            <TextBlock FontFamily="{StaticResource IconFont}" Text="&#xE72B;" Foreground="{StaticResource TextMuted}" VerticalAlignment="Center" FontSize="11" />
+                            <TextBlock Text="Home" Foreground="{StaticResource TextPrimary}" Margin="6,0,0,0" VerticalAlignment="Center" FontSize="12" />
                         </StackPanel>
                     </Button>
-                    <Image Source="/Assets/Branding/logo-tile-256.png" Width="40" Height="40" RenderOptions.BitmapScalingMode="HighQuality"
-                           AutomationProperties.Name="BBTech Laptop Tool logo" />
-                    <TextBlock Text="BBTech Laptop Tool" Foreground="White" FontSize="18" FontWeight="SemiBold" Margin="12,0,0,0" VerticalAlignment="Center" TextWrapping="NoWrap" />
-                    <TextBlock x:Name="SectionTitle" Foreground="#A9D8FF" FontSize="18" Margin="10,0,0,0" VerticalAlignment="Center" TextWrapping="NoWrap" />
+                    <Image Source="/Assets/Branding/logo-tile-256.png" Width="26" Height="26" RenderOptions.BitmapScalingMode="HighQuality"
+                           AutomationProperties.Name="BBTech Laptop Tool logo" VerticalAlignment="Center" />
+                    <TextBlock Text="BBTech" Foreground="{StaticResource TextPrimary}" FontSize="15" FontWeight="Bold" Margin="10,0,4,0" VerticalAlignment="Center" />
+                    <TextBlock Text="Laptop Tool" Foreground="{StaticResource TextMuted}" FontSize="15" FontWeight="Normal" VerticalAlignment="Center" />
+                    <TextBlock x:Name="SectionTitle" Foreground="{StaticResource TextMuted}" FontSize="13" Margin="10,0,0,0" VerticalAlignment="Center" />
                 </StackPanel>
+
+                <!-- Right Identity / System Status -->
                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Border x:Name="AdminBadge" CornerRadius="12" Background="#3316A34A" BorderBrush="#8016A34A" BorderThickness="1"
+                    <!-- Read-only User & Department Chip -->
+                    <Border x:Name="UserDeptChip" CornerRadius="14" Background="{StaticResource NeutralSoft}" BorderBrush="{StaticResource CardBorder}" BorderThickness="1"
+                            Padding="12,5" Margin="0,0,10,0" ToolTip="Active Operator Session">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock FontFamily="{StaticResource IconFont}" Text="&#xE77B;" Foreground="{StaticResource Brand}" VerticalAlignment="Center" FontSize="12" />
+                            <TextBlock x:Name="UserDeptText" Text="Kamal • Hardware" Foreground="{StaticResource TextPrimary}" FontSize="12" FontWeight="SemiBold" Margin="7,0,0,0" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Admin Privilege Badge -->
+                    <Border x:Name="AdminBadge" CornerRadius="14" Background="{StaticResource PassSoft}" BorderBrush="#BBEFCE" BorderThickness="1"
                             Padding="10,4" Margin="0,0,10,0" ToolTip="Running with Administrator privileges (Full hardware diagnostics enabled)"
                             Visibility="Collapsed">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock FontFamily="{StaticResource IconFont}" Text="&#xE7EF;" Foreground="#86EFAC" VerticalAlignment="Center" FontSize="12" />
-                            <TextBlock Text="Administrator" Foreground="White" FontSize="12" FontWeight="SemiBold" Margin="6,0,0,0" VerticalAlignment="Center" />
+                            <TextBlock FontFamily="{StaticResource IconFont}" Text="&#xE7EF;" Foreground="{StaticResource PassBrush}" VerticalAlignment="Center" FontSize="12" />
+                            <TextBlock Text="Administrator" Foreground="{StaticResource PassBrush}" FontSize="11" FontWeight="SemiBold" Margin="5,0,0,0" VerticalAlignment="Center" />
                         </StackPanel>
                     </Border>
-                    <Button x:Name="RunAdminButton" Style="{StaticResource BaseButton}" Background="#D97706" BorderBrush="#B45309"
-                            Foreground="White" Padding="10,4" MinHeight="30" Margin="0,0,10,0" Click="RunAdmin_Click"
+
+                    <Button x:Name="RunAdminButton" Style="{StaticResource BaseButton}" Background="{StaticResource WarnSoft}" BorderBrush="{StaticResource WarnBrush}"
+                            Foreground="{StaticResource WarnBrush}" Padding="10,4" MinHeight="28" Margin="0,0,10,0" Click="RunAdmin_Click"
                             ToolTip="Click to restart with Administrator privileges for full hardware and SSD SMART diagnostic access"
                             Visibility="Collapsed">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock FontFamily="{StaticResource IconFont}" Text="&#xE7EF;" Foreground="White" VerticalAlignment="Center" FontSize="12" />
-                            <TextBlock Text="Run as Administrator" Foreground="White" FontSize="12" FontWeight="SemiBold" Margin="6,0,0,0" VerticalAlignment="Center" />
+                            <TextBlock FontFamily="{StaticResource IconFont}" Text="&#xE7EF;" Foreground="{StaticResource WarnBrush}" VerticalAlignment="Center" FontSize="11" />
+                            <TextBlock Text="Run as Admin" Foreground="{StaticResource WarnBrush}" FontSize="11" FontWeight="SemiBold" Margin="5,0,0,0" VerticalAlignment="Center" />
                         </StackPanel>
                     </Button>
-                    <Border x:Name="UsbChip" CornerRadius="12" Background="#26FFFFFF" Padding="12,5" VerticalAlignment="Center">
+
+                    <!-- USB Drive Indicator -->
+                    <Border x:Name="UsbChip" CornerRadius="14" Background="{StaticResource NeutralSoft}" BorderBrush="{StaticResource CardBorder}" BorderThickness="1" Padding="10,4" VerticalAlignment="Center">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock FontFamily="{StaticResource IconFont}" Text="&#xE88E;" Foreground="#CFE8FF" VerticalAlignment="Center" />
-                            <TextBlock x:Name="UsbText" Foreground="White" FontSize="12" Margin="8,0,0,0" VerticalAlignment="Center" TextWrapping="NoWrap" />
+                            <TextBlock FontFamily="{StaticResource IconFont}" Text="&#xE88E;" Foreground="{StaticResource TextMuted}" VerticalAlignment="Center" FontSize="11" />
+                            <TextBlock x:Name="UsbText" Foreground="{StaticResource TextMuted}" FontSize="11" Margin="6,0,0,0" VerticalAlignment="Center" TextWrapping="NoWrap" />
                         </StackPanel>
                     </Border>
                 </StackPanel>
             </Grid>
         </Border>
 
-        <ContentControl x:Name="Host" Grid.Row="1" Focusable="False" />
+        <!-- Main Body: Sidebar + Host Content -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition x:Name="SidebarCol" Width="200" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Left Navigation Sidebar -->
+            <Border x:Name="SidebarBorder" Grid.Column="0" Background="{StaticResource SidebarBackground}" BorderBrush="{StaticResource CardBorder}" BorderThickness="0,0,1,0" Visibility="Collapsed">
+                <Grid Margin="12,16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <!-- Authorized Navigation Links -->
+                    <StackPanel x:Name="NavLinksPanel" Grid.Row="0">
+                        <TextBlock Text="WORKBENCH" FontSize="10" FontWeight="Bold" Foreground="{StaticResource TextMuted}" Margin="10,0,0,10" />
+                        <Button x:Name="NavHardwareBtn" Style="{StaticResource SidebarNavButton}" Click="NavHardware_Click" Margin="0,2">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock FontFamily="{StaticResource IconFont}" Text="&#xE7F4;" FontSize="14" Width="20" VerticalAlignment="Center" Foreground="{StaticResource TextMuted}" />
+                                <TextBlock Text="Hardware" Margin="8,0,0,0" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                        <Button x:Name="NavQcBtn" Style="{StaticResource SidebarNavButton}" Click="NavQc_Click" Margin="0,2">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock FontFamily="{StaticResource IconFont}" Text="&#xE9D9;" FontSize="14" Width="20" VerticalAlignment="Center" Foreground="{StaticResource TextMuted}" />
+                                <TextBlock Text="QC Inspection" Margin="8,0,0,0" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                        <Button x:Name="NavSoftwareBtn" Style="{StaticResource SidebarNavButton}" Click="NavSoftware_Click" Margin="0,2">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock FontFamily="{StaticResource IconFont}" Text="&#xE756;" FontSize="14" Width="20" VerticalAlignment="Center" Foreground="{StaticResource TextMuted}" />
+                                <TextBlock Text="Software" Margin="8,0,0,0" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                        <Button x:Name="NavEcommerceBtn" Style="{StaticResource SidebarNavButton}" Click="NavEcommerce_Click" Margin="0,2">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock FontFamily="{StaticResource IconFont}" Text="&#xE721;" FontSize="14" Width="20" VerticalAlignment="Center" Foreground="{StaticResource TextMuted}" />
+                                <TextBlock Text="E-Commerce" Margin="8,0,0,0" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+
+                    <!-- Bottom Utilities -->
+                    <StackPanel Grid.Row="2">
+                        <Border Height="1" Background="{StaticResource CardBorder}" Margin="6,8,6,12" />
+                        <Button Style="{StaticResource SidebarNavButton}" Click="NavSettings_Click" Margin="0,2">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock FontFamily="{StaticResource IconFont}" Text="&#xE713;" FontSize="14" Width="20" VerticalAlignment="Center" Foreground="{StaticResource TextMuted}" />
+                                <TextBlock Text="Settings" Margin="8,0,0,0" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                        <Button Style="{StaticResource SidebarNavButton}" Click="NavHome_Click" Margin="0,2">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock FontFamily="{StaticResource IconFont}" Text="&#xE72B;" FontSize="14" Width="20" VerticalAlignment="Center" Foreground="{StaticResource TextMuted}" />
+                                <TextBlock Text="Exit to Start" Margin="8,0,0,0" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- Main Content Host -->
+            <ContentControl x:Name="Host" Grid.Column="1" Focusable="False" />
+        </Grid>
     </Grid>
 </Window>

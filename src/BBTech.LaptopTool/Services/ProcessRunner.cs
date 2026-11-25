@@ -57,6 +57,7 @@ namespace BBTech.LaptopTool.Services
                     result.TimedOut = true;
                     result.Error = Path.GetFileName(exe) + " did not finish in time.";
                     AppLog.Warn(result.Error);
+                    try { p.Kill(); } catch { }
                     return result;
                 }
                 result.ExitCode = p.ExitCode;

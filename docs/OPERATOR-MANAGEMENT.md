@@ -1,41 +1,34 @@
 # Operator Management
 
-Source: `src/BBTech.Core/Settings/ToolSettings.cs` (`SettingsStore`), `UI/Views/SettingsWindow.cs`, `UI/Views/TestView.xaml.cs`.
-Tests: `OperatorTests` in `tests/BBTech.Core.Tests/SettingsAndWifiTests.cs`.
+Source: `BBTech.Core/Settings/ToolSettings.cs` (`OperatorRecord`, `OperatorSession`, `SettingsStore`),
+`BBTech.Core/Security/ResultAuthorization.cs`, `UI/Views/UserProfileSelectView.xaml.cs`, server `users*` tables.
 
-## Where operators live
-
-Operators are staff configuration, not laptop data. They are stored on the USB in the encrypted, tamper-evident `BBTech Data\config\settings.dat`, together with the currently selected operator. To share them, copy `BBTech Data\config\` to other BBTech USBs.
-
-## Operator record
+## Model
 
 | Field | Notes |
 |---|---|
-| OperatorId | Random identifier |
-| Name | Required and trimmed; two active operators can never share a name (case-insensitive) |
-| Role | e.g. QC (default), Senior QC, E-commerce, Technician (free text) |
-| Active | Deactivated operators are hidden for new inspections |
-| CreatedAt / UpdatedAt | Timestamps |
+| OperatorId | Stable id (same on the USB and the server) |
+| Name | Unique among active operators |
+| Role | Technician, QC Inspector, E-Commerce Specialist, Admin, Admin / Co-Founder, Super Admin |
+| Departments[] | Hardware, Software, QC, E-Commerce (several allowed; separate from the role) |
+| Permissions[] | `hardware.test`, `software.test`, `software.install`, `software.activation.check`, `software.activation.execute`, `qc.inspect`, `qc.approve`, `records.delete`, `users.manage`, ... (`ALL` for admins) |
+| Active | Inactive operators cannot be selected; their history stays |
 
-## Managing operators (admin)
+With a BBTech server, the server's list is authoritative and replaces the USB list at every configuration refresh
+(`ApplyServerOperators`). Without a server, admins manage the list in Settings → Team Profiles.
 
-Home → **Settings** → admin PIN → **QC operators**:
+## Session (1 hour)
 
-- **Add operator:** name and role. Takes effect immediately, without rebuilding.
-- **Edit:** rename or change the role. Leaving the role empty keeps the current role. Renaming an active operator to the name of another active operator is rejected.
-- **Deactivate / Reactivate.** Reactivation is rejected while another active operator uses the same name. This happens, for example, when a new staff member with the same name was added in the meantime; rename one of them first.
+- Selecting a name creates a session valid for **1 hour** (`OperatorSession`, capped at 1 hour, expires if the clock
+  moves back). It is kept in the encrypted settings on the USB and in a **signed** workstation file; a forged or
+  edited file is ignored.
+- Selecting another name replaces the session immediately. Deactivating an operator ends their session.
+- Normal technicians: no PIN, no repeated login, no repeated department choice. Admin profiles: admin PIN.
+- Every selection is audited (`OPERATOR_SELECTED`, `SESSION_STARTED`).
 
-The admin PIN is created on first use (4–12 digits). 5 wrong attempts lock Settings for 60 seconds. See [SECURITY.md](SECURITY.md).
+## Authorization (fail-closed)
 
-## Selecting the operator (QC)
-
-- **TESTED BY** in TEST lists the active operators. The choice is saved on the USB and stays selected for the following laptops and after restarts, until someone picks another name.
-- **Switching operators:** another person picks their own name, and new inspections belong to them.
-
-## Historical snapshots
-
-Each inspection stores **OperatorNameSnapshot** and **OperatorRoleSnapshot** at the moment it starts. Renaming, changing the role of or deactivating an operator later **does not change** past inspections, so history always shows who actually performed the test. An inspection in progress keeps its original operator, even if the selection changes.
-
-## Example data
-
-Names such as *Jimmy* and *Rahim* in tests and screenshots are **example data** used during development. They are not real BBTech staff records.
+Every result write goes through `ResultAuthorization` in the service layer (and again on the server):
+no operator, an inactive operator or a department the operator may not use is refused; the final QC decision needs
+`qc.approve`; deleting needs `records.delete` and never applies to a final QC decision. Results store the operator's
+id and a name snapshot, so renaming never rewrites history.

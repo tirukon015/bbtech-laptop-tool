@@ -348,7 +348,8 @@ namespace BBTech.Core.Integration
             IEnumerable<TestItem> testItems = null,
             PhysicalConditionDetails condition = null,
             AccessoryDetails accessories = null,
-            bool indent = true)
+            bool indent = true,
+            JsonObject traceability = null)
         {
             var d = detection ?? new DetectionResult();
             var deviceObj = DetectionExporter.ToItmsObject(d);
@@ -633,6 +634,14 @@ namespace BBTech.Core.Integration
                     { "product_code", d.System?.ProductCode ?? "" },
                     { "warnings", d.Warnings ?? new List<string>() }
                 });
+            }
+
+            // 14. BBTech traceability: permanent device id, lifecycle, technical inventory (raw values + sources),
+            //     full test / repair / software / QC history. See ItmsTraceability.
+            if (traceability != null)
+            {
+                root.Add("bbtech_traceability", traceability);
+                root.Add("traceability_sha256", ItmsTraceability.Sha256(traceability));
             }
 
             return JsonWriter.Serialize(root, indent);

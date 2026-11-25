@@ -1,0 +1,25 @@
+# Local development / single-host deployment of the BBTech server.
+#   1. copy .env.example to .env and set a strong BBTECH_DB_PASSWORD
+#   2. docker compose up -d
+# PostgreSQL is only reachable from this host (127.0.0.1:5433); the desktop tool talks to the API, never to the database.
+services:
+  postgres:
+    image: postgres:17
+    container_name: bbtech-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: bbtech
+      POSTGRES_USER: bbtech
+      POSTGRES_PASSWORD: ${BBTECH_DB_PASSWORD:?Set BBTECH_DB_PASSWORD in .env}
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - bbtech-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bbtech -d bbtech"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  bbtech-pgdata:

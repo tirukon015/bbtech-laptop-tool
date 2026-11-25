@@ -52,33 +52,76 @@ namespace BBTech.LaptopTool.Services
                             StorageProvider.Fill(detection);
                         }
 
-                        // 2. Read Windows-native NVMe & SMART reliability counters (no external tool needed)
-                        StorageProvider.ReadReliability(detection.StorageDevices);
-
-                        // 3. Attempt to invoke or communicate with HD Sentinel Pro
-                        List<HdSentinelDisk> hdsDisks = null;
-                        string providerName = null;
-
+                        // 2. Direct native kernel NVMe Log Page 0x02 and ATA SMART diagnostics (< 5ms)
                         try
                         {
-                            var hdsOutcome = ExecuteHdSentinelReport();
-                            if (hdsOutcome.Success && hdsOutcome.Disks != null && hdsOutcome.Disks.Count > 0)
-                            {
-                                hdsDisks = hdsOutcome.Disks;
-                                providerName = "HD Sentinel Pro (v6.30)";
-                                AppLog.Info(string.Format("SSD Health Engine: HD Sentinel report successfully acquired for {0} drive(s).", hdsDisks.Count));
-                            }
-                            else if (!string.IsNullOrEmpty(hdsOutcome.ErrorMessage))
-                            {
-                                AppLog.Info("SSD Health Engine: HD Sentinel notice: " + hdsOutcome.ErrorMessage);
-                            }
+                            NativeStorageDiagnostics.QueryAll(detection.StorageDevices);
                         }
                         catch (Exception ex)
                         {
-                            AppLog.Warn("SSD Health Engine: HD Sentinel query failed, utilizing Windows diagnostics", ex);
+                            AppLog.Warn("SSD Health Engine: Native storage diagnostics failed", ex);
                         }
 
-                        // 4. Correlate and normalize into unified SsdHealthEngineResult
+                        // 3. HD Sentinel persistent telemetry parsing (.sta daily records & .hdd NVMe logs)
+                        try
+                        {
+                            var extraDirs = new List<string>();
+                            try
+                            {
+                                string toolDir = ToolBundle.GetToolDir(ToolBundle.HdSentinel);
+                                if (!string.IsNullOrEmpty(toolDir)) extraDirs.Add(toolDir);
+                            }
+                            catch { }
+                            if (!string.IsNullOrEmpty(AppPaths.BaseDir))
+                            {
+                                extraDirs.Add(AppPaths.BaseDir);
+                                extraDirs.Add(Path.Combine(AppPaths.BaseDir, "tools", "HDSentinel"));
+                            }
+                            HdSentinelDataService.TryEnrichAll(detection.StorageDevices, extraDirs);
+                        }
+                        catch (Exception ex)
+                        {
+                            AppLog.Warn("SSD Health Engine: HD Sentinel data service enrichment failed", ex);
+                        }
+
+                        // 4. Read Windows-native NVMe & SMART reliability counters (MSFT_StorageReliabilityCounter)
+                        try
+                        {
+                            StorageProvider.ReadReliability(detection.StorageDevices);
+                        }
+                        catch (Exception ex)
+                        {
+                            AppLog.Warn("SSD Health Engine: Storage reliability counter query failed", ex);
+                        }
+
+                        // 5. Attempt HD Sentinel XML report if any internal solid-state drive is still missing health
+                        List<HdSentinelDisk> hdsDisks = null;
+                        string providerName = null;
+
+                        bool needsHdSentinel = forceRefresh || detection.StorageDevices.Any(d => !d.IsExternal && !d.HealthPercent.HasValue);
+                        if (needsHdSentinel)
+                        {
+                            try
+                            {
+                                var hdsOutcome = ExecuteHdSentinelReport();
+                                if (hdsOutcome.Success && hdsOutcome.Disks != null && hdsOutcome.Disks.Count > 0)
+                                {
+                                    hdsDisks = hdsOutcome.Disks;
+                                    providerName = "HD Sentinel Pro (v6.30)";
+                                    AppLog.Info(string.Format("SSD Health Engine: HD Sentinel report successfully acquired for {0} drive(s).", hdsDisks.Count));
+                                }
+                                else if (!string.IsNullOrEmpty(hdsOutcome.ErrorMessage))
+                                {
+                                    AppLog.Info("SSD Health Engine: HD Sentinel notice: " + hdsOutcome.ErrorMessage);
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                AppLog.Warn("SSD Health Engine: HD Sentinel query failed, utilizing Windows diagnostics", ex);
+                            }
+                        }
+
+                        // 6. Correlate and normalize into unified SsdHealthEngineResult
                         var engineResult = SsdHealthMatcher.Correlate(detection.StorageDevices, hdsDisks, providerName, detection);
 
                         _lastCachedResult = engineResult;
@@ -123,21 +166,52 @@ namespace BBTech.LaptopTool.Services
                 };
             }
 
+            string folder = Path.GetDirectoryName(exePath);
+
+            // Check if an existing fresh XML report is already available in the tool folder
+            string existingReport = FindAlternativeReport(folder);
+            if (!string.IsNullOrEmpty(existingReport) && File.Exists(existingReport))
+            {
+                var fi = new FileInfo(existingReport);
+                if (fi.Length > 100 && (DateTime.Now - fi.LastWriteTime).TotalMinutes < 15)
+                {
+                    try
+                    {
+                        string content = File.ReadAllText(existingReport);
+                        var disks = HdSentinelReportParser.Parse(content);
+                        if (disks != null && disks.Count > 0)
+                        {
+                            return new HdSentinelRunOutcome { Success = true, Disks = disks };
+                        }
+                    }
+                    catch { }
+                }
+            }
+
             string reportXml = AppPaths.NewTempFile(".xml");
             try
             {
                 bool isAdmin = IsProcessElevated();
+                if (!isAdmin)
+                {
+                    return new HdSentinelRunOutcome
+                    {
+                        Success = false,
+                        ErrorMessage = "Running as standard user; using Windows Storage Reliability API for non-blocking SSD detection."
+                    };
+                }
+
                 string args = string.Format("/SILENT /XMLREPORT \"{0}\" /QUIT", reportXml);
 
                 var psi = new ProcessStartInfo(exePath, args)
                 {
-                    WorkingDirectory = Path.GetDirectoryName(exePath),
-                    UseShellExecute = !isAdmin, // Needs ShellExecute for UAC prompt if non-admin
+                    WorkingDirectory = folder,
+                    UseShellExecute = false,
                     CreateNoWindow = true,
                     WindowStyle = ProcessWindowStyle.Hidden,
                 };
 
-                AppLog.Info(string.Format("SSD Health Engine starting HD Sentinel ({0})", isAdmin ? "elevated/hidden" : "UAC request"));
+                AppLog.Info("SSD Health Engine starting HD Sentinel (elevated/hidden)");
                 using (var proc = Process.Start(psi))
                 {
                     if (proc == null)
@@ -145,26 +219,31 @@ namespace BBTech.LaptopTool.Services
                         return new HdSentinelRunOutcome { Success = false, ErrorMessage = "Failed to launch HD Sentinel process." };
                     }
 
-                    // Poll for report file creation up to 15 seconds
+                    // Poll for report file creation up to 2 seconds for fast, non-blocking detection
                     var sw = Stopwatch.StartNew();
-                    while (sw.Elapsed < TimeSpan.FromSeconds(15))
+                    while (sw.Elapsed < TimeSpan.FromSeconds(2))
                     {
                         if (File.Exists(reportXml) && new FileInfo(reportXml).Length > 100)
                         {
-                            // Allow a brief moment for stream write buffer flush
-                            Thread.Sleep(300);
+                            Thread.Sleep(150);
                             break;
                         }
 
-                        if (proc.HasExited && sw.Elapsed > TimeSpan.FromSeconds(2))
+                        string alt = FindAlternativeReport(folder);
+                        if (!string.IsNullOrEmpty(alt) && File.Exists(alt) && new FileInfo(alt).Length > 100)
                         {
-                            // Check one more time after process exit
-                            Thread.Sleep(500);
+                            reportXml = alt;
+                            break;
+                        }
+
+                        if (proc.HasExited && sw.Elapsed > TimeSpan.FromMilliseconds(500))
+                        {
+                            Thread.Sleep(150);
                             if (File.Exists(reportXml) && new FileInfo(reportXml).Length > 100) break;
                             break;
                         }
 
-                        Thread.Sleep(250);
+                        Thread.Sleep(100);
                     }
                 }
 

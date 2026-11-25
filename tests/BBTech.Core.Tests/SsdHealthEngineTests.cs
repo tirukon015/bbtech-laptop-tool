@@ -233,5 +233,126 @@ namespace BBTech.Core.Tests
             Assert.True(res2.Success);
             Assert.Empty(res2.Disks);
         }
+
+        [Fact]
+        public void SsdHealthMatcher_HonorsPreEnrichedHealthPercent_AndUpdatesDetectionResult()
+        {
+            var detection = new DetectionResult();
+            var devices = new List<StorageDevice>
+            {
+                new StorageDevice
+                {
+                    DeviceId = @"\\.\PHYSICALDRIVE0",
+                    Model = "Micron MTFDKBA512TFK",
+                    SerialNumber = "00A0_7501_3CC4_631F.",
+                    BusType = "NVMe",
+                    WindowsHealth = "Healthy",
+                    HealthPercent = 96,
+                    WearPercentUsed = 4,
+                    HealthSource = "Windows Native NVMe Protocol IOCTL",
+                    TemperatureC = 39,
+                    PowerOnHours = 15560,
+                    IsExternal = false
+                }
+            };
+
+            var result = SsdHealthMatcher.Correlate(devices, null, null, detection);
+
+            Assert.True(result.Success);
+            Assert.Single(result.Disks);
+            var d = result.Disks[0];
+
+            Assert.Equal(96, d.HealthPercent);
+            Assert.Equal(SsdHealthStatus.Optimal, d.Status);
+            Assert.Equal("OPTIMAL", d.StatusLabel);
+            Assert.Equal("Windows Native NVMe Protocol IOCTL", d.DataSource);
+            Assert.Equal("96% (OPTIMAL)", detection.SsdHealth);
+        }
+
+        [Fact]
+        public void SsdHealthMatcher_NeverFabricates100Percent_WhenOnlyBasicOperationalStatusKnown()
+        {
+            var detection = new DetectionResult();
+            var devices = new List<StorageDevice>
+            {
+                new StorageDevice
+                {
+                    DeviceId = @"\\.\PHYSICALDRIVE0",
+                    Model = "Generic SSD 512GB",
+                    BusType = "SATA",
+                    WindowsHealth = "Healthy",
+                    HealthPercent = null,
+                    WearPercentUsed = null,
+                    IsExternal = false
+                }
+            };
+
+            var result = SsdHealthMatcher.Correlate(devices, null, null, detection);
+
+            Assert.True(result.Success);
+            Assert.Single(result.Disks);
+            var d = result.Disks[0];
+
+            // Must NOT fabricate 100% when actual wear is unknown
+            Assert.Null(d.HealthPercent);
+            Assert.Equal("Windows Basic Storage API", d.DataSource);
+            Assert.DoesNotContain("100%", detection.SsdHealth);
+            Assert.Equal("Healthy", detection.SsdHealth);
+        }
+
+        [Fact]
+        public void HdSentinelDataService_EnrichesFromStaLines_WithRealMicronData()
+        {
+            var dev = new StorageDevice
+            {
+                Model = "Micron MTFDKBA512TFK",
+                SerialNumber = "00A0_7501_3CC4_631F.",
+                DeviceId = @"\\.\PHYSICALDRIVE0",
+                BusType = "NVMe"
+            };
+
+            var lines = new[]
+            {
+                "[Sta_Micron MTFDKBA512TFK (488382 MB)_22453CC4631F]",
+                "46270=51,39.99,101,96,25,18176247"
+            };
+
+            bool ok = HdSentinelDataService.EnrichFromStaLines(lines, dev);
+
+            Assert.True(ok);
+            Assert.Equal(96, dev.HealthPercent);
+            Assert.Equal(40, dev.TemperatureC);
+            Assert.Equal("OPTIMAL", dev.HealthAssessment);
+            Assert.Contains("96% health", dev.DiagnosticDetails);
+        }
+
+        [Fact]
+        public void HdSentinelDataService_EnrichesFromHddLines_WithRealNvmeSmartLog()
+        {
+            var dev = new StorageDevice
+            {
+                Model = "Micron MTFDKBA512TFK",
+                SerialNumber = "00A0_7501_3CC4_631F.",
+                DeviceId = @"\\.\PHYSICALDRIVE0",
+                BusType = "NVMe"
+            };
+
+            var lines = new[]
+            {
+                "[46270]",
+                "SMART=FF_1200=00_00,FF_1201=00_013E,FF_1203=00_64,FF_1204=00_05,FF_1205=00_04,FF_1220=00_00000000000000000000000002C52F8D,FF_1230=00_000000000000000000000000023801FB,FF_1280=00_00000000000000000000000000003CC8"
+            };
+
+            bool ok = HdSentinelDataService.ParseHddLines(lines, dev);
+
+            Assert.True(ok);
+            // 4% wear consumed = 96% health
+            Assert.Equal(96, dev.HealthPercent);
+            Assert.Equal(4, dev.WearPercentUsed);
+            Assert.Equal(45, dev.TemperatureC);
+            Assert.Equal(15560, dev.PowerOnHours);
+            Assert.Equal("OPTIMAL", dev.HealthAssessment);
+            Assert.Contains("96% health (4% endurance used)", dev.DiagnosticDetails);
+        }
     }
 }

@@ -137,6 +137,10 @@ namespace BBTech.Core.Integration
         public string RequestId { get; }
         public ItmsDevicePayload Device { get; }
         public DetectionResult Detection { get; set; }
+        /// <summary>The laptop's complete traceability record (identity, inventory, history, QC); sent as "bbtech_traceability".</summary>
+        public JsonObject Traceability { get; set; }
+        /// <summary>SHA-256 of the compact traceability JSON (sent as "traceability_sha256"; ITMS may echo it back).</summary>
+        public string TraceabilitySha256 => Traceability == null ? null : ItmsTraceability.Sha256(Traceability);
 
         public ItmsSubmission(string requestId, ItmsDevicePayload device, DetectionResult detection = null)
         {
@@ -149,7 +153,12 @@ namespace BBTech.Core.Integration
 
         public static string NewRequestId() => Guid.NewGuid().ToString("D");
 
-        public JsonObject ToJsonObject() => new JsonObject { { "request_id", RequestId }, { "device", Device.ToJsonObject() } };
+        public JsonObject ToJsonObject()
+        {
+            var o = new JsonObject { { "request_id", RequestId }, { "device", Device.ToJsonObject() } };
+            if (Traceability != null) { o.Add("bbtech_traceability", Traceability); o.Add("traceability_sha256", TraceabilitySha256); }
+            return o;
+        }
 
         public string ToJson(bool indent = true) => JsonWriter.Serialize(ToJsonObject(), indent);
     }

@@ -12,7 +12,14 @@ namespace BBTech.Core.Testing
 
     public enum HardwareTest
     {
-        Battery, Storage, Display, Keyboard, Touchpad, Speaker, Headphone, Microphone, Camera, Usb, WiFi, Bluetooth,
+        Battery, Storage, Display, Keyboard, Touchpad, Speaker, Headphone, Microphone, Camera, Usb, WiFi, Bluetooth, Ram, PhysicalInspection, OtherInspection,
+        SoftwareDisplay, SoftwareKeyboard, SoftwareMouse, SoftwareScroll, SoftwareHotkeys, SoftwareTouchpad,
+        SoftwareOfficeActivation, SoftwareWindowsActivation,
+        // Added in 1.3/1.4 (appended: stored results use the names, existing ids never change)
+        Mouse, SoftwareDrivers, SoftwareAudio, SoftwareMicrophone, SoftwareCamera,
+        // 1.5: QC checklist confirmations and the final delivery checklist (visual PASS/FAIL items)
+        QcWindows, QcSoftware, QcActivation, QcAccessories, QcOverall,
+        DeliveryPhysical, DeliveryDisplay, DeliveryKeyboard, DeliveryCharger, DeliveryAccessories, DeliveryWindows, DeliverySoftware, DeliveryCustomerConfig
     }
 
     public static class TestText
@@ -47,6 +54,34 @@ namespace BBTech.Core.Testing
                 case HardwareTest.Storage: return "Storage / SSD";
                 case HardwareTest.Usb: return "USB";
                 case HardwareTest.WiFi: return "Wi-Fi";
+                case HardwareTest.Ram: return "RAM";
+                case HardwareTest.PhysicalInspection: return "Physical Inspection";
+                case HardwareTest.OtherInspection: return "Other Inspection";
+                case HardwareTest.SoftwareDisplay: return "Display & Driver";
+                case HardwareTest.SoftwareKeyboard: return "Keyboard Matrix";
+                case HardwareTest.SoftwareMouse: return "Mouse Tracking";
+                case HardwareTest.SoftwareScroll: return "Mouse Scroll Wheel";
+                case HardwareTest.SoftwareHotkeys: return "System Hotkeys";
+                case HardwareTest.SoftwareTouchpad: return "Touchpad & Gestures";
+                case HardwareTest.SoftwareOfficeActivation: return "Microsoft Office Activation";
+                case HardwareTest.SoftwareWindowsActivation: return "Windows Activation";
+                case HardwareTest.SoftwareDrivers: return "Drivers";
+                case HardwareTest.SoftwareAudio: return "Audio Output";
+                case HardwareTest.SoftwareMicrophone: return "Microphone Input";
+                case HardwareTest.SoftwareCamera: return "Camera";
+                case HardwareTest.QcWindows: return "Windows";
+                case HardwareTest.QcSoftware: return "Software";
+                case HardwareTest.QcActivation: return "Activation";
+                case HardwareTest.QcAccessories: return "Accessories";
+                case HardwareTest.QcOverall: return "Overall";
+                case HardwareTest.DeliveryPhysical: return "Physical";
+                case HardwareTest.DeliveryDisplay: return "Display";
+                case HardwareTest.DeliveryKeyboard: return "Keyboard";
+                case HardwareTest.DeliveryCharger: return "Charger";
+                case HardwareTest.DeliveryAccessories: return "Accessories";
+                case HardwareTest.DeliveryWindows: return "Windows";
+                case HardwareTest.DeliverySoftware: return "Software";
+                case HardwareTest.DeliveryCustomerConfig: return "Customer setup";
                 default: return t.ToString();
             }
         }

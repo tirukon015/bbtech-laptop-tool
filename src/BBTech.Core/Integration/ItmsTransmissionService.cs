@@ -14,6 +14,8 @@ namespace BBTech.Core.Integration
         /// <summary>The transport answer (null when no transport call was made).</summary>
         public ItmsSendResult Transport { get; set; }
         public string Message { get; set; } = "";
+        /// <summary>VERIFIED / UNCONFIRMED / MISMATCH / NOT_SENT for the traceability record of this send.</summary>
+        public string TraceabilityVerification { get; set; }
         /// <summary>True only when ITMS confirmed receipt of this laptop.</summary>
         public bool Confirmed => TransmissionState.IsConfirmed(Record);
     }
@@ -48,9 +50,36 @@ namespace BBTech.Core.Integration
             _connector = connector ?? throw new ArgumentNullException(nameof(connector));
         }
 
+        /// <summary>
+        /// QC is the final gate: a laptop goes to ITMS only when its LATEST final QC decision is PASS.
+        /// Returns null when allowed, otherwise the reason.
+        /// </summary>
+        public string QcGateProblem(DeviceRecord device)
+        {
+            // The lifecycle decides: QC PASS must exist AND still count (a later QC return or a newer failure undoes it).
+            var state = Testing.LaptopLifecycle.Evaluate(_repo.GetDeviceHistory(Require(device).DeviceId), Requirements);
+            if (state.ReadyForItms) return null;
+            var decision = _repo.GetLatestTestResult(device.DeviceId, Testing.QcGate.QcDecisionTestId, Testing.Departments.Qc);
+            if (decision == null) return "This laptop has no final QC decision yet. QC must record QC PASS before it can be sent to ITMS.";
+            if (decision.Status != "PASS") return "The latest final QC decision for this laptop is " + decision.Status + ". It cannot be sent to ITMS.";
+            return "This laptop is not ready for ITMS (" + state.Label + "). QC PASS must be recorded after Hardware and Software have handed it over.";
+        }
+
+        private ItmsTransmissionOutcome Blocked(DeviceRecord device, string why) => new ItmsTransmissionOutcome
+        {
+            Record = _repo.GetSyncRecord(SyncEntity.Device, device.DeviceId),
+            Message = why,
+        };
+
         public bool IsEnabled => _connector.IsEnabled;
 
+        /// <summary>Test definitions used to describe the lifecycle in the payload (null = built-in defaults).</summary>
+        public Testing.QcRequirements Requirements { get; set; }
+
         public SyncRecord GetStatus(DeviceRecord device) => _repo.GetOrCreateDeviceSync(Require(device).DeviceId);
+
+        public System.Collections.Generic.List<SyncRecord> GetHistory(DeviceRecord device) =>
+            _repo.GetSyncHistory(SyncEntity.Device, Require(device).DeviceId);
 
         /// <summary>
         /// Finds (and refreshes) or creates the stored record of THIS physical laptop, so its transmission
@@ -75,11 +104,12 @@ namespace BBTech.Core.Integration
         /// <summary>
         /// The one action behind the "Send to ITMS" button: does the next step for this laptop.
         ///   LOCAL → mark ready and send · READY_TO_SEND → send · FAILED → retry (same request id)
-        ///   SENT → ask ITMS whether it received the laptop · ITMS_RECEIVED → nothing to do.
+        ///   SENT → ask ITMS whether it received the laptop · ITMS_RECEIVED → returns confirmed status.
+        /// If forceResend is true, initiates a new submission attempt with a new request ID.
         /// A send left unfinished by a crash is first recovered as FAILED. With the connector disabled
         /// nothing is written and nothing is sent.
         /// </summary>
-        public async Task<ItmsTransmissionOutcome> SendOrContinueAsync(DeviceRecord device, DetectionResult detection = null)
+        public async Task<ItmsTransmissionOutcome> SendOrContinueAsync(DeviceRecord device, DetectionResult detection = null, bool forceResend = false)
         {
             Require(device);
             if (!_connector.IsEnabled)
@@ -89,6 +119,14 @@ namespace BBTech.Core.Integration
                     Transport = ItmsSendResult.NotEnabled(),
                     Message = ItmsSendResult.NotEnabled().Message,
                 };
+
+            string qcProblem = QcGateProblem(device);
+            if (qcProblem != null) return Blocked(device, qcProblem);
+
+            if (forceResend)
+            {
+                return await ResendAsync(device, detection).ConfigureAwait(false);
+            }
 
             var record = RecoverInterrupted(device);
             switch (record.SyncStatus)
@@ -102,10 +140,47 @@ namespace BBTech.Core.Integration
                 case TransmissionState.Local:
                     var ready = MarkReady(device);
                     if (ready.Record.SyncStatus != TransmissionState.ReadyToSend) return ready;
-                    return await SendAsync(device, detection).ConfigureAwait(false);
+                    return await SendAsync(device, detection, ready.Record).ConfigureAwait(false);
                 default:
-                    return await SendAsync(device, detection).ConfigureAwait(false);
+                    return await SendAsync(device, detection, record).ConfigureAwait(false);
             }
+        }
+
+        /// <summary>
+        /// Explicitly creates and executes a new ITMS submission for this physical laptop,
+        /// preserving all previous submission records in the history.
+        /// </summary>
+        public async Task<ItmsTransmissionOutcome> ResendAsync(DeviceRecord device, DetectionResult detection = null)
+        {
+            Require(device);
+            if (!_connector.IsEnabled)
+                return new ItmsTransmissionOutcome
+                {
+                    Record = _repo.GetOrCreateDeviceSync(device.DeviceId),
+                    Transport = ItmsSendResult.NotEnabled(),
+                    Message = ItmsSendResult.NotEnabled().Message,
+                };
+
+            string qcProblem = QcGateProblem(device);
+            if (qcProblem != null) return Blocked(device, qcProblem);
+
+            var payload = ItmsDevicePayload.From(device);
+            if (!payload.IsValid)
+            {
+                var current = _repo.GetOrCreateDeviceSync(device.DeviceId);
+                return new ItmsTransmissionOutcome { Record = current, Message = string.Join(" ", payload.Problems) };
+            }
+
+            // Create a brand new submission record in the history
+            var record = _repo.CreateNewDeviceSync(device.DeviceId);
+            record = _repo.TransitionSync(record.SyncId, TransmissionState.ReadyToSend);
+
+            if (detection != null)
+            {
+                detection.SubmissionId = record.RequestId;
+            }
+
+            return await SendAsync(device, detection, record).ConfigureAwait(false);
         }
 
         /// <summary>LOCAL → READY_TO_SEND after checking that the payload is usable. Offline.</summary>
@@ -124,22 +199,34 @@ namespace BBTech.Core.Integration
         }
 
         /// <summary>Sends this laptop (READY_TO_SEND → SENDING → SENT/ITMS_RECEIVED or FAILED).</summary>
-        public async Task<ItmsTransmissionOutcome> SendAsync(DeviceRecord device, DetectionResult detection = null)
+        public async Task<ItmsTransmissionOutcome> SendAsync(DeviceRecord device, DetectionResult detection = null, SyncRecord record = null)
         {
             var payload = ItmsDevicePayload.From(Require(device));
-            var record = _repo.GetOrCreateDeviceSync(device.DeviceId);
+            record = record ?? _repo.GetOrCreateDeviceSync(device.DeviceId);
             if (!_connector.IsEnabled)
                 return new ItmsTransmissionOutcome { Record = record, Transport = ItmsSendResult.NotEnabled(), Message = ItmsSendResult.NotEnabled().Message };
+            // Every transport path passes here: QC PASS is required, whichever button was used.
+            string qcProblem = QcGateProblem(device);
+            if (qcProblem != null) return new ItmsTransmissionOutcome { Record = record, Message = qcProblem };
             if (record.SyncStatus != TransmissionState.ReadyToSend)
                 return new ItmsTransmissionOutcome { Record = record, Message = Describe(record) };
 
+            if (detection != null && !string.IsNullOrEmpty(record.RequestId))
+            {
+                detection.SubmissionId = record.RequestId;
+            }
+
             // Same request id for the first attempt and every retry (idempotent on the ITMS side).
-            var submission = new ItmsSubmission(record.RequestId, payload, detection);
+            var submission = new ItmsSubmission(record.RequestId, payload, detection)
+            {
+                // Everything traceable about this laptop goes with it (built from the stored records only).
+                Traceability = ItmsTraceability.Build(device, _repo.GetDeviceHistory(device.DeviceId), Requirements),
+            };
             record = _repo.TransitionSync(record.SyncId, TransmissionState.Sending);
             ItmsSendResult result;
             try { result = await _connector.SendDeviceAsync(submission).ConfigureAwait(false); }
             catch (Exception) { result = ItmsSendResult.Failed(null); } // details stay out of the store and the UI
-            return Apply(record, result ?? ItmsSendResult.Failed(null));
+            return Apply(record, result ?? ItmsSendResult.Failed(null), submission.TraceabilitySha256);
         }
 
         /// <summary>SENT → asks ITMS whether it received the laptop (→ ITMS_RECEIVED, or FAILED when refused).</summary>
@@ -171,12 +258,16 @@ namespace BBTech.Core.Integration
         public Task<ItmsTransmissionOutcome> RetryAsync(DeviceRecord device, DetectionResult detection = null)
         {
             var record = _repo.GetOrCreateDeviceSync(Require(device).DeviceId);
+            if (record.SyncStatus == TransmissionState.Sending)
+                record = RecoverInterrupted(device);
             if (record.SyncStatus != TransmissionState.Failed)
                 return Task.FromResult(new ItmsTransmissionOutcome { Record = record, Message = Describe(record) });
             if (!_connector.IsEnabled)
                 return Task.FromResult(new ItmsTransmissionOutcome { Record = record, Transport = ItmsSendResult.NotEnabled(), Message = ItmsSendResult.NotEnabled().Message });
-            _repo.TransitionSync(record.SyncId, TransmissionState.ReadyToSend);
-            return SendAsync(device, detection);
+            string qcProblem = QcGateProblem(device);
+            if (qcProblem != null) return Task.FromResult(new ItmsTransmissionOutcome { Record = record, Message = qcProblem });
+            record = _repo.TransitionSync(record.SyncId, TransmissionState.ReadyToSend);
+            return SendAsync(device, detection, record);
         }
 
         /// <summary>
@@ -190,14 +281,28 @@ namespace BBTech.Core.Integration
             return _repo.TransitionSync(record.SyncId, TransmissionState.Failed, error: "Sending was interrupted before ITMS answered.");
         }
 
-        private ItmsTransmissionOutcome Apply(SyncRecord sending, ItmsSendResult result)
+        /// <summary>VERIFIED (ITMS echoed the same traceability hash), UNCONFIRMED (ITMS does not echo it) or MISMATCH.</summary>
+        public static string TraceabilityVerification(string sentSha256, string echoedSha256) =>
+            string.IsNullOrEmpty(sentSha256) ? "NOT_SENT"
+          : string.IsNullOrEmpty(echoedSha256) ? "UNCONFIRMED"
+          : string.Equals(sentSha256, echoedSha256, StringComparison.OrdinalIgnoreCase) ? "VERIFIED" : "MISMATCH";
+
+        private ItmsTransmissionOutcome Apply(SyncRecord sending, ItmsSendResult result, string sentTraceabilitySha256 = null)
         {
             SyncRecord record;
+            string verification = TraceabilityVerification(sentTraceabilitySha256, result.EchoedTraceabilitySha256);
             switch (result.Outcome)
             {
+                case ItmsSendOutcome.Received when verification == "MISMATCH":
+                    // ITMS answered, but with different traceability data than was sent: never treated as delivered.
+                    record = _repo.TransitionSync(sending.SyncId, TransmissionState.Sent);
+                    record = _repo.TransitionSync(record.SyncId, TransmissionState.Failed,
+                        error: "ITMS confirmed a different traceability record (hash mismatch). Send again.");
+                    return new ItmsTransmissionOutcome { Record = record, Transport = result, Message = record.LastError, TraceabilityVerification = verification };
                 case ItmsSendOutcome.Received:
                     record = _repo.TransitionSync(sending.SyncId, TransmissionState.Sent);
-                    record = _repo.TransitionSync(record.SyncId, TransmissionState.ItmsReceived, receipt: result.Receipt);
+                    record = _repo.TransitionSync(record.SyncId, TransmissionState.ItmsReceived,
+                        receipt: result.Receipt + (verification == "NOT_SENT" ? "" : " · traceability " + verification));
                     break;
                 case ItmsSendOutcome.RequestSent:
                     record = _repo.TransitionSync(sending.SyncId, TransmissionState.Sent);
@@ -206,7 +311,12 @@ namespace BBTech.Core.Integration
                     record = _repo.TransitionSync(sending.SyncId, TransmissionState.Failed, error: result.Message);
                     break;
             }
-            return new ItmsTransmissionOutcome { Record = record, Transport = result, Message = result.Message };
+            return new ItmsTransmissionOutcome
+            {
+                Record = record, Transport = result, TraceabilityVerification = verification,
+                Message = result.Message + (result.Outcome == ItmsSendOutcome.Received && verification == "UNCONFIRMED"
+                    ? " (ITMS did not confirm the traceability content; it needs to echo traceability_sha256.)" : ""),
+            };
         }
 
         /// <summary>Staff-readable description of a transmission state.</summary>

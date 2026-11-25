@@ -141,6 +141,15 @@ namespace BBTech.Core.Models
         public string DiagnosticDetails { get; set; } = "";
         /// <summary>Engine provider (HD Sentinel Pro v6.30, Windows NVMe Diagnostics, etc.).</summary>
         public string HealthSource { get; set; } = "";
+        /// <summary>Firmware revision reported by the drive.</summary>
+        public string FirmwareVersion { get; set; } = "";
+        /// <summary>
+        /// Raw health values exactly as the drive reported them (NVMe SMART / Health Information log, ATA SMART
+        /// attributes): e.g. critical_warning, available_spare_percent, percentage_used, data_units_written,
+        /// power_cycles, unsafe_shutdowns, media_errors. Empty when the drive's health could not be read:
+        /// the health is then UNKNOWN, never assumed good.
+        /// </summary>
+        public Dictionary<string, string> RawHealth { get; set; } = new Dictionary<string, string>();
 
         /// <summary>ITMS-style value, e.g. "512 GB SSD".</summary>
         public string DisplayValue

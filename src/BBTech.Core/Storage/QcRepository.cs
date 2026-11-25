@@ -44,6 +44,7 @@ namespace BBTech.Core.Storage
         private readonly Dictionary<string, DeviceRecord> _devices = new Dictionary<string, DeviceRecord>();
         private readonly Dictionary<string, InspectionRecord> _inspections = new Dictionary<string, InspectionRecord>();
         private readonly Dictionary<string, Dictionary<string, TestResultRecord>> _results = new Dictionary<string, Dictionary<string, TestResultRecord>>();
+        private readonly List<TestResultRecord> _allResults = new List<TestResultRecord>();
         private readonly Dictionary<string, SyncRecord> _sync2 = new Dictionary<string, SyncRecord>();
         private readonly Dictionary<string, WifiProvisionRecord> _wifi = new Dictionary<string, WifiProvisionRecord>(StringComparer.Ordinal);
 
@@ -139,9 +140,36 @@ namespace BBTech.Core.Storage
                     _inspections[e.Inspection.InspectionId] = e.Inspection;
                     break;
                 case JournalEntry.KindResult when e.Result != null:
-                    if (_inspections.TryGetValue(e.Result.InspectionId, out var insp) && !insp.IsOpen) break; // immutable
-                    if (!_results.TryGetValue(e.Result.InspectionId, out var map)) _results[e.Result.InspectionId] = map = new Dictionary<string, TestResultRecord>();
-                    map[e.Result.TestId] = e.Result;
+                    if (e.Result.Deleted)
+                    {
+                        var target = _allResults.FirstOrDefault(r => r.TestResultId == e.Result.TestResultId);
+                        if (target != null) target.Deleted = true;
+                    }
+                    else
+                    {
+                        if (string.IsNullOrEmpty(e.Result.DeviceId) && !string.IsNullOrEmpty(e.Result.InspectionId) && _inspections.TryGetValue(e.Result.InspectionId, out var linkedInsp))
+                        {
+                            e.Result.DeviceId = linkedInsp.DeviceId;
+                            if (string.IsNullOrEmpty(e.Result.OperatorName)) e.Result.OperatorName = linkedInsp.OperatorNameSnapshot;
+                            if (string.IsNullOrEmpty(e.Result.Department)) e.Result.Department = linkedInsp.OperatorRoleSnapshot ?? "QC";
+                        }
+                        var target = _allResults.FirstOrDefault(r => r.TestResultId == e.Result.TestResultId);
+                        if (target != null)
+                        {
+                            int idx = _allResults.IndexOf(target);
+                            _allResults[idx] = e.Result;
+                        }
+                        else
+                        {
+                            _allResults.Add(e.Result);
+                        }
+                    }
+                    if (!string.IsNullOrEmpty(e.Result.InspectionId))
+                    {
+                        if (_inspections.TryGetValue(e.Result.InspectionId, out var insp) && !insp.IsOpen) break; // immutable
+                        if (!_results.TryGetValue(e.Result.InspectionId, out var map)) _results[e.Result.InspectionId] = map = new Dictionary<string, TestResultRecord>();
+                        map[e.Result.TestId] = e.Result;
+                    }
                     break;
                 case JournalEntry.KindSync when e.Sync != null:
                     _sync2[e.Sync.SyncId] = e.Sync;
@@ -174,7 +202,7 @@ namespace BBTech.Core.Storage
         /// Creates a device record for this laptop. Call only after FindDevice returned NotFound,
         /// or (with <paramref name="identityNote"/>) after staff confirmed a conflict.
         /// </summary>
-        public DeviceRecord RegisterDevice(DeviceIdentity id, DeviceSpecs specs, string identityNote = null)
+        public DeviceRecord RegisterDevice(DeviceIdentity id, DeviceSpecs specs, string identityNote = null, string preferredDeviceId = null)
         {
             if (id == null || !id.HasStrongIdentifier) throw new InvalidOperationException("A device needs at least one stable identifier.");
             lock (_sync)
@@ -187,7 +215,12 @@ namespace BBTech.Core.Storage
                 var now = _clock();
                 var d = new DeviceRecord
                 {
-                    DeviceId = Guid.NewGuid().ToString("N"),
+                    // Stable id from the hardware identity: the same physical laptop gets the same id again after a
+                    // clean Windows install (which wipes this local store) and on the server. A record created
+                    // despite an identity conflict gets a random id so it can never collide.
+                    // (preferredDeviceId: the id this laptop already had before its local store was wiped.)
+                    DeviceId = !string.IsNullOrWhiteSpace(preferredDeviceId) && !_devices.ContainsKey(preferredDeviceId) ? preferredDeviceId
+                             : string.IsNullOrWhiteSpace(identityNote) ? StableDeviceId(id) : Guid.NewGuid().ToString("N"),
                     SerialNumber = id.SerialNumber, SystemUuid = id.SystemUuid, BoardSerial = id.BoardSerial,
                     SerialHash = id.SerialHash, UuidHash = id.UuidHash, BoardSerialHash = id.BoardSerialHash,
                     HardwareFingerprint = id.Fingerprint,
@@ -298,8 +331,157 @@ namespace BBTech.Core.Storage
                     StartedAt = prev?.StartedAt ?? (status == "NOT TESTED" ? (DateTime?)null : now),
                     CompletedAt = finished ? now : (DateTime?)null,
                 };
+                if (_inspections.TryGetValue(inspectionId, out var linkedInsp))
+                {
+                    r.DeviceId = linkedInsp.DeviceId;
+                    r.OperatorName = linkedInsp.OperatorNameSnapshot;
+                    r.Department = linkedInsp.OperatorRoleSnapshot ?? "QC";
+                }
                 Write(new JournalEntry { Kind = JournalEntry.KindResult, Result = r });
                 return r;
+            }
+        }
+
+        /// <summary>
+        /// Records a completed or updated test result for a department (Hardware, QC) on a device.
+        /// Each test run creates a new test record preserving full historical traceability (Test #1, Test #2...).
+        /// </summary>
+        public TestResultRecord RecordTest(string deviceId, string testId, string testName, string status, string operatorName, string department, string comment = null, string details = null, string inspectionId = null, string operatorId = null)
+        {
+            if (string.IsNullOrWhiteSpace(deviceId)) throw new ArgumentException("A device id is required.", nameof(deviceId));
+            if (string.IsNullOrWhiteSpace(testId)) throw new ArgumentException("A test id is required.", nameof(testId));
+            if (Array.IndexOf(ResultStatuses, status) < 0) throw new ArgumentException("Unknown test status: " + status, nameof(status));
+            lock (_sync)
+            {
+                var now = _clock();
+                bool finished = status == "PASS" || status == "FAIL" || status == "SKIPPED";
+                var r = new TestResultRecord
+                {
+                    TestResultId = Guid.NewGuid().ToString("N"),
+                    DeviceId = deviceId,
+                    InspectionId = inspectionId,
+                    TestId = testId,
+                    TestName = testName,
+                    Status = status,
+                    Required = true,
+                    Comment = comment ?? "",
+                    Details = details,
+                    OperatorName = string.IsNullOrWhiteSpace(operatorName) ? "Technician" : operatorName.Trim(),
+                    OperatorId = operatorId,
+                    Department = string.IsNullOrWhiteSpace(department) ? "Hardware" : department.Trim(),
+                    StartedAt = now,
+                    CompletedAt = finished ? now : (DateTime?)null,
+                };
+                Write(new JournalEntry { Kind = JournalEntry.KindResult, Result = r });
+                return r;
+            }
+        }
+
+        /// <summary>Returns the latest non-deleted test result for a device, test, and optional department.</summary>
+        public TestResultRecord GetLatestTestResult(string deviceId, string testId, string department = null)
+        {
+            if (string.IsNullOrWhiteSpace(deviceId) || string.IsNullOrWhiteSpace(testId)) return null;
+            lock (_sync)
+            {
+                return _allResults
+                    .Where(r => !r.Deleted && r.DeviceId == deviceId && r.TestId == testId &&
+                                (department == null || string.Equals(r.Department, department, StringComparison.OrdinalIgnoreCase)))
+                    .OrderByDescending(r => r.CompletedAt ?? r.StartedAt ?? DateTime.MinValue)
+                    .FirstOrDefault();
+            }
+        }
+
+        /// <summary>Returns the chronological history of all runs of a test on a device, newest first.</summary>
+        public List<TestResultRecord> GetTestHistory(string deviceId, string testId, string department = null)
+        {
+            if (string.IsNullOrWhiteSpace(deviceId) || string.IsNullOrWhiteSpace(testId)) return new List<TestResultRecord>();
+            lock (_sync)
+            {
+                return _allResults
+                    .Where(r => !r.Deleted && r.DeviceId == deviceId && r.TestId == testId &&
+                                (department == null || string.Equals(r.Department, department, StringComparison.OrdinalIgnoreCase)))
+                    .OrderByDescending(r => r.CompletedAt ?? r.StartedAt ?? DateTime.MinValue)
+                    .ToList();
+            }
+        }
+
+        /// <summary>Deterministic device id for a physical laptop ("bbt-" + 32 hex of its identity fingerprint).</summary>
+        public static string StableDeviceId(DeviceIdentity id)
+        {
+            string fp = id?.Fingerprint;
+            if (string.IsNullOrEmpty(fp)) return Guid.NewGuid().ToString("N");
+            return "bbt-" + (fp.Length > 32 ? fp.Substring(0, 32) : fp);
+        }
+
+        /// <summary>
+        /// Restores history for this laptop (from the USB carry file or the server) after the local store was
+        /// lost, e.g. by a clean Windows install. Only records not already present are appended; ids, times,
+        /// operators and results are kept exactly; they are attached to <paramref name="deviceId"/>.
+        /// Returns how many records were restored.
+        /// </summary>
+        public int ImportHistory(string deviceId, IEnumerable<TestResultRecord> records)
+        {
+            if (string.IsNullOrWhiteSpace(deviceId) || records == null) return 0;
+            lock (_sync)
+            {
+                if (!_devices.ContainsKey(deviceId)) throw new InvalidOperationException("Unknown device.");
+                var known = new HashSet<string>(_allResults.Select(r => r.TestResultId));
+                int n = 0;
+                foreach (var r in records.Where(r => r != null && !string.IsNullOrEmpty(r.TestResultId) && !string.IsNullOrEmpty(r.TestId))
+                                         .OrderBy(r => r.CompletedAt ?? r.StartedAt ?? DateTime.MinValue))
+                {
+                    if (!known.Add(r.TestResultId)) continue;
+                    if (Array.IndexOf(ResultStatuses, r.Status) < 0) continue;
+                    var copy = Clone(r);
+                    copy.DeviceId = deviceId;
+                    copy.InspectionId = null;
+                    Write(new JournalEntry { Kind = JournalEntry.KindResult, Result = copy });
+                    n++;
+                }
+                return n;
+            }
+        }
+
+        /// <summary>The complete, chronological, non-deleted history of a laptop (every department, every event).</summary>
+        public List<TestResultRecord> GetDeviceHistory(string deviceId)
+        {
+            if (string.IsNullOrWhiteSpace(deviceId)) return new List<TestResultRecord>();
+            lock (_sync)
+            {
+                return _allResults.Where(r => !r.Deleted && r.DeviceId == deviceId)
+                                  .OrderBy(r => r.CompletedAt ?? r.StartedAt ?? DateTime.MinValue).ToList();
+            }
+        }
+
+        /// <summary>Returns all latest results across tests for a device in a department.</summary>
+        public List<TestResultRecord> GetLatestDepartmentResults(string deviceId, string department = null)
+        {
+            if (string.IsNullOrWhiteSpace(deviceId)) return new List<TestResultRecord>();
+            lock (_sync)
+            {
+                return _allResults
+                    .Where(r => !r.Deleted && r.DeviceId == deviceId &&
+                                (department == null || string.Equals(r.Department, department, StringComparison.OrdinalIgnoreCase)))
+                    .GroupBy(r => r.TestId)
+                    .Select(g => g.OrderByDescending(r => r.CompletedAt ?? r.StartedAt ?? DateTime.MinValue).First())
+                    .ToList();
+            }
+        }
+
+        /// <summary>Admin delete: flags a test record as deleted. Normal technicians cannot call this without admin PIN.</summary>
+        public bool DeleteTestResult(string testResultId)
+        {
+            if (string.IsNullOrWhiteSpace(testResultId)) return false;
+            lock (_sync)
+            {
+                var existing = _allResults.FirstOrDefault(r => r.TestResultId == testResultId && !r.Deleted);
+                if (existing == null) return false;
+                // The final QC decision is the gate record: never deletable (a new decision supersedes it).
+                if (Testing.LifecycleEvents.IsStageEvent(existing.TestId) || Testing.LifecycleEvents.IsEvidence(existing.TestId)) return false;
+                var tombstone = Clone(existing);
+                tombstone.Deleted = true;
+                Write(new JournalEntry { Kind = JournalEntry.KindResult, Result = tombstone });
+                return true;
             }
         }
 
@@ -368,11 +550,24 @@ namespace BBTech.Core.Storage
 
         // ---- ITMS transmission state (bookkeeping only; no network code exists) ----
 
-        /// <summary>The transmission record of an entity, or null when none exists yet.</summary>
+        /// <summary>The latest transmission record of an entity, or null when none exists yet.</summary>
         public SyncRecord GetSyncRecord(string entityType, string entityId)
         {
             if (entityType == null || entityId == null) return null;
             lock (_sync) return FindSync(entityType, entityId);
+        }
+
+        /// <summary>Chronological submission history of an entity (newest first). Never deletes past records.</summary>
+        public List<SyncRecord> GetSyncHistory(string entityType, string entityId)
+        {
+            if (entityType == null || entityId == null) return new List<SyncRecord>();
+            lock (_sync)
+            {
+                return _sync2.Values
+                    .Where(r => r.EntityType == entityType && r.EntityId == entityId)
+                    .OrderByDescending(r => r.UpdatedAt ?? r.LastAttemptAt ?? DateTime.MinValue)
+                    .ToList();
+            }
         }
 
         /// <summary>The transmission record of a device; created in state LOCAL on first use.</summary>
@@ -383,6 +578,21 @@ namespace BBTech.Core.Storage
                 if (deviceId == null || !_devices.ContainsKey(deviceId)) throw new InvalidOperationException("Unknown device.");
                 var existing = FindSync(SyncEntity.Device, deviceId);
                 if (existing != null) return existing;
+                var r = NewSyncRecord(SyncEntity.Device, deviceId, _clock());
+                Write(new JournalEntry { Kind = JournalEntry.KindSync, Sync = r });
+                return r;
+            }
+        }
+
+        /// <summary>
+        /// Creates a new submission record for a laptop that was already submitted, allowing multiple
+        /// submissions over time without deleting or overwriting previous submissions.
+        /// </summary>
+        public SyncRecord CreateNewDeviceSync(string deviceId)
+        {
+            lock (_sync)
+            {
+                if (deviceId == null || !_devices.ContainsKey(deviceId)) throw new InvalidOperationException("Unknown device.");
                 var r = NewSyncRecord(SyncEntity.Device, deviceId, _clock());
                 Write(new JournalEntry { Kind = JournalEntry.KindSync, Sync = r });
                 return r;
@@ -409,7 +619,10 @@ namespace BBTech.Core.Storage
         }
 
         private SyncRecord FindSync(string entityType, string entityId) =>
-            _sync2.Values.FirstOrDefault(r => r.EntityType == entityType && r.EntityId == entityId);
+            _sync2.Values
+                .Where(r => r.EntityType == entityType && r.EntityId == entityId)
+                .OrderByDescending(r => r.UpdatedAt ?? r.LastAttemptAt ?? DateTime.MinValue)
+                .FirstOrDefault();
 
         private static SyncRecord NewSyncRecord(string entityType, string entityId, DateTime now) => new SyncRecord
         {

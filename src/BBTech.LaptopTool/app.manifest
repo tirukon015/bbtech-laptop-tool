@@ -4,8 +4,8 @@
   <trustInfo xmlns="urn:schemas-microsoft-com:asm.v2">
     <security>
       <requestedPrivileges xmlns="urn:schemas-microsoft-com:asm.v3">
-        <!-- Requires Administrator rights so all hardware probes, TPM, and SSD SMART / HD Sentinel diagnostics run with full access -->
-        <requestedExecutionLevel level="requireAdministrator" uiAccess="false" />
+        <!-- Runs as standard user or administrator. Elevation can be requested via header button if needed. -->
+        <requestedExecutionLevel level="asInvoker" uiAccess="false" />
       </requestedPrivileges>
     </security>
   </trustInfo>

@@ -1,29 +1,37 @@
 # Architecture
 
 > Status labels: **IMPLEMENTED** = in the code today · **PLANNED** = designed for, not implemented.
+> Version 1.4.0 (2026-11-25).
 
 ## 1. System overview
 
 ```mermaid
 flowchart LR
-    subgraph USB["BBTech USB (any)"]
+    subgraph USB["BBTech USB (one per technician / workstation)"]
         EXE["BBTech Laptop Tool.exe<br/>(single file, tools embedded)"]
-        CFG["BBTech Data\config\settings.dat<br/>encrypted: operators, current operator,<br/>admin PIN hash, managed Wi-Fi"]
-        OUT["BBTech Data\reports, exports, logs"]
+        CFG["BBTech Data\config<br/>settings.dat (operators, session, PIN hash, Wi-Fi, server keys)<br/>master.dat (cached server configuration)"]
+        Q["BBTech Data\sync\sync_queue.dat<br/>BBTech Data\audit\audit_log.dat<br/>(temporary, until server-verified)"]
     end
-    subgraph LAPTOP["Laptop being inspected"]
-        STORE["C:\ProgramData\BBTech\LaptopTool\<br/>qc.key + qc.journal (encrypted QC history)"]
-        WLAN["Windows Wi-Fi profile store<br/>(BBTech networks, auto-connect)"]
-        TMP["%TEMP%\BBTechLaptopTool\<br/>(tools extracted on demand, removed on exit)"]
+    subgraph LAPTOP["Laptop being prepared"]
+        STORE["C:\ProgramData\BBTech\LaptopTool\<br/>encrypted journal: device, results history, QC decisions"]
     end
+    subgraph SERVER["BBTech server"]
+        API["BBTech.Api (ASP.NET Core 8)"]
+        PG[("PostgreSQL")]
+    end
+    ITMS["ITMS (separate business system)"]
     EXE --> CFG
-    EXE --> OUT
+    EXE --> Q
     EXE --> STORE
-    EXE --> WLAN
-    EXE --> TMP
+    EXE -- "HTTPS + workstation key" --> API
+    API --> PG
+    EXE -- "only after QC PASS" --> ITMS
 ```
 
-**IMPLEMENTED.** The QC history lives on the laptop, never on the USB. The USB carries the program and staff/admin settings only.
+**IMPLEMENTED.** Workflow: operator (1-hour session) → laptop detected → Hardware → Software (checks, approved
+installs, activation status) → QC (sees latest Hardware + Software, gate) → final QC decision → audit → USB queue →
+server verification → safe USB cleanup → READY → ITMS. The desktop tool never connects to PostgreSQL.
+See [SERVER.md](SERVER.md), [USB-SYNC.md](USB-SYNC.md).
 
 ## 2. Technology
 
@@ -101,12 +109,11 @@ sequenceDiagram
 
 | Setting | Where | Notes |
 |---|---|---|
-| Operators, current operator, admin PIN hash, managed Wi-Fi networks | `BBTech Data\config\settings.dat` (USB) | Encrypted and authenticated; edited via Settings (admin PIN) |
+| Operators, 1-hour session, admin PIN hash, Wi-Fi, ITMS + BBTech server address/keys | `BBTech Data\config\settings.dat` (USB) | Encrypted and authenticated; Settings needs the admin PIN |
+| Master configuration (operators, test definitions, approved packages, laptop models) | Server → cached in `BBTech Data\config\master.dat` | Server is authoritative online; the cache is used offline; older versions never replace newer ones |
+| Server address | Settings → BBTech Server, or `BBTECH_API_URL` / `BBTECH_API_KEY` | HTTPS only (HTTP allowed for localhost) |
+| Approved installers | `BBTech Data\installers\` (USB) or the package's offline folder | Only packages from the master configuration |
 | Data / log folders | Next to the EXE (`BBTech Data\`) | Falls back to `%LOCALAPPDATA%\BBTech Laptop Tool\` if the USB is write-protected |
-| Tool override | `tools\<ToolName>\` next to the EXE | Optional; replaces the embedded copy (e.g. a licensed HD Sentinel Portable) |
-| Test media override | `tests\SpeakerTest.mp4` next to the EXE | Optional |
-
-There are no registry settings, environment variables or external config services.
 
 ## 6. Error handling
 
@@ -115,7 +122,10 @@ There are no registry settings, environment variables or external config service
 - Missing hardware or tools produce messages such as "Not available on this laptop." or "Battery information is currently unavailable.", never raw error codes.
 - **Store problems** (permission denied, unreadable key) mean TEST still runs, with a banner stating that results cannot be saved to the history. DETECT shows the reason. Existing data is never overwritten.
 
-## 7. Future (PLANNED, not implemented)
+## 7. Server and synchronization (IMPLEMENTED)
 
-- **ITMS sync:** `ISyncService` / `IItmsClient` implementations; see [ITMS-INTEGRATION.md](ITMS-INTEGRATION.md).
-- **Remote or cloud storage:** not planned for the local workflow.
+- Server: `server/BBTech.Api` + PostgreSQL schema in `server/BBTech.Api/Migrations` ([SERVER.md](SERVER.md)).
+- Client: `BBTech.Core.Sync` (`BBTechApiClient`, `UsbSyncQueue`, `SyncCoordinator`, `MasterConfigCache`) and
+  `LaptopTool/Services` (`UsbSyncService`, `MasterDataService`) ([USB-SYNC.md](USB-SYNC.md)).
+- Authorization is enforced in the client service layer (`ResultAuthorization`) **and** again on the server with
+  server data. QC rules: `BBTech.Core.Testing.QcGate` / `QcRequirements` and the server's `ServerQcGate`.

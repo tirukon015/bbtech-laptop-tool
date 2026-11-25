@@ -1,6 +1,6 @@
 # ITMS ↔ BBTech Laptop Tool Integration Contract
 
-**Contract Version:** `1.0`  
+**Contract Version:** `1.1` (1.1 adds §3.4 traceability hash receipt)  
 **Status:** Active  
 **Compatible Versions:**
 - ITMS: `v0.1.0+`
@@ -128,6 +128,51 @@
 - Individual tests: `PASS`, `FAIL`, `SKIPPED`, `NOT_RUN`
 
 ---
+
+### 3.4 Traceability record and hash receipt (contract 1.1, required for VERIFIED)
+
+Since Laptop Tool 1.6.0 the body also carries:
+
+| Field | Type | Meaning |
+|---|---|---|
+| `bbtech_traceability` | object | Full technical evidence (`schema: "bbtech-traceability/2"`): identity, motherboard, bios, cpu, memory, storage{device, health, raw_metrics}, battery, gpu, display, network, audio, camera, usb, bluetooth, tpm, security, windows, office, drivers, hardware_tests, repairs, software, qc, lifecycle, hardware_changes, snapshots, qc_pass_vs_current_hardware. |
+| `traceability_sha256` | string (64 hex) | SHA-256 the laptop computed over the record. |
+
+**Hash definition:** SHA-256 (lower-case hex) of the UTF-8 bytes of `JSON.stringify(body.bbtech_traceability)`:
+compact JSON, keys in the order received. (Verified: re-serializing a real 93 KB laptop record this way in Node 24
+gives exactly the laptop's hash.)
+
+**ITMS MUST:**
+1. Store `bbtech_traceability` unchanged with the request (e.g. a `jsonb` column `bbtech_traceability`).
+2. Compute the hash **itself** from what it stored — never copy the client's `traceability_sha256` into the response.
+3. Return it in the 200/201 response: `"traceability_sha256": "<hash of the stored record>"`. On an idempotent retry,
+   return the hash stored with the original request.
+4. Optionally reject with 422 `TRACEABILITY_HASH_MISMATCH` when its hash differs from the client's (corrupted in transit).
+
+**Laptop Tool behaviour:**
+
+| ITMS response | Result shown / stored | Counts as delivered? |
+|---|---|---|
+| no `traceability_sha256` | `UNCONFIRMED` (ITMS has not adopted contract 1.1) | yes, flagged |
+| same hash | `VERIFIED` | yes |
+| different hash | `MISMATCH` → transmission **FAILED** | **no** |
+
+Reference handler (Next.js route, `app/api/devices/requests/route.ts`):
+
+```ts
+import { createHash } from "crypto";
+
+const traceability = body.bbtech_traceability ?? null;
+const stored = traceability === null ? null : JSON.stringify(traceability);
+const storedSha = stored === null ? null : createHash("sha256").update(stored, "utf8").digest("hex");
+if (storedSha && body.traceability_sha256 && storedSha !== String(body.traceability_sha256).toLowerCase())
+  return NextResponse.json({ success: false, code: "TRACEABILITY_HASH_MISMATCH" }, { status: 422 });
+
+// insert into device_requests (..., bbtech_traceability, traceability_sha256) values (..., traceability, storedSha)
+return NextResponse.json({ success: true, status: "queued", request_no, traceability_sha256: storedSha }, { status: 201 });
+```
+
+The Laptop Tool test `ItmsReceiptIntegrationTests` runs this contract over real HTTP against a reference endpoint.
 
 ## 4. API Responses
 

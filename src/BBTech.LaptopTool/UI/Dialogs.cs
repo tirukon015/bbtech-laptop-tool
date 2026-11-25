@@ -113,6 +113,99 @@ namespace BBTech.LaptopTool.UI
             return result;
         }
 
+        public sealed class OperatorProfileResult
+        {
+            public string Name { get; set; }
+            public string Role { get; set; }
+            public System.Collections.Generic.List<string> Departments { get; set; } = new System.Collections.Generic.List<string>();
+            public System.Collections.Generic.List<string> Permissions { get; set; } = new System.Collections.Generic.List<string>();
+        }
+
+        public static OperatorProfileResult OperatorProfile(Window owner, string title, Core.Settings.OperatorRecord existing = null)
+        {
+            var w = Frame(owner, title, 500);
+            OperatorProfileResult result = null;
+            var sp = new StackPanel { Margin = new Thickness(22) };
+
+            sp.Children.Add(Text("Technician Name", 13, true));
+            var nameBox = new TextBox
+            {
+                Text = existing?.Name ?? "",
+                FontSize = 15,
+                Padding = new Thickness(6, 4, 6, 4),
+                MaxLength = 60
+            };
+            sp.Children.Add(nameBox);
+            sp.Children.Add(new Border { Height = 10 });
+
+            sp.Children.Add(Text("Role", 13, true));
+            var roleBox = new ComboBox { IsEditable = true, Text = existing?.Role ?? "Technician", FontSize = 14 };
+            foreach (var r in new[] { "Technician", "QC Inspector", "E-Commerce Specialist", "Admin / Co-Founder", "Super Admin" })
+                roleBox.Items.Add(r);
+            sp.Children.Add(roleBox);
+            sp.Children.Add(new Border { Height = 14 });
+
+            sp.Children.Add(Text("Assigned Departments", 13, true));
+            var deptPanel = new WrapPanel { Margin = new Thickness(0, 4, 0, 10) };
+            var deptBoxes = new System.Collections.Generic.Dictionary<string, CheckBox>();
+            foreach (var d in new[] { "Hardware", "QC", "Software", "E-Commerce" })
+            {
+                bool isChecked = existing != null && existing.Departments != null && existing.Departments.Contains(d);
+                var cb = new CheckBox { Content = d, IsChecked = isChecked, Margin = new Thickness(0, 0, 14, 6), FontSize = 13 };
+                deptBoxes[d] = cb;
+                deptPanel.Children.Add(cb);
+            }
+            sp.Children.Add(deptPanel);
+
+            sp.Children.Add(Text("Permissions", 13, true));
+            var permPanel = new WrapPanel { Margin = new Thickness(0, 4, 0, 14) };
+            var permBoxes = new System.Collections.Generic.Dictionary<string, CheckBox>();
+            foreach (var p in new[] { "Hardware Testing", "QC Inspection", "Software Tools", "E-Commerce", "ALL" })
+            {
+                bool isChecked = existing != null && existing.Permissions != null && existing.Permissions.Contains(p);
+                var cb = new CheckBox { Content = p, IsChecked = isChecked, Margin = new Thickness(0, 0, 14, 6), FontSize = 13 };
+                permBoxes[p] = cb;
+                permPanel.Children.Add(cb);
+            }
+            sp.Children.Add(permPanel);
+
+            var row = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 12, 0, 0) };
+            var ok = new Button { Content = "Save Profile", Style = St("PrimaryButton"), MinWidth = 110 };
+            var cancel = new Button { Content = "Cancel", Style = St("BaseButton"), MinWidth = 90, Margin = new Thickness(8, 0, 0, 0) };
+
+            ok.Click += (s, e) =>
+            {
+                string name = nameBox.Text.Trim();
+                if (string.IsNullOrEmpty(name))
+                {
+                    Info(w, "Validation", "Please enter a profile name.");
+                    return;
+                }
+
+                var depts = deptBoxes.Where(kv => kv.Value.IsChecked == true).Select(kv => kv.Key).ToList();
+                var perms = permBoxes.Where(kv => kv.Value.IsChecked == true).Select(kv => kv.Key).ToList();
+
+                result = new OperatorProfileResult
+                {
+                    Name = name,
+                    Role = roleBox.Text.Trim(),
+                    Departments = depts,
+                    Permissions = perms
+                };
+                w.Close();
+            };
+
+            cancel.Click += (s, e) => w.Close();
+            row.Children.Add(ok);
+            row.Children.Add(cancel);
+            sp.Children.Add(row);
+
+            w.Content = new ScrollViewer { Content = sp, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
+            w.Loaded += (s, e) => nameBox.Focus();
+            w.ShowDialog();
+            return result;
+        }
+
         /// <summary>
         /// "+ Add Tests": choose additional tests (the four required tests are always included and not listed).
         /// choices: (test, name, description, currently selected). Returns the chosen tests, or null if cancelled.

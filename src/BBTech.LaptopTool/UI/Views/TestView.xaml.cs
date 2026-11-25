@@ -198,9 +198,9 @@ namespace BBTech.LaptopTool.UI.Views
             if (!Settings.ActiveOperators.Any())
             {
                 if (Dialogs.Choice(owner, "Tested By", "No QC operators yet",
-                        "Before testing, an admin must add QC operators in Settings.", "Open Settings", "Cancel") == 0 && AdminGate.Unlock(owner))
+                        "Before testing, an admin must add QC operators in Settings.", "Open Settings", "Cancel") == 0)
                 {
-                    new SettingsWindow { Owner = owner }.ShowDialog();
+                    SettingsWindow.ShowAuthorized(owner);
                     LoadOperators();
                 }
                 return Settings.CurrentOperator;

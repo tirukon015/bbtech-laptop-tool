@@ -20,6 +20,10 @@ namespace BBTech.LaptopTool.Services
         public static string LogsDir { get; private set; }
         public static string ExportsDir => Path.Combine(DataDir, "exports");
         public static string ReportsDir => Path.Combine(DataDir, "reports");
+        public static string SyncQueuePath => Path.Combine(DataDir, "sync", "sync_queue.dat");
+        public static string AuditLogPath => Path.Combine(DataDir, "audit", "audit_log.dat");
+        /// <summary>Encrypted per-laptop history copies that survive a Windows reinstall of the laptop.</summary>
+        public static string CarryDir => Path.Combine(DataDir, "carry");
         public static string TempDir => Path.Combine(Path.GetTempPath(), "BBTechLaptopTool", "work");
         public static bool UsingFallbackStorage { get; private set; }
 

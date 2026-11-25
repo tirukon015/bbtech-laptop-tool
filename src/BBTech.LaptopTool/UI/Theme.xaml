@@ -1,51 +1,53 @@
 ﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-    <!-- BBTech palette, taken from the official BBTech Laptop Tool logo:
-         cobalt / royal blue, cyan, teal and a green accent. -->
-    <Color x:Key="BrandColor">#1260F0</Color>
+    <!-- Premium Minimalist Palette:
+         Clean white surfaces, refined neutral grays, slate charcoal typography,
+         subtle 1px borders, restrained functional accents (Pass/Fail/Warn/Brand).
+         Zero gradients. -->
+    <Color x:Key="BrandColor">#2563EB</Color>
     <SolidColorBrush x:Key="Brand" Color="{StaticResource BrandColor}" />
-    <SolidColorBrush x:Key="BrandDark" Color="#0A3DC2" />
-    <SolidColorBrush x:Key="BrandSoft" Color="#E7F0FF" />
-    <SolidColorBrush x:Key="Navy" Color="#06205F" />
-    <SolidColorBrush x:Key="Cyan" Color="#0FB7E3" />
-    <SolidColorBrush x:Key="Teal" Color="#10BFA0" />
-    <SolidColorBrush x:Key="TealSoft" Color="#E3F8F4" />
-    <SolidColorBrush x:Key="AppBackground" Color="#F1F5FB" />
-    <LinearGradientBrush x:Key="HeaderGradient" StartPoint="0,0" EndPoint="1,0">
-        <GradientStop Color="#061E63" Offset="0" />
-        <GradientStop Color="#0B3FCB" Offset="0.55" />
-        <GradientStop Color="#0A86D6" Offset="1" />
-    </LinearGradientBrush>
+    <SolidColorBrush x:Key="BrandDark" Color="#1D4ED8" />
+    <SolidColorBrush x:Key="BrandSoft" Color="#EFF6FF" />
+    <SolidColorBrush x:Key="Navy" Color="#0F172A" />
+    <SolidColorBrush x:Key="Cyan" Color="#0284C7" />
+    <SolidColorBrush x:Key="Teal" Color="#0D9488" />
+    <SolidColorBrush x:Key="TealSoft" Color="#F0FDFA" />
+    <SolidColorBrush x:Key="AppBackground" Color="#F8FAFC" />
+    <!-- Replaced gradient with flat clean white surface -->
+    <SolidColorBrush x:Key="HeaderGradient" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="HeaderBackground" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="SidebarBackground" Color="#FFFFFF" />
     <SolidColorBrush x:Key="CardBackground" Color="#FFFFFF" />
-    <SolidColorBrush x:Key="CardBorder" Color="#E2E6EE" />
-    <SolidColorBrush x:Key="TextPrimary" Color="#162033" />
-    <SolidColorBrush x:Key="TextMuted" Color="#5E6A80" />
+    <SolidColorBrush x:Key="CardBorder" Color="#E2E8F0" />
+    <SolidColorBrush x:Key="BorderSubtle" Color="#F1F5F9" />
+    <SolidColorBrush x:Key="TextPrimary" Color="#0F172A" />
+    <SolidColorBrush x:Key="TextSecondary" Color="#334155" />
+    <SolidColorBrush x:Key="TextMuted" Color="#64748B" />
     <SolidColorBrush x:Key="PassBrush" Color="#16A34A" />
-    <SolidColorBrush x:Key="PassSoft" Color="#E7F7EE" />
+    <SolidColorBrush x:Key="PassSoft" Color="#F0FDF4" />
     <SolidColorBrush x:Key="FailBrush" Color="#DC2626" />
-    <SolidColorBrush x:Key="FailSoft" Color="#FDECEC" />
+    <SolidColorBrush x:Key="FailSoft" Color="#FEF2F2" />
     <SolidColorBrush x:Key="WarnBrush" Color="#D97706" />
-    <SolidColorBrush x:Key="WarnSoft" Color="#FFF6E5" />
-    <SolidColorBrush x:Key="NeutralBrush" Color="#8590A6" />
-    <SolidColorBrush x:Key="NeutralSoft" Color="#EEF1F6" />
+    <SolidColorBrush x:Key="WarnSoft" Color="#FFFBEB" />
+    <SolidColorBrush x:Key="NeutralBrush" Color="#64748B" />
+    <SolidColorBrush x:Key="NeutralSoft" Color="#F1F5F9" />
     <SolidColorBrush x:Key="SkipBrush" Color="#64748B" />
 
     <FontFamily x:Key="IconFont">Segoe MDL2 Assets</FontFamily>
 
-    <!-- No Foreground here: an implicit TextBlock style would also recolour text inside buttons.
-         Windows set Foreground="{StaticResource TextPrimary}" and TextBlocks inherit it. -->
+    <!-- Implicit TextBlock style: inherit foreground and enable wrap -->
     <Style TargetType="TextBlock">
         <Setter Property="TextWrapping" Value="Wrap" />
     </Style>
 
     <Style x:Key="H1" TargetType="TextBlock">
-        <Setter Property="FontSize" Value="28" />
+        <Setter Property="FontSize" Value="24" />
         <Setter Property="FontWeight" Value="SemiBold" />
         <Setter Property="Foreground" Value="{StaticResource TextPrimary}" />
     </Style>
     <Style x:Key="H2" TargetType="TextBlock">
-        <Setter Property="FontSize" Value="18" />
+        <Setter Property="FontSize" Value="17" />
         <Setter Property="FontWeight" Value="SemiBold" />
         <Setter Property="Foreground" Value="{StaticResource TextPrimary}" />
         <Setter Property="Margin" Value="0,0,0,8" />
@@ -69,15 +71,14 @@
         <Setter Property="Padding" Value="18" />
     </Style>
 
-    <!-- Buttons: flat, rounded, large hit area (touch friendly). Not keyboard-focusable so
-         key presses during the keyboard test can never trigger them. -->
+    <!-- Buttons: Clean, rounded, refined hover & pressed states -->
     <Style x:Key="BaseButton" TargetType="Button">
         <Setter Property="Focusable" Value="False" />
         <Setter Property="Cursor" Value="Hand" />
-        <Setter Property="FontSize" Value="14" />
+        <Setter Property="FontSize" Value="13" />
         <Setter Property="FontWeight" Value="SemiBold" />
-        <Setter Property="Padding" Value="18,10" />
-        <Setter Property="MinHeight" Value="40" />
+        <Setter Property="Padding" Value="16,9" />
+        <Setter Property="MinHeight" Value="38" />
         <Setter Property="Background" Value="{StaticResource CardBackground}" />
         <Setter Property="Foreground" Value="{StaticResource TextPrimary}" />
         <Setter Property="BorderBrush" Value="{StaticResource CardBorder}" />
@@ -91,10 +92,12 @@
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="bd" Property="Opacity" Value="0.88" />
+                            <Setter TargetName="bd" Property="Background" Value="#F8FAFC" />
+                            <Setter TargetName="bd" Property="BorderBrush" Value="#CBD5E1" />
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
-                            <Setter TargetName="bd" Property="Opacity" Value="0.75" />
+                            <Setter TargetName="bd" Property="Background" Value="#F1F5F9" />
+                            <Setter TargetName="bd" Property="BorderBrush" Value="#94A3B8" />
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter TargetName="bd" Property="Opacity" Value="0.45" />
@@ -104,41 +107,162 @@
             </Setter.Value>
         </Setter>
     </Style>
+
     <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource BaseButton}">
-        <Setter Property="Background" Value="{StaticResource Brand}" />
+        <Setter Property="Background" Value="{StaticResource TextPrimary}" />
         <Setter Property="Foreground" Value="White" />
-        <Setter Property="BorderBrush" Value="{StaticResource Brand}" />
+        <Setter Property="BorderBrush" Value="{StaticResource TextPrimary}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="bd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="8" Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="bd" Property="Background" Value="#1E293B" />
+                            <Setter TargetName="bd" Property="BorderBrush" Value="#1E293B" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="bd" Property="Background" Value="#334155" />
+                            <Setter TargetName="bd" Property="BorderBrush" Value="#334155" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="bd" Property="Opacity" Value="0.45" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
+
     <Style x:Key="PassButton" TargetType="Button" BasedOn="{StaticResource BaseButton}">
         <Setter Property="Background" Value="{StaticResource PassBrush}" />
         <Setter Property="Foreground" Value="White" />
         <Setter Property="BorderBrush" Value="{StaticResource PassBrush}" />
         <Setter Property="MinWidth" Value="120" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="bd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="8" Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="bd" Property="Background" Value="#15803D" />
+                            <Setter TargetName="bd" Property="BorderBrush" Value="#15803D" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="bd" Property="Background" Value="#166534" />
+                            <Setter TargetName="bd" Property="BorderBrush" Value="#166534" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
+
     <Style x:Key="FailButton" TargetType="Button" BasedOn="{StaticResource BaseButton}">
         <Setter Property="Background" Value="{StaticResource FailBrush}" />
         <Setter Property="Foreground" Value="White" />
         <Setter Property="BorderBrush" Value="{StaticResource FailBrush}" />
         <Setter Property="MinWidth" Value="120" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="bd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="8" Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="bd" Property="Background" Value="#B91C1C" />
+                            <Setter TargetName="bd" Property="BorderBrush" Value="#B91C1C" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="bd" Property="Background" Value="#991B1B" />
+                            <Setter TargetName="bd" Property="BorderBrush" Value="#991B1B" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
+
     <Style x:Key="LinkButton" TargetType="Button" BasedOn="{StaticResource BaseButton}">
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="BorderBrush" Value="Transparent" />
-        <Setter Property="Foreground" Value="{StaticResource Brand}" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Foreground" Value="{StaticResource TextMuted}" />
         <Setter Property="Padding" Value="8,4" />
         <Setter Property="MinHeight" Value="28" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="bd" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Foreground" Value="{StaticResource TextPrimary}" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter Property="Foreground" Value="{StaticResource Brand}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Clean sidebar nav item style -->
+    <Style x:Key="SidebarNavButton" TargetType="Button" BasedOn="{StaticResource BaseButton}">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Foreground" Value="{StaticResource TextMuted}" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="FontWeight" Value="Normal" />
+        <Setter Property="Padding" Value="12,9" />
+        <Setter Property="MinHeight" Value="36" />
+        <Setter Property="HorizontalContentAlignment" Value="Left" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="bd" Property="Background" Value="#F1F5F9" />
+                            <Setter Property="Foreground" Value="{StaticResource TextPrimary}" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="bd" Property="Background" Value="#E2E8F0" />
+                            <Setter Property="Foreground" Value="{StaticResource TextPrimary}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
 
     <Style TargetType="CheckBox">
         <Setter Property="Focusable" Value="False" />
         <Setter Property="VerticalContentAlignment" Value="Center" />
-        <Setter Property="FontSize" Value="14" />
+        <Setter Property="FontSize" Value="13" />
         <Setter Property="Margin" Value="0,4" />
         <Setter Property="Foreground" Value="{StaticResource TextPrimary}" />
     </Style>
 
     <Style TargetType="ToolTip">
-        <Setter Property="FontSize" Value="13" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="Background" Value="#0F172A" />
+        <Setter Property="Foreground" Value="#FFFFFF" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="8,4" />
     </Style>
 </ResourceDictionary>
 

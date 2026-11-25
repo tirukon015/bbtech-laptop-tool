@@ -1,4 +1,5 @@
 using BBTech.Core.Integration;
+using BBTech.LaptopTool.Logging;
 
 namespace BBTech.LaptopTool.Services
 {
@@ -13,7 +14,9 @@ namespace BBTech.LaptopTool.Services
             var store = SettingsService.Store;
             return new HttpItmsConnector(
                 () => store?.EffectiveItmsUrl,
-                () => store?.EffectiveItmsApiKey);
+                () => store?.EffectiveItmsApiKey,
+                customHandler: null,
+                diagnosticLogger: msg => AppLog.Info(msg));
         }
     }
 }

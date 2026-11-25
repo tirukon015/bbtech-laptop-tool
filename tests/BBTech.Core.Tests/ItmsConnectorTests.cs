@@ -23,6 +23,39 @@ namespace BBTech.Core.Tests
             return r.Repository;
         }
 
+        /// <summary>Records a final QC PASS for the laptop (ITMS only accepts QC-passed laptops).</summary>
+        private static void QcPass(QcRepository repo, DeviceRecord device)
+        {
+            // The real lifecycle: Hardware → handover → Software → handover → QC checklist → QC PASS.
+            var req = BBTech.Core.Testing.QcRequirements.Default();
+            foreach (var (dept, op, handover) in new[] { ("Hardware", "Kamal", BBTech.Core.Testing.LifecycleEvents.HardwareHandover), ("Software", "Shadir", BBTech.Core.Testing.LifecycleEvents.SoftwareHandover), ("QC", "Jimmy", null) })
+            {
+                foreach (var t in req.Required(dept)) repo.RecordTest(device.DeviceId, t, t, "PASS", op, dept);
+                System.Threading.Thread.Sleep(15);
+                if (handover != null) { repo.RecordTest(device.DeviceId, handover, handover, "PASS", op, dept); System.Threading.Thread.Sleep(15); }
+            }
+            repo.RecordTest(device.DeviceId, BBTech.Core.Testing.QcGate.QcDecisionTestId, "Final QC Decision", "PASS", "Jimmy", "QC");
+        }
+
+        [Fact]
+        public async Task ItmsSend_IsRefused_WithoutFinalQcPass_AndNothingIsSent()
+        {
+            var repo = OpenRepo();
+            var handler = new MockHttpMessageHandler();
+            var service = new ItmsTransmissionService(repo, new HttpItmsConnector(() => "http://localhost:8000", () => "key", handler));
+            var detection = CreateTestDetection();
+            var laptop = service.ResolveLaptop(IdentityFactory.From(detection), IdentityFactory.SpecsFrom(detection));
+
+            var noDecision = await service.SendOrContinueAsync(laptop.Device, detection);
+            Assert.False(noDecision.Confirmed);
+            Assert.Contains("no final QC decision", noDecision.Message);
+
+            repo.RecordTest(laptop.Device.DeviceId, BBTech.Core.Testing.QcGate.QcDecisionTestId, "Final QC Decision", "FAIL", "Jimmy", "QC");
+            var failed = await service.ResendAsync(laptop.Device, detection);
+            Assert.Contains("FAIL", failed.Message);
+            Assert.Null(handler.LastRequest); // nothing reached ITMS
+        }
+
         private static DetectionResult CreateTestDetection() => new DetectionResult
         {
             Brand = "Lenovo",
@@ -184,6 +217,7 @@ namespace BBTech.Core.Tests
             var identity = IdentityFactory.From(detection);
             var laptop = service.ResolveLaptop(identity, IdentityFactory.SpecsFrom(detection));
             Assert.True(laptop.Ok);
+            QcPass(repo, laptop.Device);
 
             // Attempt 1 -> fails with 500
             var outcome1 = await service.SendOrContinueAsync(laptop.Device, detection);
@@ -199,7 +233,7 @@ namespace BBTech.Core.Tests
 
             var outcome2 = await service.SendOrContinueAsync(laptop.Device, detection);
             Assert.Equal(TransmissionState.ItmsReceived, outcome2.Record.SyncStatus);
-            Assert.Equal("Request #2001", outcome2.Record.RemoteId);
+            Assert.StartsWith("Request #2001 ", outcome2.Record.RemoteId + " ");
             // CRITICAL: RequestId must be identical across retries
             Assert.Equal(firstRequestId, outcome2.Record.RequestId);
             Assert.Equal(2, outcome2.Record.AttemptCount);
@@ -225,6 +259,155 @@ namespace BBTech.Core.Tests
             var recovered = service.RecoverInterrupted(laptop.Device);
             Assert.Equal(TransmissionState.Failed, recovered.SyncStatus);
             Assert.Contains("interrupted", recovered.LastError);
+        }
+
+        [Fact]
+        public async Task ItmsTransmissionService_SupportsMultipleSubmissionsAndResend()
+        {
+            var repo = OpenRepo();
+            var handler = new MockHttpMessageHandler();
+            var connector = new HttpItmsConnector(() => "http://localhost:8000", () => "key", handler);
+            var service = new ItmsTransmissionService(repo, connector);
+
+            var detection = CreateTestDetection();
+            detection.System.SerialNumber = "PF49SKL8";
+            var identity = IdentityFactory.From(detection);
+            var laptop = service.ResolveLaptop(identity, IdentityFactory.SpecsFrom(detection));
+            Assert.True(laptop.Ok);
+            QcPass(repo, laptop.Device);
+
+            // Submission #1 -> Request #1004
+            handler.ResponseToReturn = new HttpResponseMessage(HttpStatusCode.Created)
+            {
+                Content = new StringContent("{\"success\":true,\"status\":\"queued\",\"request_no\":1004}")
+            };
+            var outcome1 = await service.SendOrContinueAsync(laptop.Device, detection);
+            Assert.Equal(TransmissionState.ItmsReceived, outcome1.Record.SyncStatus);
+            Assert.StartsWith("Request #1004 ", outcome1.Record.RemoteId + " ");
+            var req1 = outcome1.Record.RequestId;
+
+            // Submission #2 (Resend) -> Request #1012
+            handler.ResponseToReturn = new HttpResponseMessage(HttpStatusCode.Created)
+            {
+                Content = new StringContent("{\"success\":true,\"status\":\"queued\",\"request_no\":1012}")
+            };
+            var outcome2 = await service.ResendAsync(laptop.Device, detection);
+            Assert.Equal(TransmissionState.ItmsReceived, outcome2.Record.SyncStatus);
+            Assert.StartsWith("Request #1012 ", outcome2.Record.RemoteId + " ");
+            var req2 = outcome2.Record.RequestId;
+            Assert.NotEqual(req1, req2); // Must get a fresh request id for a new submission
+
+            // Submission #3 (Resend) -> Request #1018
+            handler.ResponseToReturn = new HttpResponseMessage(HttpStatusCode.Created)
+            {
+                Content = new StringContent("{\"success\":true,\"status\":\"queued\",\"request_no\":1018}")
+            };
+            var outcome3 = await service.ResendAsync(laptop.Device, detection);
+            Assert.Equal(TransmissionState.ItmsReceived, outcome3.Record.SyncStatus);
+            Assert.StartsWith("Request #1018 ", outcome3.Record.RemoteId + " ");
+
+            // Submission #4 (Resend) -> Request #1021
+            handler.ResponseToReturn = new HttpResponseMessage(HttpStatusCode.Created)
+            {
+                Content = new StringContent("{\"success\":true,\"status\":\"queued\",\"request_no\":1021}")
+            };
+            var outcome4 = await service.ResendAsync(laptop.Device, detection);
+            Assert.Equal(TransmissionState.ItmsReceived, outcome4.Record.SyncStatus);
+            Assert.StartsWith("Request #1021 ", outcome4.Record.RemoteId + " ");
+
+            // Verify Submission History: all 4 records preserved in chronological order
+            var history = service.GetHistory(laptop.Device);
+            Assert.Equal(4, history.Count);
+            Assert.StartsWith("Request #1021 ", history[0].RemoteId + " ");
+            Assert.StartsWith("Request #1018 ", history[1].RemoteId + " ");
+            Assert.StartsWith("Request #1012 ", history[2].RemoteId + " ");
+            Assert.StartsWith("Request #1004 ", history[3].RemoteId + " ");
+
+            // Latest status query returns latest submission
+            var latest = service.GetStatus(laptop.Device);
+            Assert.StartsWith("Request #1021 ", latest.RemoteId + " ");
+            Assert.Equal(TransmissionState.ItmsReceived, latest.SyncStatus);
+        }
+
+        [Fact]
+        public async Task SendDeviceAsync_HandlesServiceMisconfigured503_WithServerDetail()
+        {
+            var loggedDiagnostics = new System.Collections.Generic.List<string>();
+            var handler = new MockHttpMessageHandler
+            {
+                ResponseToReturn = new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
+                {
+                    Content = new StringContent("{\"success\":false,\"error\":\"Intake is temporarily unavailable: the server is not configured to accept Laptop Tool submissions.\",\"code\":\"SERVER_MISCONFIGURED\"}")
+                }
+            };
+            var connector = new HttpItmsConnector(() => "https://itms.neksdev.tech", () => "secret-key", handler, msg => loggedDiagnostics.Add(msg));
+            var detection = CreateTestDetection();
+            var payload = ItmsDevicePayload.From(detection);
+            var submission = new ItmsSubmission(detection.SubmissionId, payload, detection);
+
+            var result = await connector.SendDeviceAsync(submission);
+
+            Assert.Equal(ItmsSendOutcome.Failed, result.Outcome);
+            Assert.Equal(503, result.HttpStatusCode);
+            Assert.Equal("SERVER_MISCONFIGURED", result.ServerCode);
+            Assert.True(result.IsRetryable);
+            Assert.Contains("SERVER_MISCONFIGURED", result.Message);
+            Assert.Contains("the server is not configured to accept Laptop Tool submissions", result.Message);
+
+            // Safe diagnostic capture verified
+            Assert.NotEmpty(loggedDiagnostics);
+            var diag = loggedDiagnostics[0];
+            Assert.Contains("POST https://itms.neksdev.tech/api/devices/requests", diag);
+            Assert.Contains("Status: 503", diag);
+            Assert.Contains("SERVER_MISCONFIGURED", diag);
+            Assert.DoesNotContain("secret-key", diag); // No secrets leaked
+        }
+
+        [Fact]
+        public async Task SendDeviceAsync_HandlesGatewayTimeout504()
+        {
+            var handler = new MockHttpMessageHandler
+            {
+                ResponseToReturn = new HttpResponseMessage(HttpStatusCode.GatewayTimeout)
+                {
+                    Content = new StringContent("Gateway Timeout")
+                }
+            };
+            var connector = new HttpItmsConnector(() => "http://localhost:8000", () => "key", handler);
+            var detection = CreateTestDetection();
+            var payload = ItmsDevicePayload.From(detection);
+            var submission = new ItmsSubmission(detection.SubmissionId, payload, detection);
+
+            var result = await connector.SendDeviceAsync(submission);
+
+            Assert.Equal(ItmsSendOutcome.Failed, result.Outcome);
+            Assert.Equal(504, result.HttpStatusCode);
+            Assert.True(result.IsRetryable);
+            Assert.Contains("504", result.Message);
+        }
+
+        [Fact]
+        public async Task SendDeviceAsync_HandlesInternalServerError500_WithRetryableFlag()
+        {
+            var handler = new MockHttpMessageHandler
+            {
+                ResponseToReturn = new HttpResponseMessage(HttpStatusCode.InternalServerError)
+                {
+                    Content = new StringContent("{\"error\":\"Database connection failed\",\"code\":\"DB_DOWN\"}")
+                }
+            };
+            var connector = new HttpItmsConnector(() => "http://localhost:8000", () => "key", handler);
+            var detection = CreateTestDetection();
+            var payload = ItmsDevicePayload.From(detection);
+            var submission = new ItmsSubmission(detection.SubmissionId, payload, detection);
+
+            var result = await connector.SendDeviceAsync(submission);
+
+            Assert.Equal(ItmsSendOutcome.Failed, result.Outcome);
+            Assert.Equal(500, result.HttpStatusCode);
+            Assert.Equal("DB_DOWN", result.ServerCode);
+            Assert.True(result.IsRetryable);
+            Assert.Contains("Database connection failed", result.Message);
         }
     }
 }

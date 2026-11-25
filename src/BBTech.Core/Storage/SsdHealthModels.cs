@@ -175,7 +175,7 @@ namespace BBTech.Core.Storage
                     r.Temperature = !string.IsNullOrWhiteSpace(h.Temperature) ? h.Temperature : (d.TemperatureC != null ? d.TemperatureC + " °C" : "");
                     r.PowerOnTime = !string.IsNullOrWhiteSpace(h.PowerOnTime) ? h.PowerOnTime : (d.PowerOnHours != null ? d.PowerOnHours + " hours" : "");
                     r.DiagnosticDetails = !string.IsNullOrWhiteSpace(h.Description) ? h.Description : "Health report collected via HD Sentinel Pro.";
-                    r.DataSource = "HD Sentinel Pro (v6.30)";
+                    r.DataSource = !string.IsNullOrWhiteSpace(providerName) ? providerName : "HD Sentinel Pro (v6.30)";
                     r.Status = PhysicalSsdHealthResult.EvaluateStatus(h.HealthPercent, d.WindowsHealth, d.WearPercentUsed);
 
                     // Sync back to StorageDevice instance
@@ -183,6 +183,22 @@ namespace BBTech.Core.Storage
                     d.PerformancePercent = h.PerformancePercent;
                     d.PowerOnTime = r.PowerOnTime;
                     d.Temperature = r.Temperature;
+                    d.HealthAssessment = PhysicalSsdHealthResult.GetStatusLabel(r.Status);
+                    d.DiagnosticDetails = r.DiagnosticDetails;
+                    d.HealthSource = r.DataSource;
+                }
+                else if (d.HealthPercent.HasValue)
+                {
+                    // Drive was enriched directly via Native NVMe/ATA IOCTL or HD Sentinel persistent telemetry
+                    r.HealthPercent = d.HealthPercent.Value;
+                    r.PerformancePercent = d.PerformancePercent;
+                    r.Temperature = !string.IsNullOrWhiteSpace(d.Temperature) ? d.Temperature : (d.TemperatureC != null ? d.TemperatureC + " °C" : "");
+                    r.PowerOnTime = !string.IsNullOrWhiteSpace(d.PowerOnTime) ? d.PowerOnTime : (d.PowerOnHours != null ? d.PowerOnHours + " hours" : "");
+                    r.DataSource = !string.IsNullOrWhiteSpace(d.HealthSource) ? d.HealthSource : "Hardware Diagnostic Telemetry";
+                    r.DiagnosticDetails = !string.IsNullOrWhiteSpace(d.DiagnosticDetails) ? d.DiagnosticDetails : string.Format("Drive health: {0}%.", d.HealthPercent.Value);
+                    r.Status = PhysicalSsdHealthResult.EvaluateStatus(d.HealthPercent.Value, d.WindowsHealth, d.WearPercentUsed);
+
+                    // Sync back to StorageDevice instance
                     d.HealthAssessment = PhysicalSsdHealthResult.GetStatusLabel(r.Status);
                     d.DiagnosticDetails = r.DiagnosticDetails;
                     d.HealthSource = r.DataSource;
@@ -202,16 +218,11 @@ namespace BBTech.Core.Storage
                         r.DiagnosticDetails = string.Format("NVMe health: {0}% (wear consumed: {1}%). SMART status: {2}.",
                             hp, d.WearPercentUsed.Value, !string.IsNullOrWhiteSpace(d.WindowsHealth) ? d.WindowsHealth : "Healthy");
                     }
-                    else if (!string.IsNullOrEmpty(d.WindowsHealth) && d.WindowsHealth.Equals("Healthy", StringComparison.OrdinalIgnoreCase))
-                    {
-                        r.HealthPercent = 100;
-                        d.HealthPercent = 100;
-                        r.DataSource = "Windows Basic Storage API";
-                        r.DiagnosticDetails = "Drive operational status: Healthy (100%).";
-                    }
                     else
                     {
+                        // Operational status only without fabricating unmeasured wear endurance
                         r.HealthPercent = null;
+                        d.HealthPercent = null;
                         r.DataSource = "Windows Basic Storage API";
                         r.DiagnosticDetails = string.Format("Drive operational status: {0}. Detailed SMART wear statistics require administrator elevation or an active HD Sentinel instance.",
                             !string.IsNullOrWhiteSpace(d.WindowsHealth) ? d.WindowsHealth : "Healthy");
@@ -245,7 +256,7 @@ namespace BBTech.Core.Storage
                     Temperature = h.Temperature,
                     PowerOnTime = h.PowerOnTime,
                     DiagnosticDetails = h.Description,
-                    DataSource = "HD Sentinel Pro (v6.30)",
+                    DataSource = !string.IsNullOrWhiteSpace(providerName) ? providerName : "HD Sentinel Pro (v6.30)",
                     Status = PhysicalSsdHealthResult.EvaluateStatus(h.HealthPercent),
                 };
                 orphan.StatusLabel = PhysicalSsdHealthResult.GetStatusLabel(orphan.Status);
@@ -291,13 +302,17 @@ namespace BBTech.Core.Storage
                         detection.SsdHealth = hp + "%" +
                             (!string.IsNullOrEmpty(prime.StatusLabel) && prime.StatusLabel != "UNKNOWN" ? " (" + prime.StatusLabel + ")" : "");
                     }
-                    else if (!string.IsNullOrEmpty(prime.StatusLabel) && prime.StatusLabel != "UNKNOWN")
-                    {
-                        detection.SsdHealth = "100% (" + prime.StatusLabel + ")";
-                    }
                     else if (!string.IsNullOrEmpty(prime.WindowsHealth))
                     {
-                        detection.SsdHealth = prime.WindowsHealth.Equals("Healthy", StringComparison.OrdinalIgnoreCase) ? "100% (Healthy)" : prime.WindowsHealth;
+                        detection.SsdHealth = prime.WindowsHealth;
+                    }
+                    else if (!string.IsNullOrEmpty(prime.StatusLabel) && prime.StatusLabel != "UNKNOWN")
+                    {
+                        detection.SsdHealth = prime.StatusLabel;
+                    }
+                    else
+                    {
+                        detection.SsdHealth = "Operational";
                     }
                 }
             }

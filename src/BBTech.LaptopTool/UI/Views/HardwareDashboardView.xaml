@@ -1,0 +1,87 @@
+<UserControl x:Class="BBTech.LaptopTool.UI.Views.HardwareDashboardView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <UserControl.Resources>
+        <Style x:Key="TestCardBorder" TargetType="Border">
+            <Setter Property="Background" Value="White" />
+            <Setter Property="BorderBrush" Value="{StaticResource CardBorder}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="16,14" />
+            <Setter Property="Margin" Value="6" />
+            <Setter Property="Width" Value="232" />
+            <Setter Property="MinHeight" Value="176" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
+        <ScrollViewer VerticalScrollBarVisibility="Auto" Focusable="False">
+            <StackPanel Margin="24,20,24,28">
+                <!-- Device Header & Overview Strip -->
+                <Border Style="{StaticResource Card}" Padding="18,14" Margin="0,0,0,16">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                <Border Background="{StaticResource NeutralSoft}" CornerRadius="4" Padding="7,2" Margin="0,0,10,0" VerticalAlignment="Center">
+                                    <TextBlock Text="HARDWARE" FontSize="10" FontWeight="Bold" Foreground="{StaticResource TextMuted}" />
+                                </Border>
+                                <TextBlock x:Name="DeviceTitle" Text="Detecting laptop hardware..." FontSize="18" FontWeight="Bold"
+                                           Foreground="{StaticResource TextPrimary}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                            </StackPanel>
+                            <TextBlock x:Name="DeviceSpecs" Text="Detecting CPU, RAM, storage and serial number..." Style="{StaticResource Muted}" FontSize="12" />
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Button Style="{StaticResource BaseButton}" Click="Rescan_Click" Margin="0,0,8,0" Padding="12,6" MinHeight="32" ToolTip="Re-detect hardware and refresh tests">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock FontFamily="{StaticResource IconFont}" Text="&#xE72C;" VerticalAlignment="Center" FontSize="12" Foreground="{StaticResource TextMuted}" />
+                                    <TextBlock Text="Rescan" Margin="6,0,0,0" VerticalAlignment="Center" FontSize="12" />
+                                </StackPanel>
+                            </Button>
+                            <Button Style="{StaticResource BaseButton}" Click="Export_Click" Margin="0,0,8,0" Padding="12,6" MinHeight="32" ToolTip="Export results as CSV / JSON">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock FontFamily="{StaticResource IconFont}" Text="&#xEDE1;" VerticalAlignment="Center" FontSize="12" Foreground="{StaticResource TextMuted}" />
+                                    <TextBlock Text="Export" Margin="6,0,0,0" VerticalAlignment="Center" FontSize="12" />
+                                </StackPanel>
+                            </Button>
+                            <Button Style="{StaticResource BaseButton}" Click="AllHistory_Click" Padding="12,6" MinHeight="32" ToolTip="View full test run history">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock FontFamily="{StaticResource IconFont}" Text="&#xE81C;" VerticalAlignment="Center" FontSize="12" Foreground="{StaticResource TextMuted}" />
+                                    <TextBlock Text="History" Margin="6,0,0,0" VerticalAlignment="Center" FontSize="12" />
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <ContentControl x:Name="LifecycleHost" Margin="0,0,0,16" Focusable="False" />
+
+                <!-- Hardware Tests Grid Header -->
+                <DockPanel Margin="4,0,4,10" LastChildFill="True">
+                    <TextBlock x:Name="SummaryText" DockPanel.Dock="Right" Style="{StaticResource Muted}" FontSize="12" VerticalAlignment="Center" />
+                    <TextBlock Text="Hardware Diagnostics &amp; Tests" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" Margin="0" />
+                </DockPanel>
+
+                <!-- Visual Diagnostic Cards Grid -->
+                <WrapPanel x:Name="CardsContainer" Margin="-6,0" />
+
+                <!-- History Drawer / Modal -->
+                <Border x:Name="HistoryFlyout" Visibility="Collapsed" Style="{StaticResource Card}" Margin="0,18,0,0" BorderBrush="{StaticResource CardBorder}">
+                    <StackPanel>
+                        <DockPanel Margin="0,0,0,12" LastChildFill="True">
+                            <Button DockPanel.Dock="Right" Style="{StaticResource LinkButton}" Content="Close [✕]" Click="CloseHistory_Click" FontSize="12" />
+                            <TextBlock x:Name="HistoryTitle" Text="Test History" FontSize="15" FontWeight="Bold" Foreground="{StaticResource TextPrimary}" />
+                        </DockPanel>
+                        <TextBlock Text="All test runs on this laptop are preserved for full traceability. Older records can only be removed with Admin authorization." Style="{StaticResource Muted}" FontSize="12" Margin="0,0,0,12" />
+                        <ItemsControl x:Name="HistoryList" />
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

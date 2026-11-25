@@ -14,23 +14,24 @@ namespace BBTech.LaptopTool.UI.Views
             _shell = shell;
             VersionText.Text = "Version " + AppPaths.Version + "  ·  Works offline  ·  Nothing is installed" +
                                (AppPaths.UsingFallbackStorage ? "  ·  USB is read-only: files are saved on this PC" : "");
-            // On short windows (small screens / high DPI scaling) give the space to the two big buttons.
             SizeChanged += (s, e) =>
             {
-                double size = e.NewSize.Height < 560 ? 84 : 150;
+                double size = e.NewSize.Height < 560 ? 56 : 68;
                 HomeLogo.Width = HomeLogo.Height = size;
             };
         }
 
+        private void StartTesting_Click(object sender, RoutedEventArgs e) => _shell.StartTestingWorkflow();
         private void Detect_Click(object sender, RoutedEventArgs e) => _shell.ShowDetect();
         private void Test_Click(object sender, RoutedEventArgs e) => _shell.ShowTest();
         private void Wifi_Click(object sender, RoutedEventArgs e) => _shell.ShowWifi();
+        private void DeptSetup_Click(object sender, RoutedEventArgs e) => _shell.ShowUserProfileSetup(allowCancel: true);
         private void Data_Click(object sender, RoutedEventArgs e) => ProcessRunner.OpenShell(AppPaths.Ensure(AppPaths.DataDir));
 
         private void Settings_Click(object sender, RoutedEventArgs e)
         {
             var owner = Window.GetWindow(this);
-            if (AdminGate.Unlock(owner)) new SettingsWindow { Owner = owner }.ShowDialog();
+            SettingsWindow.ShowAuthorized(owner);
         }
         private void About_Click(object sender, RoutedEventArgs e) => new AboutWindow { Owner = Window.GetWindow(this) }.ShowDialog();
     }

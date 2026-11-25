@@ -21,6 +21,9 @@ namespace BBTech.LaptopTool.UI.Tests
         /// <summary>Evidence recorded with the result (e.g. "84/84 keys").</summary>
         public virtual string Notes => ChecklistNotes();
 
+        /// <summary>Why PASS is not allowed (a measured result the technician cannot override), or null.</summary>
+        public virtual string PassBlockedReason => null;
+
         public virtual void Attach(TestHostWindow host) { Host = host; }
         public virtual void Detach() { }
 
@@ -118,7 +121,24 @@ namespace BBTech.LaptopTool.UI.Tests
                 case HardwareTest.Bluetooth: return new BluetoothTestPanel();
                 case HardwareTest.Battery: return new BatteryTestPanel();
                 case HardwareTest.Storage: return new StorageTestPanel();
-                default: throw new ArgumentOutOfRangeException(nameof(kind));
+                case HardwareTest.Ram: return new RamTestPanel();
+                case HardwareTest.PhysicalInspection: return new PhysicalInspectionTestPanel();
+                case HardwareTest.OtherInspection: return new OtherInspectionTestPanel();
+                case HardwareTest.SoftwareDisplay: return new SoftwareDisplayTestPanel();
+                case HardwareTest.SoftwareKeyboard: return new SoftwareKeyboardTestPanel();
+                case HardwareTest.SoftwareMouse: return new SoftwareMouseTestPanel();
+                case HardwareTest.SoftwareScroll: return new SoftwareScrollTestPanel();
+                case HardwareTest.SoftwareHotkeys: return new SoftwareHotkeyTestPanel();
+                case HardwareTest.SoftwareTouchpad: return new SoftwareTouchpadTestPanel();
+                // Same physical checks, reused (no duplicate implementations):
+                case HardwareTest.Mouse: return new SoftwareMouseTestPanel();
+                case HardwareTest.SoftwareAudio: return new AudioOutputTestPanel(headphones: false);
+                case HardwareTest.SoftwareMicrophone: return new MicrophoneTestPanel();
+                case HardwareTest.SoftwareCamera: return new CameraTestPanel();
+                case HardwareTest.SoftwareDrivers: return new SoftwareDriversTestPanel();
+                default:
+                    if (kind >= HardwareTest.QcWindows) return new ChecklistTestPanel(kind); // QC confirmations + delivery checklist
+                    throw new ArgumentOutOfRangeException(nameof(kind));
             }
         }
     }

@@ -370,5 +370,209 @@ namespace BBTech.Core.Tests
             string json = Encoding.UTF8.GetString(Json.ToBytes(state["BBTechShop_5G"]));
             Assert.DoesNotContain("Password123", json);
         }
+
+        [Fact]
+        public void Department_selection_and_EnsureOperator_persists_across_sessions()
+        {
+            var s = SettingsStore.Load(FilePath);
+            var kamal = s.EnsureOperator("Kamal", "Hardware");
+            s.SelectDepartmentAndOperator("Hardware", kamal.OperatorId);
+
+            var reloaded = SettingsStore.Load(FilePath);
+            Assert.Equal("Hardware", reloaded.CurrentDepartment);
+            Assert.Equal("Kamal", reloaded.CurrentOperator.Name);
+            Assert.Equal("Hardware", reloaded.CurrentOperator.Role);
+
+            // Switching to QC
+            var jimmy = reloaded.EnsureOperator("Jimmy", "QC");
+            reloaded.SelectDepartmentAndOperator("QC", jimmy.OperatorId);
+
+            var qcStore = SettingsStore.Load(FilePath);
+            Assert.Equal("QC", qcStore.CurrentDepartment);
+            Assert.Equal("Jimmy", qcStore.CurrentOperator.Name);
+        }
+
+        [Fact]
+        public void ScenarioA_Kamal_HasOnlyHardwareAccess()
+        {
+            var s = SettingsStore.Load(FilePath);
+            s.EnsureDefaultTeamProfiles();
+            var kamal = s.ActiveOperators.First(o => o.Name == "Kamal");
+            s.SelectProfile(kamal.OperatorId);
+
+            var loaded = SettingsStore.Load(FilePath);
+            Assert.Equal("Hardware", loaded.CurrentDepartment);
+            Assert.True(loaded.CurrentOperator.CanAccessHardware);
+            Assert.False(loaded.CurrentOperator.CanAccessQc);
+            Assert.False(loaded.CurrentOperator.CanAccessEcommerce);
+            Assert.False(loaded.CurrentOperator.IsAdmin);
+        }
+
+        [Fact]
+        public void ScenarioB_Jimmy_HasOnlyQcAccess()
+        {
+            var s = SettingsStore.Load(FilePath);
+            s.EnsureDefaultTeamProfiles();
+            var jimmy = s.ActiveOperators.First(o => o.Name == "Jimmy");
+            s.SelectProfile(jimmy.OperatorId);
+
+            var loaded = SettingsStore.Load(FilePath);
+            Assert.Equal("QC", loaded.CurrentDepartment);
+            Assert.True(loaded.CurrentOperator.CanAccessQc);
+            Assert.False(loaded.CurrentOperator.CanAccessHardware);
+            Assert.False(loaded.CurrentOperator.CanAccessEcommerce);
+            Assert.False(loaded.CurrentOperator.IsAdmin);
+        }
+
+        [Fact]
+        public void ScenarioC_Shadir_HasHardwareAndSoftwareAccess_NoQcOrEcommerce()
+        {
+            var s = SettingsStore.Load(FilePath);
+            s.EnsureDefaultTeamProfiles();
+            var shadir = s.ActiveOperators.First(o => o.Name == "Shadir");
+            s.SelectProfile(shadir.OperatorId);
+
+            var loaded = SettingsStore.Load(FilePath);
+            Assert.True(loaded.CurrentOperator.CanAccessHardware);
+            Assert.True(loaded.CurrentOperator.CanAccessSoftware);
+            Assert.False(loaded.CurrentOperator.CanAccessQc);
+            Assert.False(loaded.CurrentOperator.CanAccessEcommerce);
+            Assert.False(loaded.CurrentOperator.IsAdmin);
+            Assert.Equal(2, loaded.CurrentOperator.Departments.Count);
+            Assert.Contains("Hardware", loaded.CurrentOperator.Departments);
+            Assert.Contains("Software", loaded.CurrentOperator.Departments);
+        }
+
+        [Fact]
+        public void ScenarioD_Riyad_HasOnlyEcommerceAccess()
+        {
+            var s = SettingsStore.Load(FilePath);
+            s.EnsureDefaultTeamProfiles();
+            var riyad = s.ActiveOperators.First(o => o.Name == "Riyad");
+            s.SelectProfile(riyad.OperatorId);
+
+            var loaded = SettingsStore.Load(FilePath);
+            Assert.Equal("E-Commerce", loaded.CurrentDepartment);
+            Assert.True(loaded.CurrentOperator.CanAccessEcommerce);
+            Assert.False(loaded.CurrentOperator.CanAccessHardware);
+            Assert.False(loaded.CurrentOperator.CanAccessQc);
+            Assert.False(loaded.CurrentOperator.CanAccessSoftware);
+            Assert.False(loaded.CurrentOperator.IsAdmin);
+        }
+
+        [Fact]
+        public void ScenarioE_SuperAdmin_HasAllAccess()
+        {
+            var s = SettingsStore.Load(FilePath);
+            s.EnsureDefaultTeamProfiles();
+            var touhidul = s.ActiveOperators.First(o => o.Name == "Touhidul");
+            s.SelectProfile(touhidul.OperatorId);
+
+            var loaded = SettingsStore.Load(FilePath);
+            Assert.True(loaded.CurrentOperator.IsAdmin);
+            Assert.True(loaded.CurrentOperator.CanAccessHardware);
+            Assert.True(loaded.CurrentOperator.CanAccessQc);
+            Assert.True(loaded.CurrentOperator.CanAccessSoftware);
+            Assert.True(loaded.CurrentOperator.CanAccessEcommerce);
+            Assert.True(loaded.CurrentOperator.HasPermission("ALL"));
+        }
+
+        [Fact]
+        public void ScenarioF_Talal_CoFounderAdmin_HasAllAccess()
+        {
+            var s = SettingsStore.Load(FilePath);
+            s.EnsureDefaultTeamProfiles();
+            var talal = s.ActiveOperators.First(o => o.Name == "Talal");
+            s.SelectProfile(talal.OperatorId);
+
+            var loaded = SettingsStore.Load(FilePath);
+            Assert.True(loaded.CurrentOperator.IsAdmin);
+            Assert.True(loaded.CurrentOperator.CanAccessHardware);
+            Assert.True(loaded.CurrentOperator.CanAccessQc);
+            Assert.True(loaded.CurrentOperator.CanAccessSoftware);
+            Assert.True(loaded.CurrentOperator.CanAccessEcommerce);
+            Assert.True(loaded.CurrentOperator.HasPermission("ALL"));
+        }
+
+        [Fact]
+        public void ScenarioG_BijoyAndHamed_HaveOnlyEcommerceAccess()
+        {
+            var s = SettingsStore.Load(FilePath);
+            s.EnsureDefaultTeamProfiles();
+
+            foreach (var name in new[] { "Bijoy", "Hamed" })
+            {
+                var user = s.ActiveOperators.First(o => o.Name == name);
+                s.SelectProfile(user.OperatorId);
+
+                var loaded = SettingsStore.Load(FilePath);
+                Assert.Equal("E-Commerce", loaded.CurrentDepartment);
+                Assert.True(loaded.CurrentOperator.CanAccessEcommerce);
+                Assert.False(loaded.CurrentOperator.CanAccessHardware);
+                Assert.False(loaded.CurrentOperator.CanAccessQc);
+                Assert.False(loaded.CurrentOperator.CanAccessSoftware);
+                Assert.False(loaded.CurrentOperator.IsAdmin);
+            }
+        }
+
+        [Fact]
+        public void ResetSession_ClearsActiveOperatorAndDepartment()
+        {
+            var s = SettingsStore.Load(FilePath);
+            s.EnsureDefaultTeamProfiles();
+            var kamal = s.ActiveOperators.First(o => o.Name == "Kamal");
+            s.SelectProfile(kamal.OperatorId);
+
+            var beforeReset = SettingsStore.Load(FilePath);
+            Assert.NotNull(beforeReset.CurrentOperator);
+            Assert.Equal("Hardware", beforeReset.CurrentDepartment);
+
+            beforeReset.ResetSession();
+
+            var afterReset = SettingsStore.Load(FilePath);
+            Assert.Null(afterReset.CurrentOperator);
+            Assert.Null(afterReset.CurrentDepartment);
+        }
+
+        [Fact]
+        public void CustomOperator_WithDepartmentsAndPermissions_WorksCorrectly()
+        {
+            var s = SettingsStore.Load(FilePath);
+            var custom = s.AddOperator("CustomTech", "Specialist", new[] { "Hardware", "QC" }, new[] { "Hardware Testing", "QC Inspection" });
+
+            s.SelectProfile(custom.OperatorId);
+            var loaded = SettingsStore.Load(FilePath);
+            Assert.NotNull(loaded.CurrentOperator);
+            Assert.True(loaded.CurrentOperator.CanAccessHardware);
+            Assert.True(loaded.CurrentOperator.CanAccessQc);
+            Assert.False(loaded.CurrentOperator.CanAccessSoftware);
+            Assert.False(loaded.CurrentOperator.CanAccessEcommerce);
+            Assert.False(loaded.CurrentOperator.IsAdmin);
+
+            loaded.UpdateOperator(custom.OperatorId, "CustomTechEdited", "Specialist Lead", new[] { "QC" }, new[] { "QC Inspection" });
+            var updated = SettingsStore.Load(FilePath);
+            var opUpdated = updated.FindOperator(custom.OperatorId);
+            Assert.Equal("CustomTechEdited", opUpdated.Name);
+            Assert.False(opUpdated.CanAccessHardware);
+            Assert.True(opUpdated.CanAccessQc);
+        }
+
+        [Fact]
+        public void DynamicOperators_AddAndDeactivate_AppearAndHideCorrectly()
+        {
+            var s = SettingsStore.Load(FilePath);
+            s.EnsureDefaultTeamProfiles();
+
+            // Newly added active operator appears in ActiveOperators dynamically
+            var newOp = s.AddOperator("Sultana", "QC Inspector", new[] { "QC" }, new[] { "QC Inspection" });
+            var loaded = SettingsStore.Load(FilePath);
+            Assert.Contains(loaded.ActiveOperators, o => o.Name == "Sultana");
+
+            // Deactivated operator does NOT appear in ActiveOperators
+            loaded.SetOperatorActive(newOp.OperatorId, false);
+            var afterDeactivate = SettingsStore.Load(FilePath);
+            Assert.DoesNotContain(afterDeactivate.ActiveOperators, o => o.Name == "Sultana");
+            Assert.Contains(afterDeactivate.Settings.Operators, o => o.Name == "Sultana" && !o.Active);
+        }
     }
 }

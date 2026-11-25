@@ -10,17 +10,114 @@ using BBTech.LaptopTool.Services;
 namespace BBTech.LaptopTool.Detect
 {
     /// <summary>
+    /// Thread-safe in-memory cache for stable hardware specifications that do not change during an application session
+    /// (e.g. CPU, RAM, Serial Number, UUID, Board Serial, Model, Manufacturer).
+    /// Dynamic hardware (Battery, Storage drives, SSD Health) is re-scanned when requested.
+    /// </summary>
+    public static class HardwareCache
+    {
+        private static readonly object _sync = new object();
+        private static CachedHardware _cached;
+
+        public sealed class CachedHardware
+        {
+            public SystemDetails System { get; set; }
+            public string Brand { get; set; }
+            public string Model { get; set; }
+            public string ModelNumber { get; set; }
+            public string Cpu { get; set; }
+            public string Generation { get; set; }
+            public CpuDetails CpuDetails { get; set; }
+            public MemoryDetails Memory { get; set; }
+            public string Ram { get; set; }
+            public List<GpuDetails> Gpus { get; set; }
+            public DisplayDetails Display { get; set; }
+            public PeripheralDetails Peripherals { get; set; }
+            public FirmwareDetails Firmware { get; set; }
+        }
+
+        public static CachedHardware Get() { lock (_sync) return _cached; }
+        public static void Set(CachedHardware val) { lock (_sync) _cached = val; }
+        public static void Clear() { lock (_sync) _cached = null; }
+    }
+
+    /// <summary>
     /// DETECT orchestration. Each step is isolated: a failure in one step is logged,
     /// turned into a friendly warning, and the field is left as "Unknown".
+    /// Concurrent queries and session caching ensure high speed and non-blocking UI.
     /// </summary>
     public static class HardwareDetector
     {
-        public static async Task<DetectionResult> DetectAsync(IProgress<string> progress)
+        public static async Task<DetectionResult> DetectAsync(IProgress<string> progress, bool forceRefresh = false)
         {
             var sw = System.Diagnostics.Stopwatch.StartNew();
             var r = new DetectionResult { ToolVersion = AppPaths.Version, DetectedAt = DateTime.Now };
-            AppLog.Info("Detection started");
+            AppLog.Info("Detection started" + (forceRefresh ? " (force refresh)" : ""));
             progress?.Report("Scanning hardware specifications...");
+
+            var cached = !forceRefresh ? HardwareCache.Get() : null;
+            if (cached != null)
+            {
+                ApplyCached(r, cached);
+                progress?.Report("Refreshing battery and storage...");
+
+                var tFastStorage = Task.Run(() =>
+                {
+                    var ssw = System.Diagnostics.Stopwatch.StartNew();
+                    try
+                    {
+                        StorageProvider.Fill(r);
+                        ssw.Stop();
+                        AppLog.Info(string.Format("[Timing] Storage completed in {0} ms", ssw.ElapsedMilliseconds));
+                    }
+                    catch (Exception ex)
+                    {
+                        ssw.Stop();
+                        AppLog.Error("Storage detection failed", ex);
+                        r.AddWarning("Storage information unavailable.");
+                    }
+                });
+
+                var tFastBattery = Task.Run(() =>
+                {
+                    var bsw = System.Diagnostics.Stopwatch.StartNew();
+                    try
+                    {
+                        BatteryProvider.Fill(r);
+                        bsw.Stop();
+                        AppLog.Info(string.Format("[Timing] Battery completed in {0} ms", bsw.ElapsedMilliseconds));
+                    }
+                    catch (Exception ex)
+                    {
+                        bsw.Stop();
+                        AppLog.Error("Battery detection failed", ex);
+                        r.AddWarning("Battery information is currently unavailable.");
+                    }
+                });
+
+                var tFastSsd = tFastStorage.ContinueWith(_ =>
+                {
+                    var ssw = System.Diagnostics.Stopwatch.StartNew();
+                    try
+                    {
+                        SsdHealthEngine.InspectAsync(r).GetAwaiter().GetResult();
+                        ssw.Stop();
+                        AppLog.Info(string.Format("[Timing] SSD health completed in {0} ms", ssw.ElapsedMilliseconds));
+                    }
+                    catch (Exception ex)
+                    {
+                        ssw.Stop();
+                        AppLog.Warn("Automatic SSD health inspection encountered an issue", ex);
+                        r.AddWarning("SSD health diagnosis unavailable.");
+                    }
+                });
+
+                await Task.WhenAll(tFastSsd, tFastBattery).ConfigureAwait(false);
+                sw.Stop();
+                AppLog.Info(string.Format("Detection (cached session) finished in {0} ms: {1} | {2} | {3} | {4} | {5} | {6} | {7} | battery {8} | ssd {9}",
+                    sw.ElapsedMilliseconds, r.Brand, r.Model, r.ModelNumber, r.Cpu, r.Generation, r.Ram, r.Storage, r.BatteryHealth, r.SsdHealth));
+                return r;
+            }
 
             int completedStages = 0;
             const int totalStages = 9;
@@ -69,11 +166,123 @@ namespace BBTech.LaptopTool.Detect
 
             await Task.WhenAll(tSystem, tCpu, tMemory, tStorageWithSsd, tBattery, tGpu, tDisplay, tPeripherals, tFirmware).ConfigureAwait(false);
 
+            // Save stable hardware snapshot to cache for subsequent rescans in this application session
+            HardwareCache.Set(new HardwareCache.CachedHardware
+            {
+                System = r.System,
+                Brand = r.Brand,
+                Model = r.Model,
+                ModelNumber = r.ModelNumber,
+                Cpu = r.Cpu,
+                Generation = r.Generation,
+                CpuDetails = r.CpuDetails,
+                Memory = r.Memory,
+                Ram = r.Ram,
+                Gpus = r.Gpus,
+                Display = r.Display,
+                Peripherals = r.Peripherals,
+                Firmware = r.Firmware,
+            });
+
             sw.Stop();
             AppLog.Info(string.Format("Detection finished in {0} ms: {1} | {2} | {3} | {4} | {5} | {6} | {7} | battery {8} | ssd {9}{10}",
                 sw.ElapsedMilliseconds, r.Brand, r.Model, r.ModelNumber, r.Cpu, r.Generation, r.Ram, r.Storage, r.BatteryHealth, r.SsdHealth,
                 r.Warnings.Count > 0 ? " | warnings: " + r.Warnings.Count : ""));
             return r;
+        }
+
+        private static void ApplyCached(DetectionResult r, HardwareCache.CachedHardware cached)
+        {
+            r.Brand = cached.Brand;
+            r.Model = cached.Model;
+            r.ModelNumber = cached.ModelNumber;
+            r.Cpu = cached.Cpu;
+            r.Generation = cached.Generation;
+            r.Ram = cached.Ram;
+
+            r.System = new SystemDetails
+            {
+                RawManufacturer = cached.System.RawManufacturer,
+                RawModel = cached.System.RawModel,
+                SystemFamily = cached.System.SystemFamily,
+                ProductVersion = cached.System.ProductVersion,
+                SystemSku = cached.System.SystemSku,
+                ProductCode = cached.System.ProductCode,
+                SerialNumber = cached.System.SerialNumber,
+                SystemUuid = cached.System.SystemUuid,
+                BoardSerial = cached.System.BoardSerial,
+                BiosVersion = cached.System.BiosVersion,
+                BiosReleaseDate = cached.System.BiosReleaseDate,
+                FirmwareAssetTag = cached.System.FirmwareAssetTag,
+                ComputerName = cached.System.ComputerName,
+                ChassisType = cached.System.ChassisType,
+                IsPortable = cached.System.IsPortable,
+                OperatingSystem = cached.System.OperatingSystem,
+            };
+
+            r.CpuDetails = new CpuDetails
+            {
+                FullName = cached.CpuDetails.FullName,
+                Vendor = cached.CpuDetails.Vendor,
+                ModelCode = cached.CpuDetails.ModelCode,
+                Cores = cached.CpuDetails.Cores,
+                LogicalProcessors = cached.CpuDetails.LogicalProcessors,
+                MaxClockMhz = cached.CpuDetails.MaxClockMhz,
+            };
+
+            r.Memory = new MemoryDetails
+            {
+                TotalBytes = cached.Memory.TotalBytes,
+                FromModules = cached.Memory.FromModules,
+                Modules = cached.Memory.Modules.Select(m => new MemoryModule
+                {
+                    CapacityBytes = m.CapacityBytes,
+                    SpeedMhz = m.SpeedMhz,
+                    Type = m.Type,
+                    Slot = m.Slot,
+                    Manufacturer = m.Manufacturer,
+                    PartNumber = m.PartNumber,
+                }).ToList()
+            };
+
+            r.Gpus = cached.Gpus.Select(g => new GpuDetails
+            {
+                Name = g.Name,
+                Manufacturer = g.Manufacturer,
+                DedicatedVramBytes = g.DedicatedVramBytes,
+                DedicatedVramLabel = g.DedicatedVramLabel,
+                DriverVersion = g.DriverVersion,
+            }).ToList();
+
+            r.Display = new DisplayDetails
+            {
+                Resolution = cached.Display.Resolution,
+                RefreshRateHz = cached.Display.RefreshRateHz,
+                DisplayCount = cached.Display.DisplayCount,
+            };
+
+            r.Peripherals = new PeripheralDetails
+            {
+                MicrophoneName = cached.Peripherals.MicrophoneName,
+                SpeakerName = cached.Peripherals.SpeakerName,
+                WifiAdapter = cached.Peripherals.WifiAdapter,
+                BluetoothAdapter = cached.Peripherals.BluetoothAdapter,
+                EthernetAdapter = cached.Peripherals.EthernetAdapter,
+                FingerprintReader = cached.Peripherals.FingerprintReader,
+                TpmPresent = cached.Peripherals.TpmPresent,
+                TpmVersion = cached.Peripherals.TpmVersion,
+                SecureBootEnabled = cached.Peripherals.SecureBootEnabled,
+            };
+
+            r.Firmware = new FirmwareDetails
+            {
+                BiosVendor = cached.Firmware.BiosVendor,
+                BiosVersion = cached.Firmware.BiosVersion,
+                BiosReleaseDate = cached.Firmware.BiosReleaseDate,
+                SecureBoot = cached.Firmware.SecureBoot,
+                TpmReady = cached.Firmware.TpmReady,
+                TpmVersion = cached.Firmware.TpmVersion,
+            };
         }
     }
 
@@ -85,13 +294,23 @@ namespace BBTech.LaptopTool.Detect
         public static void Fill(DetectionResult r)
         {
             var s = r.System;
-            var cs = Wmi.Query("SELECT Manufacturer, Model, SystemFamily, SystemSKUNumber, TotalPhysicalMemory FROM Win32_ComputerSystem").FirstOrDefault()
-                     ?? Wmi.Query("SELECT * FROM Win32_ComputerSystem").FirstOrDefault();
-            var prod = Wmi.Query("SELECT Vendor, Name, Version, UUID FROM Win32_ComputerSystemProduct").FirstOrDefault();
-            var bios = Wmi.Query("SELECT SerialNumber, SMBIOSBIOSVersion FROM Win32_BIOS").FirstOrDefault();
-            var board = Wmi.Query("SELECT SerialNumber FROM Win32_BaseBoard").FirstOrDefault();
-            var enc = Wmi.Query("SELECT ChassisTypes FROM Win32_SystemEnclosure").FirstOrDefault();
-            var os = Wmi.Query("SELECT Caption, Version FROM Win32_OperatingSystem").FirstOrDefault();
+
+            // Execute all 6 independent system WMI queries concurrently
+            var tCs = Task.Run(() => Wmi.Query("SELECT Manufacturer, Model, SystemFamily, SystemSKUNumber, TotalPhysicalMemory FROM Win32_ComputerSystem", timeoutSeconds: 3).FirstOrDefault()
+                                     ?? Wmi.Query("SELECT * FROM Win32_ComputerSystem", timeoutSeconds: 3).FirstOrDefault());
+            var tProd = Task.Run(() => Wmi.Query("SELECT Vendor, Name, Version, UUID FROM Win32_ComputerSystemProduct", timeoutSeconds: 3).FirstOrDefault());
+            var tBios = Task.Run(() => Wmi.Query("SELECT SerialNumber, SMBIOSBIOSVersion, ReleaseDate FROM Win32_BIOS", timeoutSeconds: 3).FirstOrDefault());
+            var tBoard = Task.Run(() => Wmi.Query("SELECT SerialNumber FROM Win32_BaseBoard", timeoutSeconds: 3).FirstOrDefault());
+            var tEnc = Task.Run(() => Wmi.Query("SELECT ChassisTypes, SMBIOSAssetTag FROM Win32_SystemEnclosure", timeoutSeconds: 3).FirstOrDefault());
+            var tOs = Task.Run(() => Wmi.Query("SELECT Caption, Version FROM Win32_OperatingSystem", timeoutSeconds: 3).FirstOrDefault());
+
+            Task.WaitAll(tCs, tProd, tBios, tBoard, tEnc, tOs);
+            var cs = tCs.Result;
+            var prod = tProd.Result;
+            var bios = tBios.Result;
+            var board = tBoard.Result;
+            var enc = tEnc.Result;
+            var os = tOs.Result;
 
             if (cs != null)
             {
@@ -237,7 +456,7 @@ namespace BBTech.LaptopTool.Detect
 
         public static void Fill(DetectionResult r)
         {
-            var disks = Wmi.Query("SELECT FriendlyName, MediaType, BusType, Size, HealthStatus, SpindleSpeed, DeviceId FROM MSFT_PhysicalDisk", StorageNs);
+            var disks = Wmi.Query("SELECT FriendlyName, SerialNumber, MediaType, BusType, Size, HealthStatus, SpindleSpeed, DeviceId FROM MSFT_PhysicalDisk", StorageNs);
             foreach (var d in disks)
             {
                 int bus = Wmi.Int(d, "BusType");
@@ -247,10 +466,12 @@ namespace BBTech.LaptopTool.Detect
                 long size = Wmi.Long(d, "Size");
                 if (size <= 0) continue;
                 string model = Wmi.Str(d, "FriendlyName");
+                string serial = Wmi.Str(d, "SerialNumber");
 
                 r.StorageDevices.Add(new StorageDevice
                 {
                     Model = model,
+                    SerialNumber = serial,
                     CapacityBytes = size,
                     CapacityLabel = CapacityFormatter.FormatDrive(size),
                     BusType = BusName(bus),
@@ -272,23 +493,27 @@ namespace BBTech.LaptopTool.Detect
 
         private static void FillFromDiskDrive(DetectionResult r)
         {
-            foreach (var d in Wmi.Query("SELECT Model, Size, InterfaceType, MediaType, PNPDeviceID FROM Win32_DiskDrive"))
+            foreach (var d in Wmi.Query("SELECT Model, SerialNumber, Size, InterfaceType, MediaType, PNPDeviceID, DeviceID FROM Win32_DiskDrive"))
             {
                 long size = Wmi.Long(d, "Size");
                 if (size <= 0) continue;
                 string iface = Wmi.Str(d, "InterfaceType");
                 string pnp = Wmi.Str(d, "PNPDeviceID");
                 string model = Wmi.Str(d, "Model");
+                string serial = Wmi.Str(d, "SerialNumber");
+                string devId = Wmi.Str(d, "DeviceID");
                 bool usb = iface.Equals("USB", StringComparison.OrdinalIgnoreCase) || pnp.StartsWith("USBSTOR", StringComparison.OrdinalIgnoreCase);
                 bool nvme = pnp.IndexOf("NVME", StringComparison.OrdinalIgnoreCase) >= 0;
                 r.StorageDevices.Add(new StorageDevice
                 {
                     Model = model,
+                    SerialNumber = serial,
                     CapacityBytes = size,
                     CapacityLabel = CapacityFormatter.FormatDrive(size),
                     BusType = usb ? "USB" : nvme ? "NVMe" : iface,
                     MediaType = nvme || model.IndexOf("SSD", StringComparison.OrdinalIgnoreCase) >= 0 ? "SSD" : "",
                     IsExternal = usb || Wmi.Str(d, "MediaType").IndexOf("External", StringComparison.OrdinalIgnoreCase) >= 0,
+                    DeviceId = devId,
                 });
             }
         }
@@ -468,48 +693,59 @@ namespace BBTech.LaptopTool.Detect
     {
         public static void Fill(DetectionResult r)
         {
-            try
+            var tAudio = Task.Run(() =>
             {
-                var audio = Wmi.Query("SELECT Name, Manufacturer FROM Win32_SoundDevice").FirstOrDefault();
-                if (audio != null)
+                try
                 {
-                    r.Peripherals.SpeakerName = Wmi.Str(audio, "Name");
+                    var audio = Wmi.Query("SELECT Name, Manufacturer FROM Win32_SoundDevice", timeoutSeconds: 2).FirstOrDefault();
+                    if (audio != null)
+                    {
+                        r.Peripherals.SpeakerName = Wmi.Str(audio, "Name");
+                    }
                 }
-            }
-            catch { }
+                catch { }
+            });
 
-            try
+            var tNet = Task.Run(() =>
             {
-                var netAdapters = Wmi.Query("SELECT Name, AdapterType, NetConnectionID, PhysicalAdapter FROM Win32_NetworkAdapter");
-                foreach (var net in netAdapters)
+                try
                 {
-                    string name = Wmi.Str(net, "Name");
-                    string conn = Wmi.Str(net, "NetConnectionID");
-                    if (conn.IndexOf("Wi-Fi", StringComparison.OrdinalIgnoreCase) >= 0 || name.IndexOf("Wireless", StringComparison.OrdinalIgnoreCase) >= 0 || name.IndexOf("Wi-Fi", StringComparison.OrdinalIgnoreCase) >= 0 || name.IndexOf("802.11", StringComparison.OrdinalIgnoreCase) >= 0)
+                    var netAdapters = Wmi.Query("SELECT Name, AdapterType, NetConnectionID, PhysicalAdapter FROM Win32_NetworkAdapter", timeoutSeconds: 3);
+                    foreach (var net in netAdapters)
                     {
-                        if (string.IsNullOrEmpty(r.Peripherals.WifiAdapter)) r.Peripherals.WifiAdapter = name;
-                    }
-                    else if (conn.IndexOf("Bluetooth", StringComparison.OrdinalIgnoreCase) >= 0 || name.IndexOf("Bluetooth", StringComparison.OrdinalIgnoreCase) >= 0)
-                    {
-                        if (string.IsNullOrEmpty(r.Peripherals.BluetoothAdapter)) r.Peripherals.BluetoothAdapter = name;
-                    }
-                    else if (conn.IndexOf("Ethernet", StringComparison.OrdinalIgnoreCase) >= 0 || name.IndexOf("Ethernet", StringComparison.OrdinalIgnoreCase) >= 0 || name.IndexOf("Gigabit", StringComparison.OrdinalIgnoreCase) >= 0)
-                    {
-                        if (string.IsNullOrEmpty(r.Peripherals.EthernetAdapter)) r.Peripherals.EthernetAdapter = name;
+                        string name = Wmi.Str(net, "Name");
+                        string conn = Wmi.Str(net, "NetConnectionID");
+                        if (conn.IndexOf("Wi-Fi", StringComparison.OrdinalIgnoreCase) >= 0 || name.IndexOf("Wireless", StringComparison.OrdinalIgnoreCase) >= 0 || name.IndexOf("Wi-Fi", StringComparison.OrdinalIgnoreCase) >= 0 || name.IndexOf("802.11", StringComparison.OrdinalIgnoreCase) >= 0)
+                        {
+                            if (string.IsNullOrEmpty(r.Peripherals.WifiAdapter)) r.Peripherals.WifiAdapter = name;
+                        }
+                        else if (conn.IndexOf("Bluetooth", StringComparison.OrdinalIgnoreCase) >= 0 || name.IndexOf("Bluetooth", StringComparison.OrdinalIgnoreCase) >= 0)
+                        {
+                            if (string.IsNullOrEmpty(r.Peripherals.BluetoothAdapter)) r.Peripherals.BluetoothAdapter = name;
+                        }
+                        else if (conn.IndexOf("Ethernet", StringComparison.OrdinalIgnoreCase) >= 0 || name.IndexOf("Ethernet", StringComparison.OrdinalIgnoreCase) >= 0 || name.IndexOf("Gigabit", StringComparison.OrdinalIgnoreCase) >= 0)
+                        {
+                            if (string.IsNullOrEmpty(r.Peripherals.EthernetAdapter)) r.Peripherals.EthernetAdapter = name;
+                        }
                     }
                 }
-            }
-            catch { }
+                catch { }
+            });
 
-            try
+            var tPnp = Task.Run(() =>
             {
-                var pnp = Wmi.Query("SELECT Name, Description FROM Win32_PnPEntity WHERE Service = 'WbioSrvc' OR Description LIKE '%Fingerprint%' OR Description LIKE '%Biometric%'");
-                if (pnp.Count > 0)
+                try
                 {
-                    r.Peripherals.FingerprintReader = Wmi.Str(pnp[0], "Name");
+                    var pnp = Wmi.Query("SELECT Name, Description FROM Win32_PnPEntity WHERE Service = 'WbioSrvc' OR Description LIKE '%Fingerprint%' OR Description LIKE '%Biometric%'", timeoutSeconds: 2);
+                    if (pnp.Count > 0)
+                    {
+                        r.Peripherals.FingerprintReader = Wmi.Str(pnp[0], "Name");
+                    }
                 }
-            }
-            catch { }
+                catch { }
+            });
+
+            Task.WaitAll(tAudio, tNet, tPnp);
         }
     }
 

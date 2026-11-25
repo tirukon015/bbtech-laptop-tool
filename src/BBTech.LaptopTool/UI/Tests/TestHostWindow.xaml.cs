@@ -77,6 +77,8 @@ namespace BBTech.LaptopTool.UI.Tests
 
         private void Finish(TestState state)
         {
+            string blocked = state == TestState.Pass ? _panel.PassBlockedReason : null;
+            if (blocked != null) { Dialogs.Info(this, "PASS not possible", blocked); return; }
             string notes = _panel.Notes ?? "";
             string comment = CommentBox.Text.Trim();
             if (comment.Length > 0) notes = notes.Length > 0 ? notes + "; " + comment : comment;

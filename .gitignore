@@ -7,3 +7,6 @@ artifacts/
 # Third-party binaries are re-created from TEST-Laptop.zip with build\import-toolkit.ps1
 third_party/
 *.lnk
+
+# BBTech server local secrets
+server/.env

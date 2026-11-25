@@ -112,6 +112,33 @@ namespace BBTech.Core.Security
             purpose + ":" + Convert.ToBase64String(A.Select((x, i) => (byte)(x ^ B[i])).ToArray());
     }
 
+    /// <summary>
+    /// Keyed integrity tag (HMAC-SHA256) for local records (operator session, audit log, sync queue).
+    /// Unlike a plain SHA-256 checksum, the tag cannot be recomputed after a hand-edit with ordinary
+    /// tools. Same limit as <see cref="AppSecret"/>: it is tamper-evidence, not protection against
+    /// someone who reverse-engineers the EXE. The server is the final authority.
+    /// </summary>
+    public static class RecordMac
+    {
+        public static string Compute(string purpose, string data)
+        {
+            byte[] key;
+            using (var sha = SHA256.Create()) key = sha.ComputeHash(Encoding.UTF8.GetBytes(AppSecret.Value("record-mac|" + purpose)));
+            using (var h = new HMACSHA256(key))
+                return BitConverter.ToString(h.ComputeHash(Encoding.UTF8.GetBytes(data ?? ""))).Replace("-", "").ToLowerInvariant();
+        }
+
+        public static bool Verify(string purpose, string data, string tag)
+        {
+            if (string.IsNullOrEmpty(tag)) return false;
+            string expected = Compute(purpose, data);
+            if (expected.Length != tag.Length) return false;
+            int diff = 0;
+            for (int i = 0; i < expected.Length; i++) diff |= expected[i] ^ char.ToLowerInvariant(tag[i]);
+            return diff == 0;
+        }
+    }
+
     /// <summary>Salted, slow hash for the admin PIN (PBKDF2-HMAC-SHA256).</summary>
     public static class PinHasher
     {

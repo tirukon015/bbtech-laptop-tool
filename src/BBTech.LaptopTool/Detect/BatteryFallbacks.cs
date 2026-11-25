@@ -48,7 +48,7 @@ namespace BBTech.LaptopTool.Detect
             try
             {
                 string exe = Path.Combine(Environment.SystemDirectory, "powercfg.exe");
-                var run = ProcessRunner.Run(exe, "/batteryreport /xml /output \"" + file + "\"", 30000);
+                var run = ProcessRunner.Run(exe, "/batteryreport /xml /output \"" + file + "\"", 4000);
                 if (run.Error != null || !File.Exists(file)) return null;
 
                 var doc = XDocument.Load(file);

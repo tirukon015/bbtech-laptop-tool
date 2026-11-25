@@ -93,6 +93,12 @@ namespace BBTech.Core.Storage
         [DataMember] public string Details { get; set; }
         [DataMember] public DateTime? StartedAt { get; set; }
         [DataMember] public DateTime? CompletedAt { get; set; }
+        [DataMember] public string OperatorName { get; set; }
+        /// <summary>Stable operator id (null for records written before operator ids were stored).</summary>
+        [DataMember] public string OperatorId { get; set; }
+        [DataMember] public string Department { get; set; }
+        [DataMember] public string DeviceId { get; set; }
+        [DataMember] public bool Deleted { get; set; }
     }
 
     public static class SyncEntity

@@ -50,39 +50,21 @@ namespace BBTech.LaptopTool
                 MessageBox.Show("BBTech Laptop Tool supports Windows 10 and Windows 11.\nSome features may not work on this version of Windows.",
                                 "BBTech Laptop Tool", MessageBoxButton.OK, MessageBoxImage.Information);
 
-            // Requirement 4: Force Administrator Privileges
             if (!ElevationHelper.IsAdministrator)
             {
-                bool bypass = false;
-                if (e.Args != null)
-                {
-                    foreach (var arg in e.Args)
-                    {
-                        if (string.Equals(arg, "--no-elevation-check", StringComparison.OrdinalIgnoreCase))
-                            bypass = true;
-                    }
-                }
-
-                if (!bypass)
-                {
-                    AppLog.Info("Application launched without administrator privileges. Requesting elevation via UAC...");
-                    bool restarted = ElevationHelper.RestartAsAdministrator(e.Args != null ? string.Join(" ", e.Args) : "");
-                    if (!restarted)
-                    {
-                        AppLog.Warn("User declined UAC elevation prompt or restart failed. Showing notice and exiting cleanly.");
-                        MessageBox.Show(
-                            "BBTech Laptop Tool requires Administrator privileges to detect hardware components, TPM status, and SSD SMART health.\n\nThe application will now close.",
-                            "Administrator Privileges Required",
-                            MessageBoxButton.OK,
-                            MessageBoxImage.Warning);
-                    }
-                    Shutdown();
-                    return;
-                }
+                AppLog.Info("Application running as standard user. Full hardware diagnostics can be elevated via header button.");
             }
 
             // Only the UI is loaded here: no scans, no hardware access, no tool extraction.
             new MainWindow().Show();
+
+            // Retry anything left on the USB queue (also recovers uploads interrupted by a crash/restart).
+            // Background only; does nothing until a BBTech server is configured.
+            System.Threading.Tasks.Task.Run(async () =>
+            {
+                AppLog.Info(await MasterDataService.RefreshAsync(null));
+                UsbSyncService.TriggerInBackground(null);
+            });
         }
 
         private void OnUiException(object sender, DispatcherUnhandledExceptionEventArgs e)

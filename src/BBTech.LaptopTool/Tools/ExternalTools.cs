@@ -44,7 +44,7 @@ namespace BBTech.LaptopTool.Tools
             string xmlFile = AppPaths.NewTempFile(".xml");
             try
             {
-                var run = ProcessRunner.Run(exe, "/sxml \"" + xmlFile + "\"", 20000);
+                var run = ProcessRunner.Run(exe, "/sxml \"" + xmlFile + "\"", 3000);
                 if (run.Error != null || !File.Exists(xmlFile)) return new ToolResult<BatteryDetails> { Message = Unavailable };
 
                 var details = BatteryInfoViewParser.Parse(File.ReadAllText(xmlFile));

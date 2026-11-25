@@ -28,9 +28,20 @@ $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $env:DOTNET_CLI_TELEMETRY_OPTOUT = '1'
 $env:DOTNET_NOLOGO = '1'
 
+$localDotnet = Join-Path $env:LOCALAPPDATA 'Microsoft\dotnet\dotnet.exe'
 $dotnet = (Get-Command dotnet -ErrorAction SilentlyContinue).Source
-if (-not $dotnet) { $dotnet = Join-Path $env:LOCALAPPDATA 'Microsoft\dotnet\dotnet.exe' }
-if (-not (Test-Path $dotnet)) { throw "The .NET SDK was not found. Install it from https://dot.net (build machine only)." }
+if (Test-Path $localDotnet) {
+    $hasSdk = $false
+    if ($dotnet -and (Test-Path $dotnet)) {
+        try { & $dotnet --version 2>&1 | Out-Null; if ($LASTEXITCODE -eq 0) { $hasSdk = $true } } catch { }
+    }
+    if (-not $hasSdk) {
+        $dotnet = $localDotnet
+        $env:DOTNET_ROOT = Split-Path $localDotnet
+        $env:PATH = (Split-Path $localDotnet) + ';' + $env:PATH
+    }
+}
+if (-not $dotnet -or -not (Test-Path $dotnet)) { throw "The .NET SDK was not found. Install it from https://dot.net (build machine only)." }
 
 $tp = Join-Path $root 'third_party'
 if (-not (Test-Path (Join-Path $tp 'tools'))) { throw "third_party\ is missing. Run: build\import-toolkit.ps1 -Zip <path to TEST-Laptop.zip>" }
@@ -79,36 +90,48 @@ if (-not $SkipTests) {
 }
 
 # ---- 3. Build -----------------------------------------------------------------------
-Write-Host "== Building application (Release)" -ForegroundColor Cyan
-& $dotnet build (Join-Path $root 'src\BBTech.LaptopTool') -c Release --no-incremental
+# The EXE carries the exact commit; "-dirty" marks a build made from uncommitted changes, so a
+# stale or unofficial EXE is recognisable from Properties > Details and from the log line at startup.
+$commit = (& git -C $root rev-parse --short=12 HEAD 2>$null)
+if (-not $commit) { $commit = 'nogit' }
+$dirty = (& git -C $root status --porcelain 2>$null)
+if ($dirty) { $commit = "$commit-dirty"; Write-Warning "Building from uncommitted changes: the EXE is stamped '$commit'." }
+
+Write-Host "== Building application (Release, $commit)" -ForegroundColor Cyan
+& $dotnet build (Join-Path $root 'src\BBTech.LaptopTool') -c Release --no-incremental "-p:SourceRevisionId=$commit"
 if ($LASTEXITCODE -ne 0) { throw "Build failed." }
 
 # ---- 4. Release ---------------------------------------------------------------------
+# ONE release location: dist\release\BBTech Laptop Tool.exe. Any failure stops the build, so an old
+# EXE is never left behind next to a new checksum.
 $bin = Join-Path $root 'src\BBTech.LaptopTool\bin\Release\net472'
 $rel = Join-Path $root 'dist\release'
 $targetExe = Join-Path $rel 'BBTech Laptop Tool.exe'
 $builtExe = Join-Path $bin 'BBTech Laptop Tool.exe'
-$distRootExe = Join-Path $root 'dist\BBTech Laptop Tool.exe'
 
 if (-not (Test-Path $rel)) { New-Item -ItemType Directory -Force $rel | Out-Null }
 try {
     if (Test-Path $targetExe) { Remove-Item -LiteralPath $targetExe -Force -ErrorAction Stop }
     Copy-Item $builtExe $targetExe -Force -ErrorAction Stop
 } catch {
-    Write-Warning "Could not update '$targetExe' because it is running. Close the running tool window to update release."
+    throw "Could not replace '$targetExe' (is BBTech Laptop Tool running from it?). Close it and build again. Nothing was released."
 }
 
-# Synchronize single distribution copy in dist\
-try {
-    Copy-Item $builtExe $distRootExe -Force -ErrorAction Stop
-    Write-Host "   Synchronized $distRootExe" -ForegroundColor Gray
-} catch {
-    Write-Warning "Could not update '$distRootExe'. Please close any running instance of BBTech Laptop Tool."
+# Old duplicate copies are removed so nobody launches them by mistake.
+foreach ($stale in @((Join-Path $root 'dist\BBTech Laptop Tool.exe'), (Join-Path $root 'dist\BBTech Laptop Tool.exe.config'), (Join-Path $root 'dist\release.sha256.txt'), (Join-Path $bin 'BBTech Laptop Tool.old.exe'))) {
+    if (Test-Path $stale) {
+        try { Remove-Item -LiteralPath $stale -Force -ErrorAction Stop; Write-Host "   Removed stale $stale" -ForegroundColor Gray }
+        catch { Write-Warning "Could not remove stale copy '$stale'. Delete it by hand." }
+    }
 }
 
-$exe = if (Test-Path $targetExe) { Get-Item $targetExe } else { Get-Item $distRootExe }
-$hash = (Get-FileHash $exe.FullName -Algorithm SHA256).Hash
-Set-Content (Join-Path $root 'dist\release.sha256.txt') "$hash  BBTech Laptop Tool.exe"
+$hash = (Get-FileHash $targetExe -Algorithm SHA256).Hash
+if ($hash -ne (Get-FileHash $builtExe -Algorithm SHA256).Hash) { throw "The released EXE does not match the build output." }
+$exe = Get-Item $targetExe
+$ver = $exe.VersionInfo.ProductVersion
+$stamp = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')
+Set-Content (Join-Path $rel 'BBTech Laptop Tool.exe.sha256.txt') "$hash  BBTech Laptop Tool.exe`r`nversion: $ver`r`nbuilt: $stamp"
 Write-Host ("== Done: {0}  ({1:N1} MB)" -f $exe.FullName, ($exe.Length / 1MB)) -ForegroundColor Green
+Write-Host "   Version: $ver" -ForegroundColor Green
 Write-Host "   SHA-256: $hash" -ForegroundColor Green
 Write-Host "   Copy this one file to the USB drive."
