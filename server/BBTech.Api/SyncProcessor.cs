@@ -248,15 +248,39 @@ public sealed class SyncProcessor
         }
     }
 
+    /// <summary>Actions only the server performs (user/role/permission/package/workstation administration): a client
+    /// entry claiming one is kept, but never counted as verified.</summary>
+    private static readonly HashSet<string> ServerOnlyAuditActions = new(StringComparer.Ordinal)
+    {
+        "USER_CREATED", "USER_DISABLED", "USER_ENABLED", "USER_CHANGED", "ROLE_CHANGED", "PERMISSION_CHANGED",
+        "SOFTWARE_PACKAGE_CHANGED", "WORKSTATION_CREATED", "RECORD_DELETED",
+    };
+
     private static async Task<bool> StoreAuditAsync(NpgsqlConnection conn, AuditRecordDto a, Guid workstationId, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(a.AuditId) || a.AuditId.Length > 100 || string.IsNullOrWhiteSpace(a.Action) || a.Timestamp == default) return false;
+
+        // The client names the actor itself, so the server records whether it can confirm that claim. Nothing is dropped
+        // (it stays evidence), but only confirmed entries count as proof of who did something.
+        bool verified;
+        await using (var cmd = new NpgsqlCommand(
+            @"SELECT EXISTS (SELECT 1 FROM users WHERE user_id = @u AND active AND deleted_at IS NULL)
+                 AND (NOT EXISTS (SELECT 1 FROM workstation_operators WHERE workstation_id = @w)
+                      OR EXISTS (SELECT 1 FROM workstation_operators WHERE workstation_id = @w AND user_id = @u))", conn))
+        {
+            cmd.Parameters.AddWithValue("u", a.ActorUserId ?? "");
+            cmd.Parameters.AddWithValue("w", workstationId);
+            verified = (bool)(await cmd.ExecuteScalarAsync(ct))!;
+        }
+        verified = verified && a.Timestamp.ToUniversalTime() <= DateTime.UtcNow.AddDays(1) && !ServerOnlyAuditActions.Contains(a.Action);
+
         await using (var cmd = new NpgsqlCommand(
             @"INSERT INTO audit_logs (audit_id, occurred_at, actor_user_id, actor_name, action, target, old_value, new_value, details,
-                                      client_checksum, previous_checksum, source, workstation_id)
-              VALUES (@id, @t, @u, @n, @a, @tg, @o, @nv, @d, @c, @p, 'client', @w)
+                                      client_checksum, previous_checksum, source, workstation_id, actor_verified)
+              VALUES (@id, @t, @u, @n, @a, @tg, @o, @nv, @d, @c, @p, 'client', @w, @v)
               ON CONFLICT (audit_id) DO NOTHING", conn))
         {
+            cmd.Parameters.AddWithValue("v", verified);
             cmd.Parameters.AddWithValue("id", a.AuditId);
             cmd.Parameters.AddWithValue("t", a.Timestamp.ToUniversalTime());
             cmd.Parameters.AddWithValue("u", a.ActorUserId ?? "");

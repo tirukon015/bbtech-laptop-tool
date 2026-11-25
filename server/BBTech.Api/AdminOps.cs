@@ -214,7 +214,7 @@ public static class AdminOps
     {
         var list = new List<AuditRecordDto>();
         await using var cmd = new NpgsqlCommand(
-            "SELECT audit_id, occurred_at, actor_user_id, actor_name, action, target, old_value, new_value, details, client_checksum, previous_checksum FROM audit_logs ORDER BY occurred_at DESC LIMIT @l", conn);
+            "SELECT audit_id, occurred_at, actor_user_id, actor_name, action, target, old_value, new_value, details, client_checksum, previous_checksum, actor_verified, source FROM audit_logs ORDER BY occurred_at DESC LIMIT @l", conn);
         cmd.Parameters.AddWithValue("l", limit);
         await using var r = await cmd.ExecuteReaderAsync();
         while (await r.ReadAsync())
@@ -222,6 +222,7 @@ public static class AdminOps
             {
                 AuditId = r.GetString(0), Timestamp = r.GetDateTime(1), ActorUserId = r.GetString(2), ActorName = r.GetString(3), Action = r.GetString(4),
                 Target = r.GetString(5), OldValue = r.GetString(6), NewValue = r.GetString(7), Details = r.GetString(8), Checksum = r.GetString(9), PreviousChecksum = r.GetString(10), Synced = true,
+                ActorVerified = r.GetBoolean(11) || r.GetString(12) == "server", Source = r.GetString(12),
             });
         return list;
     }

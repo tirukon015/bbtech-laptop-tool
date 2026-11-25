@@ -204,4 +204,34 @@ public sealed class LifecycleApiTests : IClassFixture<ApiFixture>, IDisposable
         }
         File.WriteAllText(Path.Combine(Path.GetDirectoryName(path), "server_real_snapshot.txt"), report.ToString());
     }
+
+    [Fact]
+    public async Task ClientAuditEntries_AreKept_ButOnlyConfirmedActorsCountAsVerified()
+    {
+        string tag = Guid.NewGuid().ToString("N").Substring(0, 8);
+        AuditRecordDto A(string id, string actor, string action, DateTime at) => new AuditRecordDto
+            { AuditId = id + "-" + tag, ActorUserId = actor, ActorName = actor, Action = action, Timestamp = at, Checksum = "c-" + id, Target = "DEV-" + tag };
+        var batch = new SyncUploadBatchDto
+        {
+            BatchId = "B-" + tag, DeviceId = "DEV-" + tag, SentAt = DateTime.UtcNow,
+            AuditRecords =
+            {
+                A("real", "kamal", "HARDWARE_TEST", DateTime.UtcNow.AddMinutes(-5)),
+                A("forged", "the-ceo", "QC_DECISION_CREATED", DateTime.UtcNow.AddMinutes(-5)),        // not a user
+                A("admin", "kamal", "ROLE_CHANGED", DateTime.UtcNow.AddMinutes(-5)),                  // server-only action
+                A("future", "kamal", "HARDWARE_TEST", DateTime.UtcNow.AddDays(30)),                    // impossible time
+            },
+        };
+        var resp = await _f.Client(_f.WorkstationKey).PostAsJsonAsync("/v1/sync/upload", batch, Json);
+        Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
+
+        async Task<bool?> Verified(string id) => await _f.ScalarAsync<bool?>("SELECT actor_verified FROM audit_logs WHERE audit_id = @id", ("id", id + "-" + tag));
+        Assert.True(await Verified("real"));
+        Assert.False(await Verified("forged"));       // kept as evidence, but not proof of who did it
+        Assert.False(await Verified("admin"));
+        Assert.False(await Verified("future"));
+
+        var listed = await _f.Client(_f.AdminKey, "touhidul").GetStringAsync("/v1/admin/audit?limit=500");
+        Assert.Contains("forged-" + tag, listed);
+    }
 }

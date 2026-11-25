@@ -117,6 +117,10 @@ public sealed class AuditRecordDto
     public string PreviousChecksum { get; set; }
     public string Checksum { get; set; }
     public bool Synced { get; set; }
+    /// <summary>Server only: the actor was confirmed (active user, allowed on the workstation, plausible time, client action).</summary>
+    public bool ActorVerified { get; set; }
+    /// <summary>Server only: "client" or "server".</summary>
+    public string Source { get; set; }
 }
 
 public sealed class SyncUploadBatchDto
